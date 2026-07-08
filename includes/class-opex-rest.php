@@ -1,0 +1,176 @@
+<?php
+/**
+ * REST API. Every route requires the admin capability; WordPress cookie
+ * auth additionally enforces the wp_rest nonce (sent as X-WP-Nonce by
+ * apiFetch, or as _wpnonce on download links).
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+class OPEX_Rest {
+
+	private const NS = 'open-export/v1';
+
+	public static function register_routes(): void {
+		$can = static function (): bool {
+			return current_user_can( opex_capability() );
+		};
+
+		register_rest_route( self::NS, '/sources', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'sources' ),
+		) );
+
+		register_rest_route( self::NS, '/fields', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'fields' ),
+			'args'                => array(
+				'source' => array(
+					'required'          => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+			),
+		) );
+
+		register_rest_route( self::NS, '/preview', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'preview' ),
+		) );
+
+		register_rest_route( self::NS, '/jobs', array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'jobs' ),
+			),
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'create_job' ),
+			),
+		) );
+
+		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})', array(
+			'methods'             => WP_REST_Server::DELETABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'delete_job' ),
+		) );
+
+		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/run', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'run_job' ),
+		) );
+
+		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/pause', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'pause_job' ),
+		) );
+
+		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/download', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'download' ),
+		) );
+	}
+
+	public static function sources(): WP_REST_Response {
+		return rest_ensure_response( OPEX_Catalog::sources() );
+	}
+
+	public static function fields( WP_REST_Request $request ): WP_REST_Response {
+		return rest_ensure_response( OPEX_Catalog::fields( (string) $request['source'] ) );
+	}
+
+	public static function preview( WP_REST_Request $request ) {
+		$config = OPEX_Exporter::sanitize_config( (array) $request->get_json_params() );
+		if ( is_wp_error( $config ) ) {
+			return $config;
+		}
+		return rest_ensure_response( OPEX_Exporter::preview( $config ) );
+	}
+
+	public static function jobs(): WP_REST_Response {
+		OPEX_Jobs::sweep();
+		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
+		usort( $jobs, static function ( $a, $b ) {
+			return $b['created'] <=> $a['created'];
+		} );
+		return rest_ensure_response( $jobs );
+	}
+
+	public static function create_job( WP_REST_Request $request ) {
+		$body   = (array) $request->get_json_params();
+		$config = OPEX_Exporter::sanitize_config( $body );
+		if ( is_wp_error( $config ) ) {
+			return $config;
+		}
+
+		$label = sanitize_text_field( (string) ( $body['label'] ?? '' ) );
+		$label = $label ? $label : $config['source'];
+
+		$result = OPEX_Exporter::create( $config, $label );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+	}
+
+	public static function run_job( WP_REST_Request $request ) {
+		$result = OPEX_Exporter::run( (string) $request['id'] );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+	}
+
+	public static function pause_job( WP_REST_Request $request ) {
+		$result = OPEX_Exporter::pause( (string) $request['id'] );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+	}
+
+	public static function delete_job( WP_REST_Request $request ): WP_REST_Response {
+		OPEX_Jobs::delete( (string) $request['id'] );
+		return rest_ensure_response( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Stream a finished file. Capability + nonce were already enforced by
+	 * the permission callback and REST cookie auth before we got here.
+	 */
+	public static function download( WP_REST_Request $request ) {
+		$job = OPEX_Jobs::get( (string) $request['id'] );
+		if ( ! $job || 'done' !== $job['status'] ) {
+			return new WP_Error( 'opex_not_ready', __( 'Export is not ready.', 'open-export' ), array( 'status' => 404 ) );
+		}
+
+		$path = OPEX_Jobs::file_path( $job );
+		if ( ! file_exists( $path ) ) {
+			return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
+		}
+
+		$types = array( 'csv' => 'text/csv; charset=utf-8', 'json' => 'application/json; charset=utf-8', 'xml' => 'application/xml; charset=utf-8' );
+		$type  = $types[ $job['config']['format'] ] ?? 'application/octet-stream';
+
+		nocache_headers();
+		header( 'Content-Type: ' . $type );
+		header( 'Content-Disposition: attachment; filename="' . rawurlencode( $job['filename'] ) . '"' );
+		header( 'Content-Length: ' . (string) filesize( $path ) );
+		header( 'X-Content-Type-Options: nosniff' );
+
+		// phpcs:disable WordPress.WP.AlternativeFunctions -- chunked streaming of a potentially multi-gigabyte export file.
+		$handle = fopen( $path, 'rb' );
+		if ( $handle ) {
+			while ( ! feof( $handle ) ) {
+				$chunk = fread( $handle, 1024 * 1024 );
+				if ( false === $chunk ) {
+					break;
+				}
+				echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- binary-safe file passthrough of our own generated export.
+				flush();
+			}
+			fclose( $handle );
+		}
+		// phpcs:enable
+		exit;
+	}
+}

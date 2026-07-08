@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Dependencies (if added later)
+/vendor/
+/node_modules/
+
+# Local environment
+.env
+.env.*
+
+# Build artifacts (if added later)
+*.zip
+
+# WordPress install artifacts (if developing inside a full site)
+wp-config.php

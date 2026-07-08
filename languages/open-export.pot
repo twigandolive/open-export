@@ -1,0 +1,141 @@
+# Copyright (C) 2026 Twig & Olive
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Open Export 1.0.1\n"
+"Report-Msgid-Bugs-To: https://twigandolive.com/support/\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-08T21:24:55+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: open-export\n"
+
+#. Plugin Name of the plugin
+#: open-export.php
+#: includes/class-opex-admin.php:15
+#: includes/class-opex-admin.php:16
+#: open-export.php:92
+msgid "Open Export"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: open-export.php
+msgid "https://twigandolive.com"
+msgstr ""
+
+#. Description of the plugin
+#: open-export.php
+msgid "Export anything from your WordPress database — posts, users, comments, terms, or any table — with smart field discovery, powerful filters, host-friendly pacing, and CSV / JSON / XML output. Everything included. No upsells, no add-ons."
+msgstr ""
+
+#. Author of the plugin
+#: open-export.php
+msgid "Twig & Olive"
+msgstr ""
+
+#: includes/class-opex-admin.php:42
+msgid "You do not have permission to use Open Export."
+msgstr ""
+
+#: includes/class-opex-admin.php:47
+msgid "Loading Open Export…"
+msgstr ""
+
+#: includes/class-opex-admin.php:48
+msgid "Open Export needs JavaScript enabled."
+msgstr ""
+
+#: includes/class-opex-catalog.php:119
+msgid "Content"
+msgstr ""
+
+#: includes/class-opex-catalog.php:123
+msgid "People & Discussion"
+msgstr ""
+
+#: includes/class-opex-catalog.php:125
+msgid "Users"
+msgstr ""
+
+#: includes/class-opex-catalog.php:126
+msgid "Comments"
+msgstr ""
+
+#: includes/class-opex-catalog.php:130
+#: includes/class-opex-catalog.php:261
+msgid "Taxonomies"
+msgstr ""
+
+#: includes/class-opex-catalog.php:134
+msgid "Raw Database Tables"
+msgstr ""
+
+#: includes/class-opex-catalog.php:234
+#: includes/class-opex-catalog.php:274
+#: includes/class-opex-catalog.php:294
+#: includes/class-opex-catalog.php:306
+msgid "Core Fields"
+msgstr ""
+
+#: includes/class-opex-catalog.php:248
+#: includes/class-opex-catalog.php:278
+msgid "Computed"
+msgstr ""
+
+#: includes/class-opex-catalog.php:326
+msgid "Columns"
+msgstr ""
+
+#: includes/class-opex-catalog.php:432
+msgid "Custom Fields"
+msgstr ""
+
+#: includes/class-opex-catalog.php:436
+msgid "Technical / Hidden"
+msgstr ""
+
+#: includes/class-opex-exporter.php:22
+msgid "Unknown data source."
+msgstr ""
+
+#: includes/class-opex-exporter.php:37
+msgid "Pick at least one field to export."
+msgstr ""
+
+#: includes/class-opex-exporter.php:133
+#: includes/class-opex-exporter.php:203
+msgid "Export job not found."
+msgstr ""
+
+#: includes/class-opex-exporter.php:153
+msgid "This export is already running in another window."
+msgstr ""
+
+#: includes/class-opex-exporter.php:218
+msgid "Could not write the export file. Check that the uploads directory is writable."
+msgstr ""
+
+#: includes/class-opex-exporter.php:220
+msgid "Export failed. Try resuming or starting a new export."
+msgstr ""
+
+#: includes/class-opex-rest.php:143
+msgid "Export is not ready."
+msgstr ""
+
+#: includes/class-opex-rest.php:148
+msgid "Export file no longer exists."
+msgstr ""
+
+#: open-export.php:115
+msgid "https://twigandolive.com/open-export/"
+msgstr ""
+
+#: open-export.php:116
+msgid "Documentation"
+msgstr ""

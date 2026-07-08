@@ -1,0 +1,409 @@
+/* Open Export admin styles — modern, calm, zero-dependency. */
+
+.opex-wrap {
+	--opex-accent: #3858e9;
+	--opex-accent-soft: #eef1fd;
+	--opex-ink: #1e1e2a;
+	--opex-muted: #757586;
+	--opex-line: #e3e3ea;
+	--opex-radius: 12px;
+	max-width: 1100px;
+	color: var(--opex-ink);
+}
+
+/* Hero ------------------------------------------------------------- */
+
+.opex-hero {
+	background: linear-gradient(135deg, #3858e9 0%, #7b5cf0 100%);
+	color: #fff;
+	border-radius: var(--opex-radius);
+	padding: 28px 32px;
+	margin: 16px 0 24px;
+}
+
+.opex-hero h1 {
+	color: #fff;
+	font-size: 26px;
+	font-weight: 700;
+	margin: 0 0 6px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 0;
+}
+
+.opex-hero h1 .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.opex-hero p {
+	margin: 0;
+	opacity: 0.92;
+	font-size: 14px;
+}
+
+/* Sections ---------------------------------------------------------- */
+
+.opex-section {
+	background: #fff;
+	border: 1px solid var(--opex-line);
+	border-radius: var(--opex-radius);
+	padding: 22px 26px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 2px rgba(20, 20, 40, 0.04);
+}
+
+.opex-section h2 {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 17px;
+	margin: 0 0 16px;
+}
+
+.opex-step {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: var(--opex-accent);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	flex: none;
+}
+
+.opex-step.is-plain {
+	background: var(--opex-accent-soft);
+}
+
+.opex-optional {
+	color: var(--opex-muted);
+	font-weight: 400;
+	font-size: 13px;
+}
+
+.opex-muted { color: var(--opex-muted); }
+
+.opex-group-title {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--opex-muted);
+	margin: 18px 0 8px;
+}
+
+/* Source cards ------------------------------------------------------ */
+
+.opex-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 10px;
+}
+
+.opex-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	padding: 14px 16px;
+	background: #fafafc;
+	border: 1.5px solid var(--opex-line);
+	border-radius: 10px;
+	cursor: pointer;
+	text-align: left;
+	transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.opex-card:hover {
+	border-color: var(--opex-accent);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(56, 88, 233, 0.12);
+}
+
+.opex-card.is-on {
+	border-color: var(--opex-accent);
+	background: var(--opex-accent-soft);
+	box-shadow: inset 0 0 0 1px var(--opex-accent);
+}
+
+.opex-card .dashicons {
+	color: var(--opex-accent);
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+}
+
+.opex-card-label {
+	font-weight: 600;
+	font-size: 13px;
+	word-break: break-all;
+}
+
+.opex-card-count {
+	font-size: 11.5px;
+	color: var(--opex-muted);
+}
+
+/* Filter rules ------------------------------------------------------ */
+
+.opex-rule {
+	display: grid;
+	grid-template-columns: minmax(180px, 1.3fr) minmax(150px, 1fr) minmax(160px, 1.4fr) 34px;
+	gap: 8px;
+	margin-bottom: 8px;
+	align-items: center;
+}
+
+.opex-rule select,
+.opex-rule input {
+	width: 100%;
+	max-width: none;
+}
+
+.opex-icon-btn {
+	background: none;
+	border: 1px solid var(--opex-line);
+	border-radius: 6px;
+	height: 30px;
+	cursor: pointer;
+	color: var(--opex-muted);
+	font-size: 16px;
+	line-height: 1;
+}
+
+.opex-icon-btn:hover { color: #c0392b; border-color: #c0392b; }
+
+.opex-relation { margin: 10px 0; }
+.opex-row-actions { margin: 12px 0; display: flex; gap: 8px; }
+.opex-total { margin: 10px 0 6px; }
+
+/* Field picker ------------------------------------------------------ */
+
+.opex-selected {
+	background: #fafafc;
+	border: 1px solid var(--opex-line);
+	border-radius: 10px;
+	padding: 12px 14px;
+	margin-bottom: 14px;
+}
+
+.opex-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.opex-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	background: var(--opex-accent-soft);
+	color: var(--opex-accent);
+	border-radius: 999px;
+	padding: 3px 10px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.opex-chip button {
+	background: none;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	font-size: 14px;
+	padding: 0;
+	line-height: 1;
+}
+
+.opex-search {
+	width: 100%;
+	max-width: 420px;
+	margin-bottom: 14px;
+	border-radius: 8px !important;
+}
+
+.opex-fgroup { margin-bottom: 16px; }
+
+.opex-fgroup-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+	font-size: 13px;
+}
+
+.opex-link {
+	background: none;
+	border: 0;
+	color: var(--opex-accent);
+	cursor: pointer;
+	padding: 0;
+	font-size: 12px;
+	text-decoration: underline;
+}
+
+.opex-checks {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	gap: 4px 12px;
+}
+
+.opex-check {
+	font-size: 12.5px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	word-break: break-all;
+}
+
+.opex-check.is-on { background: var(--opex-accent-soft); }
+
+/* Export step -------------------------------------------------------- */
+
+.opex-export-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 18px;
+	margin-bottom: 8px;
+}
+
+.opex-label {
+	display: block;
+	font-weight: 600;
+	font-size: 12.5px;
+	margin-bottom: 6px;
+}
+
+.opex-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.opex-pill {
+	border: 1.5px solid var(--opex-line);
+	background: #fff;
+	border-radius: 999px;
+	padding: 5px 16px;
+	font-size: 12.5px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.12s;
+}
+
+.opex-pill:hover { border-color: var(--opex-accent); }
+
+.opex-pill.is-on {
+	background: var(--opex-accent);
+	border-color: var(--opex-accent);
+	color: #fff;
+}
+
+.opex-run { margin: 18px 0 10px; }
+
+/* Progress ----------------------------------------------------------- */
+
+.opex-progress {
+	height: 14px;
+	background: #ececf2;
+	border-radius: 999px;
+	overflow: hidden;
+	margin: 12px 0 6px;
+}
+
+.opex-progress-bar {
+	height: 100%;
+	border-radius: 999px;
+	background: repeating-linear-gradient(
+		45deg,
+		var(--opex-accent),
+		var(--opex-accent) 12px,
+		#5a76ee 12px,
+		#5a76ee 24px
+	);
+	background-size: 34px 34px;
+	animation: opex-stripe 0.8s linear infinite;
+	transition: width 0.3s ease;
+}
+
+.opex-progress-bar.is-done {
+	background: #2fb344;
+	animation: none;
+}
+
+@keyframes opex-stripe {
+	from { background-position: 0 0; }
+	to { background-position: 34px 0; }
+}
+
+.opex-progress-text { font-size: 13px; }
+
+/* Tables -------------------------------------------------------------- */
+
+.opex-table-scroll {
+	overflow-x: auto;
+	border: 1px solid var(--opex-line);
+	border-radius: 8px;
+	max-width: 100%;
+}
+
+.opex-table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 12.5px;
+}
+
+.opex-table th,
+.opex-table td {
+	text-align: left;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--opex-line);
+	white-space: nowrap;
+	max-width: 340px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.opex-table thead th {
+	background: #fafafc;
+	position: sticky;
+	top: 0;
+	font-weight: 600;
+}
+
+.opex-table tbody tr:last-child td { border-bottom: 0; }
+
+.opex-job-actions { display: flex; gap: 6px; }
+
+/* Badges & errors ------------------------------------------------------ */
+
+.opex-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	background: #ececf2;
+	color: var(--opex-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.opex-badge.is-done { background: #e2f6e6; color: #1e7c30; }
+.opex-badge.is-error { background: #fdecea; color: #b02a1f; }
+
+.opex-error {
+	background: #fdecea;
+	color: #b02a1f;
+	border-radius: 8px;
+	padding: 10px 14px;
+	margin-top: 12px;
+	font-size: 13px;
+}
+
+@media (max-width: 782px) {
+	.opex-rule { grid-template-columns: 1fr; }
+	.opex-hero { padding: 20px; }
+	.opex-section { padding: 16px; }
+}
