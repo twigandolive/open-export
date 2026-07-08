@@ -116,10 +116,14 @@ class OPEX_Catalog {
 
 		return array(
 			array(
+				'id'    => 'content',
+				'tier'  => 'standard',
 				'label' => __( 'Content', 'open-export' ),
 				'items' => $content,
 			),
 			array(
+				'id'    => 'people',
+				'tier'  => 'standard',
 				'label' => __( 'People & Discussion', 'open-export' ),
 				'items' => array(
 					array( 'id' => 'users', 'label' => __( 'Users', 'open-export' ), 'icon' => 'dashicons-admin-users', 'count' => $user_count ),
@@ -127,10 +131,14 @@ class OPEX_Catalog {
 				),
 			),
 			array(
+				'id'    => 'taxonomies',
+				'tier'  => 'standard',
 				'label' => __( 'Taxonomies', 'open-export' ),
 				'items' => $taxes,
 			),
 			array(
+				'id'    => 'tables',
+				'tier'  => 'advanced',
 				'label' => __( 'Raw Database Tables', 'open-export' ),
 				'items' => $tables,
 			),

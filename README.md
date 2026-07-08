@@ -2,7 +2,7 @@
 
 Export anything from your WordPress database — every feature included, no add-ons, no upsells, ever.
 
-**Version:** 1.1.0  
+**Version:** 1.1.1  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** [GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -26,7 +26,7 @@ No Pro version. No add-ons to buy. This is all of it.
 
 1. Upload the `open-export` folder to `/wp-content/plugins/`, or install from the WordPress plugin directory when available.
 2. Activate the plugin through the **Plugins** screen in WordPress.
-3. Open **Open Export** from the admin menu (or use the **Open Export** link on the Plugins screen).
+3. Open **Tools → Open Export** in the WordPress admin (or use the **Open Export** link on the Plugins screen).
 
 ## Usage
 
@@ -72,6 +72,10 @@ wp i18n make-pot . languages/open-export.pot --domain=open-export
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for full release notes.
+
+### 1.1.1
+
+Cleaner source picker: collapsible groups, quick-start steps, Advanced tab for database tables, moved to Tools menu.
 
 ### 1.1.0
 

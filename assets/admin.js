@@ -55,6 +55,10 @@
 		running: null,
 		stopRequested: false,
 		dragChipId: null,
+		sourceTab: 'standard',
+		sourceSearch: '',
+		collapsed: {},
+		collapsedReady: false,
 		error: '',
 	};
 
@@ -112,6 +116,7 @@
 	function render() {
 		app.innerHTML =
 			header() +
+			introSteps() +
 			stepSource() +
 			(state.sourceId ? stepFilters() + stepFields() + stepExport() : '') +
 			savedTemplates() +
@@ -127,22 +132,80 @@
 			'</div>';
 	}
 
+	function introSteps() {
+		return '<div class="opex-intro-steps-wrap">' +
+			'<ol class="opex-intro-steps">' +
+			'<li><strong>Select</strong> what you want to export.</li>' +
+			'<li><strong>Filter</strong> your data when the next sections appear below <span class="opex-muted">(optional)</span>.</li>' +
+			'<li><strong>Export</strong> — choose fields, set your parameters, and download.</li>' +
+			'</ol></div>';
+	}
+
+	function ensureCollapsedDefaults() {
+		if (state.collapsedReady) return;
+		state.sources.forEach(function (g) {
+			if (state.collapsed[g.id] === undefined) {
+				state.collapsed[g.id] = 'content' !== g.id;
+			}
+		});
+		state.collapsedReady = true;
+	}
+
+	function visibleSourceGroups() {
+		ensureCollapsedDefaults();
+		return state.sources.filter(function (g) {
+			if (!g.items.length) return false;
+			const tier = g.tier || 'standard';
+			if (state.sourceTab === 'advanced') return tier === 'advanced';
+			return tier !== 'advanced';
+		});
+	}
+
+	function filteredSourceItems(items) {
+		const q = (state.sourceSearch || '').toLowerCase().trim();
+		if (!q) return items;
+		return items.filter(function (item) {
+			return item.label.toLowerCase().indexOf(q) !== -1;
+		});
+	}
+
 	function stepSource() {
 		let body;
 		if (!state.sources.length) {
 			body = '<p class="opex-muted">Loading sources…</p>';
 		} else {
-			body = state.sources.map(function (group) {
-				if (!group.items.length) return '';
-				return '<h3 class="opex-group-title">' + esc(group.label) + '</h3>' +
-					'<div class="opex-cards">' + group.items.map(function (item) {
-						const on = state.sourceId === item.id;
-						return '<button type="button" class="opex-card' + (on ? ' is-on' : '') + '" data-act="pick-source" data-id="' + esc(item.id) + '" data-label="' + esc(item.label) + '">' +
-							'<span class="dashicons ' + esc(item.icon) + '"></span>' +
-							'<span class="opex-card-label">' + esc(item.label) + '</span>' +
-							'<span class="opex-card-count">' + fmtNum(item.count) + ' rows</span>' +
-							'</button>';
-					}).join('') + '</div>';
+			const tabs =
+				'<div class="opex-source-tabs">' +
+				'<button type="button" class="opex-tab' + (state.sourceTab === 'standard' ? ' is-on' : '') + '" data-act="source-tab" data-v="standard">Common sources</button>' +
+				'<button type="button" class="opex-tab' + (state.sourceTab === 'advanced' ? ' is-on' : '') + '" data-act="source-tab" data-v="advanced">Advanced — database tables</button>' +
+				'</div>';
+
+			const search = state.sourceTab === 'advanced'
+				? '<input type="search" id="opex-source-search" class="opex-search" placeholder="Search tables…" value="' + esc(state.sourceSearch) + '">'
+				: '<p class="opex-muted opex-tab-hint">Post types, users, comments, and taxonomies. Plugin tables live under Advanced.</p>';
+
+			body = tabs + search + visibleSourceGroups().map(function (group) {
+				const items = filteredSourceItems(group.items);
+				const collapsed = !!state.collapsed[group.id];
+				const arrow = collapsed ? 'dashicons-arrow-right-alt2' : 'dashicons-arrow-down-alt2';
+				return '<div class="opex-source-group' + (collapsed ? ' is-collapsed' : '') + '">' +
+					'<button type="button" class="opex-group-toggle" data-act="toggle-src-group" data-id="' + esc(group.id) + '">' +
+					'<span class="dashicons ' + arrow + '"></span>' +
+					'<span class="opex-group-toggle-label">' + esc(group.label) + '</span>' +
+					'<span class="opex-muted">(' + fmtNum(group.items.length) + ')</span>' +
+					'</button>' +
+					'<div class="opex-group-body">' +
+					(items.length
+						? '<div class="opex-cards">' + items.map(function (item) {
+							const on = state.sourceId === item.id;
+							return '<button type="button" class="opex-card' + (on ? ' is-on' : '') + '" data-act="pick-source" data-id="' + esc(item.id) + '" data-label="' + esc(item.label) + '">' +
+								'<span class="dashicons ' + esc(item.icon) + '"></span>' +
+								'<span class="opex-card-label">' + esc(item.label) + '</span>' +
+								'<span class="opex-card-count">' + fmtNum(item.count) + ' rows</span>' +
+								'</button>';
+						}).join('') + '</div>'
+						: '<p class="opex-muted">No matches.</p>') +
+					'</div></div>';
 			}).join('');
 		}
 		return section(1, 'What do you want to export?', body);
@@ -407,6 +470,17 @@
 			label.addEventListener('input', function () { state.label = this.value; });
 		}
 
+		const sourceSearch = document.getElementById('opex-source-search');
+		if (sourceSearch) {
+			sourceSearch.addEventListener('input', debounce(function () {
+				state.sourceSearch = sourceSearch.value;
+				const pos = sourceSearch.selectionStart;
+				render();
+				const again = document.getElementById('opex-source-search');
+				if (again) { again.focus(); again.setSelectionRange(pos, pos); }
+			}, 200));
+		}
+
 		document.querySelectorAll('.opex-chip-label').forEach(function (input) {
 			input.addEventListener('input', function () {
 				const id = input.dataset.id;
@@ -470,6 +544,19 @@
 		const act = btn.dataset.act;
 
 		if (act === 'pick-source') return pickSource(btn.dataset.id, btn.dataset.label);
+		if (act === 'source-tab') {
+			state.sourceTab = btn.dataset.v;
+			state.sourceSearch = '';
+			if (state.sourceTab === 'advanced') {
+				state.collapsed.tables = false;
+			}
+			return render();
+		}
+		if (act === 'toggle-src-group') {
+			const id = btn.dataset.id;
+			state.collapsed[id] = !state.collapsed[id];
+			return render();
+		}
 		if (act === 'add-rule') { state.rules.push({ field: '', op: 'eq', value: '' }); state.preview = null; return render(); }
 		if (act === 'del-rule') { state.rules.splice(parseInt(btn.dataset.i, 10), 1); state.preview = null; return render(); }
 		if (act === 'preview') return doPreview();
@@ -528,6 +615,11 @@
 		state.preview = null;
 		state.running = null;
 		state.error = '';
+
+		if (cfg.source && cfg.source.indexOf('table:') === 0) {
+			state.sourceTab = 'advanced';
+			state.collapsed.tables = false;
+		}
 
 		return apiFetch({ path: '/' + BOOT.restBase + '/fields?source=' + encodeURIComponent(cfg.source) })
 			.then(function (groups) {

@@ -4,7 +4,7 @@ Tags: export, csv export, xml export, json export, database export
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,9 @@ Yes — orders are a post type, and their meta is grouped under a WooCommerce he
 
 == Upgrade Notice ==
 
+= 1.1.1 =
+UI cleanup: Open Export now lives under Tools. Source picker uses collapsible groups and an Advanced tab for database tables.
+
 = 1.1.0 =
 Workflow release: saved templates, one-click re-run, column reorder and rename, CSV delimiters, and relative date filters.
 
@@ -60,6 +63,10 @@ Security and stability update: blocks credential columns on raw table exports, a
 Initial release.
 
 == Changelog ==
+
+= 1.1.1 =
+* Changed: admin screen moved to Tools → Open Export.
+* Added: quick-start steps, collapsible source groups, Advanced tab for database tables, table search.
 
 = 1.1.0 =
 * Added: saved export templates (save, load, delete).

@@ -11,19 +11,17 @@ class OPEX_Admin {
 	private const SLUG = 'open-export';
 
 	public static function register_menu(): void {
-		add_menu_page(
+		add_management_page(
 			__( 'Open Export', 'open-export' ),
 			__( 'Open Export', 'open-export' ),
 			opex_capability(),
 			self::SLUG,
-			array( __CLASS__, 'render' ),
-			'dashicons-database-export',
-			58
+			array( __CLASS__, 'render' )
 		);
 	}
 
 	public static function enqueue( string $hook ): void {
-		if ( 'toplevel_page_' . self::SLUG !== $hook ) {
+		if ( 'tools_page_' . self::SLUG !== $hook ) {
 			return;
 		}
 

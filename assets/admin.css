@@ -44,6 +44,105 @@
 	font-size: 14px;
 }
 
+/* Quick-start steps --------------------------------------------------- */
+
+.opex-intro-steps-wrap {
+	background: #fff;
+	border: 1px solid var(--opex-line);
+	border-radius: var(--opex-radius);
+	padding: 16px 22px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 2px rgba(20, 20, 40, 0.04);
+}
+
+.opex-intro-steps {
+	margin: 0;
+	padding-left: 1.25em;
+	color: var(--opex-ink);
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.opex-intro-steps li + li {
+	margin-top: 4px;
+}
+
+/* Source picker tabs & collapsible groups ----------------------------- */
+
+.opex-source-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 14px;
+}
+
+.opex-tab {
+	background: #f4f4f7;
+	border: 1px solid var(--opex-line);
+	border-radius: 999px;
+	padding: 6px 14px;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	color: var(--opex-ink);
+}
+
+.opex-tab.is-on {
+	background: var(--opex-accent-soft);
+	border-color: var(--opex-accent);
+	color: var(--opex-accent);
+}
+
+.opex-tab-hint {
+	margin: 0 0 14px;
+	font-size: 13px;
+}
+
+.opex-source-group {
+	border: 1px solid var(--opex-line);
+	border-radius: 10px;
+	margin-bottom: 10px;
+	overflow: hidden;
+}
+
+.opex-group-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	background: #f9f9fb;
+	border: 0;
+	padding: 12px 14px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	text-align: left;
+	color: var(--opex-ink);
+}
+
+.opex-group-toggle .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	color: var(--opex-muted);
+}
+
+.opex-group-toggle-label {
+	flex: 1;
+}
+
+.opex-source-group.is-collapsed .opex-group-body {
+	display: none;
+}
+
+.opex-source-group .opex-group-body {
+	padding: 0 14px 14px;
+}
+
+.opex-source-group .opex-cards {
+	margin-top: 4px;
+}
+
 /* Sections ---------------------------------------------------------- */
 
 .opex-section {

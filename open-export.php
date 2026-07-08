@@ -3,7 +3,7 @@
  * Plugin Name:       Open Export
  * Plugin URI:        https://twigandolive.com
  * Description:       Export anything from your WordPress database — posts, users, comments, terms, or any table — with smart field discovery, powerful filters, host-friendly pacing, and CSV / JSON / XML output. Everything included. No upsells, no add-ons.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Twig & Olive
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'OPEX_VERSION', '1.1.0' );
+define( 'OPEX_VERSION', '1.1.1' );
 define( 'OPEX_FILE', __FILE__ );
 define( 'OPEX_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPEX_URL', plugin_dir_url( __FILE__ ) );

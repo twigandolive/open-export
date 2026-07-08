@@ -5,6 +5,19 @@ All notable changes to Open Export are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-08
+
+### Changed
+
+- Move admin screen to **Tools → Open Export** instead of a top-level menu item.
+
+### Added
+
+- Quick-start instructions below the banner (select, filter, export).
+- Collapsible source groups — only Content expanded by default.
+- **Common sources** / **Advanced** tabs; raw database tables live under Advanced.
+- Table search when browsing Advanced sources.
+
 ## [1.1.0] - 2026-07-08
 
 ### Added
@@ -56,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CSV, JSON, and XML output with host-friendly batched pacing.
 - Secure export file storage and authenticated downloads.
 
+[1.1.1]: https://github.com/twigandolive/open-export/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/twigandolive/open-export/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/twigandolive/open-export/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/twigandolive/open-export/releases/tag/v1.0.0
