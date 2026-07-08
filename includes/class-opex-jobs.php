@@ -84,6 +84,16 @@ class OPEX_Jobs {
 		);
 	}
 
+	/** Job record including full export config for load / re-run. */
+	public static function expose_detail( array $job ): array {
+		return array_merge(
+			self::expose( $job ),
+			array(
+				'config' => $job['config'],
+			)
+		);
+	}
+
 	public static function file_path( array $job ): string {
 		return trailingslashit( opex_export_dir() ) . $job['filename'];
 	}

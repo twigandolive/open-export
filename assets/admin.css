@@ -89,6 +89,19 @@
 
 .opex-muted { color: var(--opex-muted); }
 
+.opex-hint {
+	font-size: 12px;
+	color: var(--opex-muted);
+	margin: 8px 0 0;
+}
+
+.opex-hint code {
+	background: #f4f4f7;
+	padding: 1px 5px;
+	border-radius: 4px;
+	font-size: 11px;
+}
+
 .opex-group-title {
 	font-size: 12px;
 	text-transform: uppercase;
@@ -206,9 +219,36 @@
 	background: var(--opex-accent-soft);
 	color: var(--opex-accent);
 	border-radius: 999px;
-	padding: 3px 10px;
+	padding: 3px 6px 3px 10px;
 	font-size: 12px;
 	font-weight: 500;
+	cursor: grab;
+}
+
+.opex-chip.is-dragging {
+	opacity: 0.5;
+	cursor: grabbing;
+}
+
+.opex-chip.is-drag-over {
+	outline: 2px dashed var(--opex-accent);
+}
+
+.opex-chip-label {
+	background: transparent;
+	border: 0;
+	color: inherit;
+	font: inherit;
+	font-weight: 500;
+	min-width: 40px;
+	max-width: 160px;
+	padding: 0;
+	margin: 0;
+}
+
+.opex-chip-label:focus {
+	outline: none;
+	text-decoration: underline;
 }
 
 .opex-chip button {

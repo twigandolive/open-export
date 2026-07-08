@@ -55,9 +55,22 @@ class OPEX_Rest {
 		) );
 
 		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})', array(
-			'methods'             => WP_REST_Server::DELETABLE,
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'get_job' ),
+			),
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'delete_job' ),
+			),
+		) );
+
+		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/rerun', array(
+			'methods'             => WP_REST_Server::CREATABLE,
 			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'delete_job' ),
+			'callback'            => array( __CLASS__, 'rerun_job' ),
 		) );
 
 		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/run', array(
@@ -76,6 +89,25 @@ class OPEX_Rest {
 			'methods'             => WP_REST_Server::READABLE,
 			'permission_callback' => $can,
 			'callback'            => array( __CLASS__, 'download' ),
+		) );
+
+		register_rest_route( self::NS, '/templates', array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'templates' ),
+			),
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'save_template' ),
+			),
+		) );
+
+		register_rest_route( self::NS, '/templates/(?P<id>t[a-f0-9]{12})', array(
+			'methods'             => WP_REST_Server::DELETABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'delete_template' ),
 		) );
 	}
 
@@ -128,6 +160,19 @@ class OPEX_Rest {
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	public static function get_job( WP_REST_Request $request ) {
+		$job = OPEX_Jobs::get( (string) $request['id'] );
+		if ( ! $job ) {
+			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		}
+		return rest_ensure_response( OPEX_Jobs::expose_detail( $job ) );
+	}
+
+	public static function rerun_job( WP_REST_Request $request ) {
+		$result = OPEX_Exporter::rerun( (string) $request['id'] );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+	}
+
 	public static function delete_job( WP_REST_Request $request ): WP_REST_Response {
 		OPEX_Jobs::delete( (string) $request['id'] );
 		return rest_ensure_response( array( 'deleted' => true ) );
@@ -172,5 +217,26 @@ class OPEX_Rest {
 		}
 		// phpcs:enable
 		exit;
+	}
+
+	public static function templates(): WP_REST_Response {
+		$list = array_map( array( 'OPEX_Templates', 'expose' ), array_values( OPEX_Templates::all() ) );
+		usort( $list, static function ( $a, $b ) {
+			return $b['updated'] <=> $a['updated'];
+		} );
+		return rest_ensure_response( $list );
+	}
+
+	public static function save_template( WP_REST_Request $request ) {
+		$body   = (array) $request->get_json_params();
+		$name   = sanitize_text_field( (string) ( $body['name'] ?? '' ) );
+		$config = (array) ( $body['config'] ?? array() );
+		$result = OPEX_Templates::save( $name, $config );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+	}
+
+	public static function delete_template( WP_REST_Request $request ): WP_REST_Response {
+		OPEX_Templates::delete( (string) $request['id'] );
+		return rest_ensure_response( array( 'deleted' => true ) );
 	}
 }

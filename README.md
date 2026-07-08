@@ -2,7 +2,7 @@
 
 Export anything from your WordPress database — every feature included, no add-ons, no upsells, ever.
 
-**Version:** 1.0.1  
+**Version:** 1.1.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** [GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -32,17 +32,15 @@ No Pro version. No add-ons to buy. This is all of it.
 
 1. **Pick a source** — post type, users, comments, taxonomy, or a raw database table.
 2. **Filter** (optional) — add rules, preview the first five rows, and check the match count.
-3. **Choose fields** — search and select columns; order follows your click order.
-4. **Export** — pick CSV, JSON, or XML, set pacing, and download when finished.
+3. **Choose fields** — search and select columns; drag chips to reorder; edit chip labels for custom headers.
+4. **Export** — pick CSV, JSON, or XML (with delimiter choice for CSV), set pacing, and download when finished.
 
-Recent exports appear in job history for re-download (kept up to 30 days).
+Save setups as templates, load them later, or re-run exports from history.
 
 ## What's coming
 
 See [ROADMAP.md](ROADMAP.md) for the full plan. Highlights:
 
-- **Soon:** saved export templates, one-click re-run, CSV delimiter choice, drag-to-reorder columns
-- **1.1:** custom column headers, relative date filters
 - **1.5:** scheduled exports, webhooks, WP-CLI, WooCommerce line-item exports
 - **2.0:** custom XML templates, value transforms, FTP delivery, multisite export
 
@@ -74,6 +72,10 @@ wp i18n make-pot . languages/open-export.pot --domain=open-export
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for full release notes.
+
+### 1.1.0
+
+Saved templates, one-click re-run, drag-to-reorder columns, custom headers, CSV delimiters, and relative date filters.
 
 ### 1.0.1
 

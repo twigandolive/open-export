@@ -213,7 +213,7 @@ class OPEX_Query {
 	private static function rule_clause( array $src, array $rule, array &$args ): string {
 		$field = (string) ( $rule['field'] ?? '' );
 		$op    = (string) ( $rule['op'] ?? 'eq' );
-		$value = (string) ( $rule['value'] ?? '' );
+		$value = self::resolve_filter_value( (string) ( $rule['value'] ?? '' ) );
 
 		if ( ! in_array( $op, self::OPS, true ) ) {
 			return '';
@@ -258,6 +258,47 @@ class OPEX_Query {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Turn relative date tokens into concrete datetimes for filter values.
+	 * Supports: last N days/weeks/months, today, yesterday, this/last month/year, -N days.
+	 */
+	private static function resolve_filter_value( string $value ): string {
+		$value = trim( $value );
+		if ( '' === $value ) {
+			return $value;
+		}
+
+		$lower = strtolower( $value );
+
+		if ( preg_match( '/^last\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)$/i', $value, $matches ) ) {
+			$n    = (int) $matches[1];
+			$unit = rtrim( strtolower( $matches[2] ), 's' ) . 's';
+			$ts   = strtotime( '-' . $n . ' ' . $unit );
+			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+		}
+
+		$phrases = array(
+			'today'      => 'today',
+			'yesterday'  => 'yesterday',
+			'this month' => 'first day of this month',
+			'last month' => 'first day of last month',
+			'this year'  => 'first day of january this year',
+			'last year'  => 'first day of january last year',
+		);
+
+		if ( isset( $phrases[ $lower ] ) ) {
+			$ts = strtotime( $phrases[ $lower ] );
+			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+		}
+
+		if ( preg_match( '/^-\d+\s+(day|days|week|weeks|month|months|year|years)$/i', $value ) ) {
+			$ts = strtotime( $value );
+			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+		}
+
+		return $value;
 	}
 
 	/** Direct comparison against a validated column reference. */

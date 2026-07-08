@@ -19,14 +19,14 @@ abstract class OPEX_Writer {
 		$this->headers = $headers;
 	}
 
-	public static function make( string $format, string $path, array $headers ): OPEX_Writer {
+	public static function make( string $format, string $path, array $headers, array $options = array() ): OPEX_Writer {
 		switch ( $format ) {
 			case 'json':
 				return new OPEX_Writer_JSON( $path, $headers );
 			case 'xml':
 				return new OPEX_Writer_XML( $path, $headers );
 			default:
-				return new OPEX_Writer_CSV( $path, $headers );
+				return new OPEX_Writer_CSV( $path, $headers, (string) ( $options['csv_delimiter'] ?? ',' ) );
 		}
 	}
 
@@ -48,11 +48,18 @@ abstract class OPEX_Writer {
 
 class OPEX_Writer_CSV extends OPEX_Writer {
 
+	private string $delimiter;
+
+	public function __construct( string $path, array $headers, string $delimiter = ',' ) {
+		parent::__construct( $path, $headers );
+		$this->delimiter = in_array( $delimiter, array( ',', ';', "\t" ), true ) ? $delimiter : ',';
+	}
+
 	public function start(): void {
 		$handle = $this->open();
 		// UTF-8 BOM so Excel opens accented characters correctly.
 		fwrite( $handle, "\xEF\xBB\xBF" );
-		fputcsv( $handle, array_values( $this->headers ) );
+		fputcsv( $handle, array_values( $this->headers ), $this->delimiter );
 		fclose( $handle );
 	}
 
@@ -63,7 +70,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 			foreach ( array_keys( $this->headers ) as $field ) {
 				$line[] = $this->guard( (string) ( $row[ $field ] ?? '' ) );
 			}
-			fputcsv( $handle, $line );
+			fputcsv( $handle, $line, $this->delimiter );
 		}
 		fclose( $handle );
 	}

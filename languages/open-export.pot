@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Open Export 1.0.1\n"
-"Report-Msgid-Bugs-To: https://twigandolive.com/support/\n"
+"Project-Id-Version: Open Export 1.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/open-export\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-08T21:24:55+00:00\n"
+"POT-Creation-Date: 2026-07-08T21:47:35+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: open-export\n"
@@ -18,7 +18,7 @@ msgstr ""
 #: open-export.php
 #: includes/class-opex-admin.php:15
 #: includes/class-opex-admin.php:16
-#: open-export.php:92
+#: open-export.php:93
 msgid "Open Export"
 msgstr ""
 
@@ -107,35 +107,45 @@ msgstr ""
 msgid "Pick at least one field to export."
 msgstr ""
 
-#: includes/class-opex-exporter.php:133
-#: includes/class-opex-exporter.php:203
+#: includes/class-opex-exporter.php:173
+#: includes/class-opex-exporter.php:243
+#: includes/class-opex-exporter.php:256
+#: includes/class-opex-rest.php:166
 msgid "Export job not found."
 msgstr ""
 
-#: includes/class-opex-exporter.php:153
+#: includes/class-opex-exporter.php:193
 msgid "This export is already running in another window."
 msgstr ""
 
-#: includes/class-opex-exporter.php:218
+#: includes/class-opex-exporter.php:247
+msgid "Export rerun"
+msgstr ""
+
+#: includes/class-opex-exporter.php:271
 msgid "Could not write the export file. Check that the uploads directory is writable."
 msgstr ""
 
-#: includes/class-opex-exporter.php:220
+#: includes/class-opex-exporter.php:273
 msgid "Export failed. Try resuming or starting a new export."
 msgstr ""
 
-#: includes/class-opex-rest.php:143
+#: includes/class-opex-rest.php:188
 msgid "Export is not ready."
 msgstr ""
 
-#: includes/class-opex-rest.php:148
+#: includes/class-opex-rest.php:193
 msgid "Export file no longer exists."
 msgstr ""
 
-#: open-export.php:115
-msgid "https://twigandolive.com/open-export/"
+#: includes/class-opex-templates.php:27
+msgid "Template name is required."
 msgstr ""
 
 #: open-export.php:116
+msgid "https://twigandolive.com/open-export/"
+msgstr ""
+
+#: open-export.php:117
 msgid "Documentation"
 msgstr ""

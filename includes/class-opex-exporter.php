@@ -53,12 +53,31 @@ class OPEX_Exporter {
 		$format = in_array( $raw['format'] ?? '', self::FORMATS, true ) ? $raw['format'] : 'csv';
 		$batch  = max( 10, min( 5000, (int) ( $raw['batch_size'] ?? 500 ) ) );
 
+		$delim_key = sanitize_key( (string) ( $raw['csv_delimiter'] ?? 'comma' ) );
+		if ( ! in_array( $delim_key, array( 'comma', 'semicolon', 'tab' ), true ) ) {
+			$delim_key = 'comma';
+		}
+
+		$labels = array();
+		foreach ( (array) ( $raw['column_labels'] ?? array() ) as $field_id => $label ) {
+			$field_id = (string) $field_id;
+			if ( ! in_array( $field_id, $fields, true ) ) {
+				continue;
+			}
+			$label = sanitize_text_field( (string) $label );
+			if ( '' !== $label ) {
+				$labels[ $field_id ] = $label;
+			}
+		}
+
 		return array(
-			'source'     => $source,
-			'fields'     => $fields,
-			'filters'    => $filters,
-			'format'     => $format,
-			'batch_size' => $batch,
+			'source'        => $source,
+			'fields'        => $fields,
+			'filters'       => $filters,
+			'format'        => $format,
+			'batch_size'    => $batch,
+			'csv_delimiter' => $delim_key,
+			'column_labels' => $labels,
 		);
 	}
 
@@ -66,21 +85,42 @@ class OPEX_Exporter {
 	 * Unique, human-readable output keys for the chosen fields:
 	 * "meta:_sku" → "_sku", colliding names get a numeric suffix.
 	 */
-	public static function header_map( array $fields ): array {
+	public static function header_map( array $fields, array $custom = array() ): array {
 		$headers = array();
 		$used    = array();
 		foreach ( $fields as $field ) {
-			$label = (string) preg_replace( '/^(core|meta|tax|computed|col):/', '', $field );
-			$base  = $label;
-			$n     = 2;
+			if ( isset( $custom[ $field ] ) && '' !== trim( (string) $custom[ $field ] ) ) {
+				$label = sanitize_text_field( (string) $custom[ $field ] );
+			} else {
+				$label = (string) preg_replace( '/^(core|meta|tax|computed|col):/', '', $field );
+			}
+			$base = $label;
+			$n    = 2;
 			while ( isset( $used[ $label ] ) ) {
 				$label = $base . '_' . $n;
 				$n++;
 			}
-			$used[ $label ]     = true;
-			$headers[ $field ]  = $label;
+			$used[ $label ]    = true;
+			$headers[ $field ] = $label;
 		}
 		return $headers;
+	}
+
+	/** Map delimiter key to the character used by fputcsv. */
+	public static function csv_delimiter_char( string $key ): string {
+		$map = array(
+			'comma'     => ',',
+			'semicolon' => ';',
+			'tab'       => "\t",
+		);
+		return $map[ $key ] ?? ',';
+	}
+
+	/** Writer options derived from a sanitized config. */
+	public static function writer_options( array $config ): array {
+		return array(
+			'csv_delimiter' => self::csv_delimiter_char( $config['csv_delimiter'] ?? 'comma' ),
+		);
 	}
 
 	/** Create a job: count, open the file, write the format header. */
@@ -96,7 +136,7 @@ class OPEX_Exporter {
 			'id'        => $id,
 			'label'     => $label,
 			'config'    => $config,
-			'headers'   => self::header_map( $config['fields'] ),
+			'headers'   => self::header_map( $config['fields'], $config['column_labels'] ?? array() ),
 			'status'    => 'running',
 			'total'     => $total,
 			'processed' => 0,
@@ -108,7 +148,7 @@ class OPEX_Exporter {
 		);
 
 		try {
-			$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'] );
+			$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'], self::writer_options( $config ) );
 			$writer->start();
 		} catch ( Exception $e ) {
 			self::log_exception( $e );
@@ -156,7 +196,7 @@ class OPEX_Exporter {
 		}
 
 		$config = $job['config'];
-		$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'] );
+		$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'], self::writer_options( $config ) );
 
 		try {
 			$batch = OPEX_Query::batch( $config, (int) $job['cursor'], (int) $config['batch_size'] );
@@ -196,6 +236,19 @@ class OPEX_Exporter {
 		return OPEX_Jobs::expose( $job );
 	}
 
+	/** Create a new export job from a previous job's stored config. */
+	public static function rerun( string $id ) {
+		$job = OPEX_Jobs::get( $id );
+		if ( ! $job || empty( $job['config'] ) ) {
+			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		}
+
+		$label = sanitize_text_field( (string) ( $job['label'] ?? '' ) );
+		$label = $label ? $label . ' (rerun)' : __( 'Export rerun', 'open-export' );
+
+		return self::create( $job['config'], $label );
+	}
+
 	/** Pause a running job so it can be resumed later. */
 	public static function pause( string $id ) {
 		$job = OPEX_Jobs::get( $id );
@@ -230,7 +283,7 @@ class OPEX_Exporter {
 
 	/** First rows + total, so people see their data before committing. */
 	public static function preview( array $config ): array {
-		$headers = self::header_map( $config['fields'] );
+		$headers = self::header_map( $config['fields'], $config['column_labels'] ?? array() );
 		$batch   = OPEX_Query::batch( $config, 0, 5 );
 
 		$rows = array();

@@ -2,26 +2,6 @@
 
 Upcoming work for Open Export, grouped by target release. Plans may change as feedback comes in.
 
-## Up next
-
-Work starting immediately, ahead of version 1.1:
-
-- Saved export templates — load a previous configuration from job history
-- One-click re-run — repeat an export without rebuilding filters and fields
-- CSV delimiter choice — comma, semicolon, or tab
-- Drag-to-reorder columns — reorder selected fields on chips
-
-## Version 1.1
-
-Workflow polish for repeat exports and spreadsheet handoff:
-
-- Saved export templates
-- One-click re-run from job history
-- Column drag reorder
-- Column rename (custom headers)
-- CSV delimiter choice
-- Relative date filters (`last 30 days`, `this month`, `-7 days`, and similar tokens)
-
 ## Version 1.5
 
 Scheduled exports and richer WooCommerce order data:

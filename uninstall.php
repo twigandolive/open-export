@@ -7,6 +7,7 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 delete_option( 'opex_jobs' );
+delete_option( 'opex_templates' );
 delete_transient( 'opex_table_status' );
 delete_transient( 'opex_acf_keys' );
 

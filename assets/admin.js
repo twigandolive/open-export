@@ -28,23 +28,33 @@
 		fast:     { batch: 2000, delay: 50,   label: 'Fast — VPS / dedicated' },
 	};
 
+	const DELIMITERS = {
+		comma:     { label: 'Comma', char: ',' },
+		semicolon: { label: 'Semicolon', char: ';' },
+		tab:       { label: 'Tab', char: 'Tab' },
+	};
+
 	const state = {
 		sources: [],
 		sourceId: null,
 		sourceLabel: '',
 		fieldGroups: [],
-		selected: [],           // ordered field ids
+		selected: [],
+		columnLabels: {},
 		relation: 'AND',
-		rules: [],               // {field, op, value}
+		rules: [],
 		format: 'csv',
+		csvDelimiter: 'comma',
 		pacing: 'balanced',
 		label: '',
 		search: '',
 		preview: null,
 		previewBusy: false,
 		jobs: [],
-		running: null,           // {id, processed, total, status}
+		templates: [],
+		running: null,
 		stopRequested: false,
+		dragChipId: null,
 		error: '',
 	};
 
@@ -72,6 +82,29 @@
 		return id.replace(/^(core|meta|tax|computed|col):/, '');
 	}
 
+	function chipDisplayLabel(id) {
+		return state.columnLabels[id] || fieldLabel(id);
+	}
+
+	function inferPacing(batchSize) {
+		const batch = batchSize || 400;
+		let match = 'balanced';
+		Object.keys(PACING).forEach(function (k) {
+			if (PACING[k].batch === batch) match = k;
+		});
+		return match;
+	}
+
+	function findSourceLabel(id) {
+		let label = id;
+		state.sources.forEach(function (group) {
+			group.items.forEach(function (item) {
+				if (item.id === id) label = item.label;
+			});
+		});
+		return label;
+	}
+
 	/* ------------------------------------------------------------------ */
 	/* Render                                                              */
 	/* ------------------------------------------------------------------ */
@@ -81,6 +114,7 @@
 			header() +
 			stepSource() +
 			(state.sourceId ? stepFilters() + stepFields() + stepExport() : '') +
+			savedTemplates() +
 			recentJobs();
 		bindDynamic();
 	}
@@ -119,7 +153,6 @@
 		state.fieldGroups.forEach(function (group) {
 			opts += '<optgroup label="' + esc(group.label) + '">';
 			group.fields.forEach(function (f) {
-				// Computed fields other than roles can't be filtered server-side.
 				if (f.id.indexOf('computed:') === 0 && f.id !== 'computed:roles') return;
 				opts += '<option value="' + esc(f.id) + '">' + esc(f.label) + '</option>';
 			});
@@ -136,7 +169,7 @@
 				'<select class="opex-rule-op">' + OPS.map(function (op) {
 					return '<option value="' + op[0] + '"' + (rule.op === op[0] ? ' selected' : '') + '>' + esc(op[1]) + '</option>';
 				}).join('') + '</select>' +
-				'<input type="text" class="opex-rule-value" placeholder="value"' + (noValue ? ' disabled' : '') + ' value="' + esc(rule.value) + '">' +
+				'<input type="text" class="opex-rule-value" placeholder="value or last 30 days, this month…"' + (noValue ? ' disabled' : '') + ' value="' + esc(rule.value) + '">' +
 				'<button type="button" class="opex-icon-btn" data-act="del-rule" data-i="' + i + '" title="Remove rule">&times;</button>' +
 				'</div>';
 		}).join('');
@@ -154,6 +187,7 @@
 
 		const body =
 			'<div class="opex-rules">' + rows + '</div>' + relation +
+			'<p class="opex-hint">Date filters accept tokens like <code>last 30 days</code>, <code>this month</code>, <code>-7 days</code> (use with ≥ or ≤).</p>' +
 			'<div class="opex-row-actions">' +
 			'<button type="button" class="button" data-act="add-rule">+ Add filter</button> ' +
 			'<button type="button" class="button button-secondary" data-act="preview"' + (state.previewBusy ? ' disabled' : '') + '>Preview first 5 rows</button>' +
@@ -200,11 +234,12 @@
 		}).join('');
 
 		const chips = state.selected.length
-			? '<div class="opex-chips">' + state.selected.map(function (id) {
-				return '<span class="opex-chip">' + esc(fieldLabel(id)) +
+			? '<div class="opex-chips" id="opex-chips">' + state.selected.map(function (id) {
+				return '<span class="opex-chip" draggable="true" data-id="' + esc(id) + '" title="Drag to reorder">' +
+					'<input type="text" class="opex-chip-label" data-id="' + esc(id) + '" value="' + esc(chipDisplayLabel(id)) + '">' +
 					'<button type="button" data-act="chip-remove" data-id="' + esc(id) + '" title="Remove">&times;</button></span>';
 			}).join('') + '</div>'
-			: '<p class="opex-muted">Nothing selected yet — tick fields below. Column order follows your click order.</p>';
+			: '<p class="opex-muted">Nothing selected yet — tick fields below. Drag chips to reorder; edit labels for custom column headers.</p>';
 
 		const body =
 			'<div class="opex-selected"><strong>' + state.selected.length + ' selected</strong>' + chips + '</div>' +
@@ -225,7 +260,7 @@
 				'<p class="opex-progress-text">' + fmtNum(running.processed) + ' / ' + fmtNum(running.total) + ' rows (' + pct + '%)' +
 				(running.status === 'running' ? ' <button type="button" class="opex-link" data-act="stop">stop</button>' : '') + '</p>';
 			if (running.status === 'done') {
-				progress += '<p><a class="button button-primary" href="' + downloadUrl(running.id) + '">⬇ Download ' + esc(running.filename || 'file') + '</a></p>';
+				progress += '<p><a class="button button-primary" href="' + downloadUrl(running.id) + '">Download ' + esc(running.filename || 'file') + '</a></p>';
 			}
 			if (running.status === 'error') {
 				progress += '<p class="opex-error">' + esc(running.error || 'Export failed.') + ' <button type="button" class="opex-link" data-act="resume">retry / resume</button></p>';
@@ -235,12 +270,20 @@
 			}
 		}
 
+		const delimBlock = state.format === 'csv'
+			? '<div><label class="opex-label">CSV delimiter</label><div class="opex-pills">' +
+				Object.keys(DELIMITERS).map(function (k) {
+					return '<button type="button" class="opex-pill' + (state.csvDelimiter === k ? ' is-on' : '') + '" data-act="delimiter" data-v="' + k + '">' + esc(DELIMITERS[k].label) + '</button>';
+				}).join('') + '</div></div>'
+			: '';
+
 		const body =
 			'<div class="opex-export-grid">' +
 			'<div><label class="opex-label">Format</label><div class="opex-pills">' +
 			['csv', 'json', 'xml'].map(function (f) {
 				return '<button type="button" class="opex-pill' + (state.format === f ? ' is-on' : '') + '" data-act="format" data-v="' + f + '">' + f.toUpperCase() + '</button>';
 			}).join('') + '</div></div>' +
+			delimBlock +
 			'<div><label class="opex-label">Pacing <span class="opex-muted">(be kind to your host)</span></label><div class="opex-pills">' +
 			Object.keys(PACING).map(function (k) {
 				return '<button type="button" class="opex-pill' + (state.pacing === k ? ' is-on' : '') + '" data-act="pacing" data-v="' + k + '" title="' + esc(PACING[k].label) + '">' +
@@ -249,11 +292,36 @@
 			'<div><label class="opex-label" for="opex-label-input">Export name</label>' +
 			'<input type="text" id="opex-label-input" placeholder="' + esc(state.sourceLabel || 'my-export') + '" value="' + esc(state.label) + '"></div>' +
 			'</div>' +
-			'<p class="opex-run"><button type="button" class="button button-primary button-hero" data-act="export"' +
-			((state.running && state.running.status === 'running') || !state.selected.length ? ' disabled' : '') + '>Export ' + esc(state.sourceLabel) + '</button></p>' +
+			'<p class="opex-run">' +
+			'<button type="button" class="button button-primary button-hero" data-act="export"' +
+			((state.running && state.running.status === 'running') || !state.selected.length ? ' disabled' : '') + '>Export ' + esc(state.sourceLabel) + '</button> ' +
+			'<button type="button" class="button" data-act="save-template"' + (!state.selected.length ? ' disabled' : '') + '>Save as template</button>' +
+			'</p>' +
 			progress;
 
 		return section(4, 'Export', body);
+	}
+
+	function savedTemplates() {
+		if (!state.templates.length) return '';
+		const rows = state.templates.map(function (tpl) {
+			const date = new Date(tpl.updated * 1000).toLocaleString();
+			return '<tr>' +
+				'<td>' + esc(tpl.name) + '</td>' +
+				'<td>' + esc((tpl.config.source || '').replace(/^(posts:|terms:|table:)/, '')) + '</td>' +
+				'<td>' + esc(tpl.config.format.toUpperCase()) + '</td>' +
+				'<td>' + esc(date) + '</td>' +
+				'<td class="opex-job-actions">' +
+				'<button type="button" class="button button-small" data-act="load-template" data-id="' + esc(tpl.id) + '">Load</button> ' +
+				'<button type="button" class="button button-small" data-act="del-template" data-id="' + esc(tpl.id) + '">Delete</button>' +
+				'</td></tr>';
+		}).join('');
+
+		const body = '<div class="opex-table-scroll"><table class="opex-table">' +
+			'<thead><tr><th>Name</th><th>Source</th><th>Format</th><th>Saved</th><th></th></tr></thead>' +
+			'<tbody>' + rows + '</tbody></table></div>';
+
+		return section('T', 'Saved templates', body, true);
 	}
 
 	function recentJobs() {
@@ -271,6 +339,8 @@
 				'<td>' + esc(date) + '</td>' +
 				'<td>' + status + '</td>' +
 				'<td class="opex-job-actions">' +
+				'<button type="button" class="button button-small" data-act="load-job" data-id="' + esc(job.id) + '">Load</button> ' +
+				'<button type="button" class="button button-small" data-act="rerun-job" data-id="' + esc(job.id) + '">Re-run</button> ' +
 				(job.status === 'done' ? '<a class="button button-small" href="' + downloadUrl(job.id) + '">Download</a> ' : '') +
 				'<button type="button" class="button button-small" data-act="del-job" data-id="' + esc(job.id) + '">Delete</button>' +
 				'</td></tr>';
@@ -280,7 +350,7 @@
 			'<thead><tr><th>Name</th><th>Format</th><th>Rows</th><th>Size</th><th>Created</th><th>Status</th><th></th></tr></thead>' +
 			'<tbody>' + rows + '</tbody></table></div>';
 
-		return section('&#128190;', 'Recent exports', body, true);
+		return section('H', 'Recent exports', body, true);
 	}
 
 	function section(num, title, body, plain) {
@@ -290,8 +360,6 @@
 	}
 
 	function downloadUrl(id) {
-		// restRoot is rest_url('open-export/v1') — either .../wp-json/open-export/v1
-		// or, with plain permalinks, .../?rest_route=/open-export/v1
 		const base = BOOT.restRoot.replace(/\/$/, '') + '/jobs/' + id + '/download';
 		const sep = base.indexOf('?') === -1 ? '?' : '&';
 		return base + sep + '_wpnonce=' + encodeURIComponent(BOOT.restNonce);
@@ -302,7 +370,6 @@
 	/* ------------------------------------------------------------------ */
 
 	function bindDynamic() {
-		// Rule selects need their current values applied (options render generic).
 		document.querySelectorAll('.opex-rule').forEach(function (el) {
 			const i = parseInt(el.dataset.i, 10);
 			const rule = state.rules[i];
@@ -316,8 +383,7 @@
 				rule.op = this.value;
 				render();
 			});
-			const valueInput = el.querySelector('.opex-rule-value');
-			valueInput.addEventListener('input', function () { rule.value = this.value; });
+			el.querySelector('.opex-rule-value').addEventListener('input', function () { rule.value = this.value; });
 		});
 
 		const relation = document.getElementById('opex-relation');
@@ -340,6 +406,57 @@
 		if (label) {
 			label.addEventListener('input', function () { state.label = this.value; });
 		}
+
+		document.querySelectorAll('.opex-chip-label').forEach(function (input) {
+			input.addEventListener('input', function () {
+				const id = input.dataset.id;
+				const val = input.value.trim();
+				if (val && val !== fieldLabel(id)) {
+					state.columnLabels[id] = val;
+				} else {
+					delete state.columnLabels[id];
+				}
+			});
+			input.addEventListener('click', function (e) { e.stopPropagation(); });
+			input.addEventListener('dragstart', function (e) { e.stopPropagation(); });
+		});
+
+		document.querySelectorAll('.opex-chip').forEach(function (chip) {
+			chip.addEventListener('dragstart', function (e) {
+				state.dragChipId = chip.dataset.id;
+				chip.classList.add('is-dragging');
+				e.dataTransfer.effectAllowed = 'move';
+			});
+			chip.addEventListener('dragend', function () {
+				chip.classList.remove('is-dragging');
+				state.dragChipId = null;
+			});
+			chip.addEventListener('dragover', function (e) {
+				e.preventDefault();
+				chip.classList.add('is-drag-over');
+			});
+			chip.addEventListener('dragleave', function () {
+				chip.classList.remove('is-drag-over');
+			});
+			chip.addEventListener('drop', function (e) {
+				e.preventDefault();
+				chip.classList.remove('is-drag-over');
+				const from = state.dragChipId;
+				const to = chip.dataset.id;
+				if (from && to && from !== to) {
+					reorderSelected(from, to);
+					render();
+				}
+			});
+		});
+	}
+
+	function reorderSelected(fromId, toId) {
+		const from = state.selected.indexOf(fromId);
+		const to = state.selected.indexOf(toId);
+		if (from === -1 || to === -1) return;
+		state.selected.splice(from, 1);
+		state.selected.splice(to, 0, fromId);
 	}
 
 	function debounce(fn, ms) {
@@ -360,10 +477,16 @@
 		if (act === 'chip-remove') return toggleField(btn.dataset.id, false);
 		if (act === 'toggle-group') return toggleGroup(btn.dataset.group);
 		if (act === 'format') { state.format = btn.dataset.v; return render(); }
+		if (act === 'delimiter') { state.csvDelimiter = btn.dataset.v; return render(); }
 		if (act === 'pacing') { state.pacing = btn.dataset.v; return render(); }
 		if (act === 'export') return startExport();
+		if (act === 'save-template') return saveTemplate();
 		if (act === 'stop') return pauseExport();
 		if (act === 'resume') return resumeExport();
+		if (act === 'load-job') return loadJob(btn.dataset.id);
+		if (act === 'rerun-job') return rerunJob(btn.dataset.id);
+		if (act === 'load-template') return loadTemplate(btn.dataset.id);
+		if (act === 'del-template') return deleteTemplate(btn.dataset.id);
 		if (act === 'del-job') return deleteJob(btn.dataset.id);
 		if (act === 'dismiss-error') { state.error = ''; return render(); }
 	});
@@ -373,6 +496,7 @@
 		state.sourceLabel = label;
 		state.fieldGroups = [];
 		state.selected = [];
+		state.columnLabels = {};
 		state.rules = [];
 		state.preview = null;
 		state.running = null;
@@ -381,7 +505,6 @@
 		apiFetch({ path: '/' + BOOT.restBase + '/fields?source=' + encodeURIComponent(id) })
 			.then(function (groups) {
 				state.fieldGroups = groups;
-				// Preselect the core fields so one click already exports something useful.
 				const core = groups.find(function (g) { return g.label.indexOf('Core') === 0 || g.label === 'Columns'; });
 				state.selected = core ? core.fields.map(function (f) { return f.id; }) : [];
 				render();
@@ -389,10 +512,77 @@
 			.catch(fail);
 	}
 
+	function applyConfig(cfg, label) {
+		state.sourceId = cfg.source;
+		state.sourceLabel = findSourceLabel(cfg.source);
+		state.selected = (cfg.fields || []).slice();
+		state.columnLabels = Object.assign({}, cfg.column_labels || {});
+		state.relation = (cfg.filters && cfg.filters.relation) || 'AND';
+		state.rules = (cfg.filters && cfg.filters.rules) ? cfg.filters.rules.map(function (r) {
+			return { field: r.field || '', op: r.op || 'eq', value: r.value || '' };
+		}) : [];
+		state.format = cfg.format || 'csv';
+		state.csvDelimiter = cfg.csv_delimiter || 'comma';
+		state.pacing = inferPacing(cfg.batch_size);
+		state.label = label || '';
+		state.preview = null;
+		state.running = null;
+		state.error = '';
+
+		return apiFetch({ path: '/' + BOOT.restBase + '/fields?source=' + encodeURIComponent(cfg.source) })
+			.then(function (groups) {
+				state.fieldGroups = groups;
+				render();
+			});
+	}
+
+	function loadJob(id) {
+		apiFetch({ path: '/' + BOOT.restBase + '/jobs/' + id })
+			.then(function (job) {
+				return applyConfig(job.config, job.label);
+			})
+			.catch(fail);
+	}
+
+	function loadTemplate(id) {
+		const tpl = state.templates.find(function (t) { return t.id === id; });
+		if (!tpl) return;
+		applyConfig(tpl.config, tpl.name).catch(fail);
+	}
+
+	function rerunJob(id) {
+		state.error = '';
+		state.stopRequested = false;
+		apiFetch({ path: '/' + BOOT.restBase + '/jobs/' + id + '/rerun', method: 'POST' })
+			.then(function (job) {
+				state.running = job;
+				render();
+				if (job.status !== 'done') pump(job.id);
+				else refreshJobs();
+			})
+			.catch(fail);
+	}
+
+	function saveTemplate() {
+		if (!state.selected.length) return;
+		const name = window.prompt('Template name');
+		if (!name || !name.trim()) return;
+		apiFetch({
+			path: '/' + BOOT.restBase + '/templates',
+			method: 'POST',
+			data: { name: name.trim(), config: config() },
+		})
+			.then(function () { refreshTemplates(); })
+			.catch(fail);
+	}
+
 	function toggleField(id, on) {
 		const at = state.selected.indexOf(id);
 		if (on && at === -1) state.selected.push(id);
-		if (!on && at !== -1) state.selected.splice(at, 1);
+		if (!on && at !== -1) {
+			state.selected.splice(at, 1);
+			delete state.columnLabels[id];
+		}
 		render();
 	}
 
@@ -404,18 +594,27 @@
 		const allOn = visible.every(function (f) { return state.selected.indexOf(f.id) !== -1; });
 		visible.forEach(function (f) {
 			const at = state.selected.indexOf(f.id);
-			if (allOn && at !== -1) state.selected.splice(at, 1);
+			if (allOn && at !== -1) {
+				state.selected.splice(at, 1);
+				delete state.columnLabels[f.id];
+			}
 			if (!allOn && at === -1) state.selected.push(f.id);
 		});
 		render();
 	}
 
 	function config() {
+		const labels = {};
+		state.selected.forEach(function (id) {
+			if (state.columnLabels[id]) labels[id] = state.columnLabels[id];
+		});
 		return {
 			source: state.sourceId,
 			fields: state.selected,
 			filters: { relation: state.relation, rules: state.rules.filter(function (r) { return r.field; }) },
 			format: state.format,
+			csv_delimiter: state.csvDelimiter,
+			column_labels: labels,
 			batch_size: PACING[state.pacing].batch,
 			label: state.label || state.sourceLabel,
 		};
@@ -464,11 +663,8 @@
 			.catch(fail);
 	}
 
-	/** Drive the job one batch at a time, sleeping between calls per pacing. */
 	function pump(id) {
-		if (state.stopRequested) {
-			return;
-		}
+		if (state.stopRequested) return;
 		apiFetch({ path: '/' + BOOT.restBase + '/jobs/' + id + '/run', method: 'POST' })
 			.then(function (job) {
 				state.running = job;
@@ -492,6 +688,12 @@
 			.catch(function () {});
 	}
 
+	function refreshTemplates() {
+		apiFetch({ path: '/' + BOOT.restBase + '/templates' })
+			.then(function (templates) { state.templates = templates; render(); })
+			.catch(function () {});
+	}
+
 	function deleteJob(id) {
 		apiFetch({ path: '/' + BOOT.restBase + '/jobs/' + id, method: 'DELETE' })
 			.then(function () {
@@ -501,15 +703,21 @@
 			.catch(fail);
 	}
 
+	function deleteTemplate(id) {
+		apiFetch({ path: '/' + BOOT.restBase + '/templates/' + id, method: 'DELETE' })
+			.then(refreshTemplates)
+			.catch(fail);
+	}
+
 	function fail(err) {
 		state.error = (err && err.message) || 'Something went wrong.';
 		render();
 	}
 
-	/* Boot */
 	render();
 	apiFetch({ path: '/' + BOOT.restBase + '/sources' })
 		.then(function (sources) { state.sources = sources; render(); })
 		.catch(fail);
 	refreshJobs();
+	refreshTemplates();
 })();
