@@ -1,9 +1,8 @@
 <?php
 /**
- * Job lifecycle: create writes the file header and counts rows; each run()
- * processes exactly one batch and returns, so a single PHP worker is never
- * held longer than one batch. The browser paces the calls — that's the
- * host-friendly throttle.
+ * Job lifecycle: create() writes the file header and counts rows; each run()
+ * processes exactly one batch and returns. The client paces run() calls, so
+ * no PHP worker is held longer than one batch.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -31,7 +30,7 @@ class OPEX_Exporter {
 			if ( preg_match( '/^col:(.+)$/', $field, $matches ) && OPEX_Query::is_forbidden_column( $matches[1] ) ) {
 				continue;
 			}
-			$fields[] = wp_unslash( $field );
+			$fields[] = $field;
 		}
 		if ( ! $fields ) {
 			return new WP_Error( 'opex_no_fields', __( 'Pick at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
@@ -44,9 +43,9 @@ class OPEX_Exporter {
 		}
 		foreach ( array_slice( (array) ( $raw_f['rules'] ?? array() ), 0, 20 ) as $rule ) {
 			$filters['rules'][] = array(
-				'field' => wp_unslash( sanitize_text_field( (string) ( $rule['field'] ?? '' ) ) ),
+				'field' => sanitize_text_field( (string) ( $rule['field'] ?? '' ) ),
 				'op'    => sanitize_key( (string) ( $rule['op'] ?? 'eq' ) ),
-				'value' => wp_unslash( (string) ( $rule['value'] ?? '' ) ),
+				'value' => (string) ( $rule['value'] ?? '' ),
 			);
 		}
 
@@ -158,7 +157,7 @@ class OPEX_Exporter {
 		if ( 0 === $total ) {
 			$writer->finish();
 			$job['status']   = 'done';
-			$job['filesize'] = (int) @filesize( OPEX_Jobs::file_path( $job ) );
+			$job['filesize'] = self::output_size( $job );
 		}
 
 		OPEX_Jobs::save( $job );
@@ -218,7 +217,7 @@ class OPEX_Exporter {
 			$writer->finish();
 			$job['status']   = 'done';
 			$job['total']    = max( (int) $job['total'], (int) $job['processed'] );
-			$job['filesize'] = (int) @filesize( OPEX_Jobs::file_path( $job ) );
+			$job['filesize'] = self::output_size( $job );
 		}
 
 		// A pause request may have landed while this batch was processing.
@@ -262,6 +261,12 @@ class OPEX_Exporter {
 		return OPEX_Jobs::expose( $job );
 	}
 
+	/** Size of the finished export file, without PHP warnings if it vanished. */
+	private static function output_size( array $job ): int {
+		$path = OPEX_Jobs::file_path( $job );
+		return file_exists( $path ) ? (int) filesize( $path ) : 0;
+	}
+
 	/** User-safe export error text; full detail is logged server-side. */
 	private static function public_error_message( Exception $e ): string {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -281,7 +286,7 @@ class OPEX_Exporter {
 		}
 	}
 
-	/** First rows + total, so people see their data before committing. */
+	/** First rows and total count for the preview step. */
 	public static function preview( array $config ): array {
 		$headers = self::header_map( $config['fields'], $config['column_labels'] ?? array() );
 		$batch   = OPEX_Query::batch( $config, 0, 5 );
@@ -289,7 +294,7 @@ class OPEX_Exporter {
 		$rows = array();
 		foreach ( $batch['items'] as $item ) {
 			$row = array();
-			foreach ( $headers as $field => $label ) {
+			foreach ( array_keys( $headers ) as $field ) {
 				$value = (string) ( $item[ $field ] ?? '' );
 				if ( function_exists( 'mb_strimwidth' ) ) {
 					$value = mb_strimwidth( $value, 0, 200, '…', 'UTF-8' );
