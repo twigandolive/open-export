@@ -68,7 +68,7 @@ class OPEX_Jobs {
 		}
 	}
 
-	/** The public shape sent to the UI — no server paths leak out. */
+	/** Public job shape for the UI; excludes server paths. */
 	public static function expose( array $job ): array {
 		return array(
 			'id'        => $job['id'],

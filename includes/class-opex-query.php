@@ -44,7 +44,7 @@ class OPEX_Query {
 
 	/**
 	 * Validate and decompose a source id like "posts:product" or "table:wp_options".
-	 * Returns null when the source does not exist — nothing downstream trusts input.
+	 * Returns null for unknown sources; downstream code never trusts raw input.
 	 */
 	public static function parse_source( string $source_id ): ?array {
 		if ( 'users' === $source_id ) {
@@ -91,9 +91,9 @@ class OPEX_Query {
 
 	/**
 	 * Fetch one batch. Returns:
-	 *   items  — list of assoc arrays keyed by field id, in $config['fields'] order
-	 *   cursor — opaque int to pass back for the next batch
-	 *   done   — true when the source is exhausted
+	 *   items:  list of assoc arrays keyed by field id, in $config['fields'] order
+	 *   cursor: opaque int to pass back for the next batch
+	 *   done:   true when the source is exhausted
 	 */
 	public static function batch( array $config, int $cursor, int $limit ): array {
 		global $wpdb;
@@ -127,7 +127,7 @@ class OPEX_Query {
 		$rows = $wpdb->get_results( $sql );
 		$rows = is_array( $rows ) ? $rows : array();
 
-		// Belt and braces: strip credential columns even if SELECT * slipped them in.
+		// Strip credential columns even if SELECT * included them.
 		foreach ( $rows as $row ) {
 			foreach ( self::FORBIDDEN as $col ) {
 				unset( $row->$col );
@@ -237,7 +237,7 @@ class OPEX_Query {
 			return self::value_condition( '`' . str_replace( '`', '', $col ) . '`', $op, $value, $args );
 		}
 
-		// Meta rule, e.g. meta:_sku — EXISTS / NOT EXISTS subquery.
+		// Meta rule, e.g. meta:_sku; EXISTS / NOT EXISTS subquery.
 		if ( 0 === strpos( $field, 'meta:' ) && 'table' !== $src['type'] ) {
 			return self::meta_clause( $src, substr( $field, 5 ), $op, $value, $args );
 		}
@@ -355,9 +355,8 @@ class OPEX_Query {
 	}
 
 	/**
-	 * Meta comparisons run as EXISTS subqueries; negative operators become
-	 * NOT EXISTS of the positive form so "not equals" also matches rows
-	 * that have no such meta key at all — which is what people mean.
+	 * Meta comparisons run as EXISTS subqueries. Negative operators become
+	 * NOT EXISTS of the positive form, so rows without the meta key also match.
 	 */
 	private static function meta_clause( array $src, string $key, string $op, string $value, array &$args ): string {
 		global $wpdb;
@@ -678,7 +677,7 @@ class OPEX_Query {
 		return $out;
 	}
 
-	/** Serialized meta becomes readable JSON instead of PHP soup. */
+	/** Decode serialized values to JSON for readable output. */
 	private static function flatten( $value ): string {
 		if ( is_null( $value ) ) {
 			return '';

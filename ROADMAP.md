@@ -32,8 +32,8 @@ Advanced shaping, delivery, and multi-site support:
 
 Deliberately out of scope:
 
-- **Custom PHP / `eval()` snippets** — unacceptable security risk with user-supplied code
-- **Excel native (XLS / XLSX)** — heavy dependency and memory use; CSV with UTF-8 BOM opens correctly in Excel
-- **Direct cloud spreadsheet sync** — OAuth complexity; webhooks cover most automation needs
-- **Full re-import companion** — a separate product; exports will always include ID and stable keys for standard import workflows
-- **WordPress WXR export** — already provided by WordPress core
+- **Custom PHP / `eval()` snippets**: unacceptable security risk with user-supplied code
+- **Excel native (XLS / XLSX)**: heavy dependency and memory use; CSV with UTF-8 BOM opens correctly in Excel
+- **Direct cloud spreadsheet sync**: OAuth complexity; webhooks cover most automation needs
+- **Full re-import companion**: a separate product; exports will always include ID and stable keys for standard import workflows
+- **WordPress WXR export**: already provided by WordPress core

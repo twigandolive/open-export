@@ -1,6 +1,6 @@
 <?php
 /**
- * Saved export templates — named configs users can reload or re-run.
+ * Saved export templates: named configs users can reload or re-run.
  */
 
 defined( 'ABSPATH' ) || exit;
