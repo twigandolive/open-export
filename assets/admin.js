@@ -1,12 +1,13 @@
 /**
- * Open Export admin app. No framework, no build step — one state object,
- * render functions, delegated events, and wp.apiFetch (which attaches the
- * REST nonce automatically).
+ * Open Export admin app: one state object, render functions, delegated
+ * events, and wp.apiFetch (attaches the REST nonce). All strings flow
+ * through wp.i18n and are escaped on output.
  */
 (function () {
 	'use strict';
 
 	const apiFetch = window.wp.apiFetch;
+	const { __, _n, sprintf } = window.wp.i18n;
 	const BOOT = window.OPEX_BOOT || {};
 
 	if ( apiFetch && BOOT.restNonce ) {
@@ -14,24 +15,29 @@
 	}
 
 	const OPS = [
-		['eq', 'equals'], ['neq', 'does not equal'],
-		['contains', 'contains'], ['not_contains', 'does not contain'],
-		['starts_with', 'starts with'], ['ends_with', 'ends with'],
+		['eq', __( 'equals', 'open-export' )],
+		['neq', __( 'does not equal', 'open-export' )],
+		['contains', __( 'contains', 'open-export' )],
+		['not_contains', __( 'does not contain', 'open-export' )],
+		['starts_with', __( 'starts with', 'open-export' )],
+		['ends_with', __( 'ends with', 'open-export' )],
 		['gt', '>'], ['gte', '≥'], ['lt', '<'], ['lte', '≤'],
-		['in', 'is one of (comma list)'], ['not_in', 'is not one of (comma list)'],
-		['empty', 'is empty'], ['not_empty', 'is not empty'],
+		['in', __( 'is one of (comma list)', 'open-export' )],
+		['not_in', __( 'is not one of (comma list)', 'open-export' )],
+		['empty', __( 'is empty', 'open-export' )],
+		['not_empty', __( 'is not empty', 'open-export' )],
 	];
 
 	const PACING = {
-		gentle:   { batch: 100,  delay: 1500, label: 'Gentle — shared / budget hosting' },
-		balanced: { batch: 400,  delay: 400,  label: 'Balanced — most sites' },
-		fast:     { batch: 2000, delay: 50,   label: 'Fast — VPS / dedicated' },
+		gentle:   { batch: 100,  delay: 1500, name: __( 'Gentle', 'open-export' ),   label: __( 'Gentle: shared / budget hosting', 'open-export' ) },
+		balanced: { batch: 400,  delay: 400,  name: __( 'Balanced', 'open-export' ), label: __( 'Balanced: most sites', 'open-export' ) },
+		fast:     { batch: 2000, delay: 50,   name: __( 'Fast', 'open-export' ),     label: __( 'Fast: VPS / dedicated', 'open-export' ) },
 	};
 
 	const DELIMITERS = {
-		comma:     { label: 'Comma', char: ',' },
-		semicolon: { label: 'Semicolon', char: ';' },
-		tab:       { label: 'Tab', char: 'Tab' },
+		comma:     { label: __( 'Comma', 'open-export' ) },
+		semicolon: { label: __( 'Semicolon', 'open-export' ) },
+		tab:       { label: __( 'Tab', 'open-export' ) },
 	};
 
 	const state = {
@@ -75,7 +81,7 @@
 	}
 
 	function fmtSize(bytes) {
-		if (!bytes) return '—';
+		if (!bytes) return '-';
 		const units = ['B', 'KB', 'MB', 'GB'];
 		let i = 0, v = bytes;
 		while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
@@ -126,18 +132,26 @@
 
 	function header() {
 		return '<div class="opex-hero">' +
-			'<h1><span class="dashicons dashicons-database-export"></span> Open Export</h1>' +
-			'<p>Pick a source, filter it down, choose your fields, export. Everything included — no add-ons, ever.</p>' +
-			(state.error ? '<div class="opex-error">' + esc(state.error) + ' <button type="button" class="opex-link" data-act="dismiss-error">dismiss</button></div>' : '') +
+			'<h1><span class="dashicons dashicons-database-export"></span> ' + esc( __( 'Open Export', 'open-export' ) ) + '</h1>' +
+			'<p>' + esc( __( 'Pick a source, filter it down, choose your fields, export. Everything included; no add-ons, ever.', 'open-export' ) ) + '</p>' +
+			(state.error ? '<div class="opex-error">' + esc(state.error) + ' <button type="button" class="opex-link" data-act="dismiss-error">' + esc( __( 'dismiss', 'open-export' ) ) + '</button></div>' : '') +
 			'</div>';
+	}
+
+	/** Escape a translated step, then swap the %1$s/%2$s markers for <strong> tags. */
+	function introStep(text) {
+		return '<li>' + esc(text).replace('%1$s', '<strong>').replace('%2$s', '</strong>') + '</li>';
 	}
 
 	function introSteps() {
 		return '<div class="opex-intro-steps-wrap">' +
 			'<ol class="opex-intro-steps">' +
-			'<li><strong>Select</strong> what you want to export.</li>' +
-			'<li><strong>Filter</strong> your data when the next sections appear below <span class="opex-muted">(optional)</span>.</li>' +
-			'<li><strong>Export</strong> — choose fields, set your parameters, and download.</li>' +
+			/* translators: %1$s / %2$s wrap the leading verb in <strong> tags. */
+			introStep( __( '%1$sSelect%2$s what you want to export.', 'open-export' ) ) +
+			/* translators: %1$s / %2$s wrap the leading verb in <strong> tags. */
+			introStep( __( '%1$sFilter%2$s your data when the next sections appear below (optional).', 'open-export' ) ) +
+			/* translators: %1$s / %2$s wrap the leading verb in <strong> tags. */
+			introStep( __( '%1$sExport%2$s: choose fields, set your parameters, and download.', 'open-export' ) ) +
 			'</ol></div>';
 	}
 
@@ -172,17 +186,17 @@
 	function stepSource() {
 		let body;
 		if (!state.sources.length) {
-			body = '<p class="opex-muted">Loading sources…</p>';
+			body = '<p class="opex-muted">' + esc( __( 'Loading sources…', 'open-export' ) ) + '</p>';
 		} else {
 			const tabs =
 				'<div class="opex-source-tabs">' +
-				'<button type="button" class="opex-tab' + (state.sourceTab === 'standard' ? ' is-on' : '') + '" data-act="source-tab" data-v="standard">Common sources</button>' +
-				'<button type="button" class="opex-tab' + (state.sourceTab === 'advanced' ? ' is-on' : '') + '" data-act="source-tab" data-v="advanced">Advanced — database tables</button>' +
+				'<button type="button" class="opex-tab' + (state.sourceTab === 'standard' ? ' is-on' : '') + '" data-act="source-tab" data-v="standard">' + esc( __( 'Common sources', 'open-export' ) ) + '</button>' +
+				'<button type="button" class="opex-tab' + (state.sourceTab === 'advanced' ? ' is-on' : '') + '" data-act="source-tab" data-v="advanced">' + esc( __( 'Advanced: database tables', 'open-export' ) ) + '</button>' +
 				'</div>';
 
 			const search = state.sourceTab === 'advanced'
-				? '<input type="search" id="opex-source-search" class="opex-search" placeholder="Search tables…" value="' + esc(state.sourceSearch) + '">'
-				: '<p class="opex-muted opex-tab-hint">Post types, users, comments, and taxonomies. Plugin tables live under Advanced.</p>';
+				? '<input type="search" id="opex-source-search" class="opex-search" placeholder="' + esc( __( 'Search tables…', 'open-export' ) ) + '" value="' + esc(state.sourceSearch) + '">'
+				: '<p class="opex-muted opex-tab-hint">' + esc( __( 'Post types, users, comments, and taxonomies. Plugin tables live under Advanced.', 'open-export' ) ) + '</p>';
 
 			body = tabs + search + visibleSourceGroups().map(function (group) {
 				const items = filteredSourceItems(group.items);
@@ -198,17 +212,19 @@
 					(items.length
 						? '<div class="opex-cards">' + items.map(function (item) {
 							const on = state.sourceId === item.id;
+							/* translators: %s: formatted row count. */
+							const count = sprintf( _n( '%s row', '%s rows', item.count || 0, 'open-export' ), fmtNum(item.count) );
 							return '<button type="button" class="opex-card' + (on ? ' is-on' : '') + '" data-act="pick-source" data-id="' + esc(item.id) + '" data-label="' + esc(item.label) + '">' +
 								'<span class="dashicons ' + esc(item.icon) + '"></span>' +
 								'<span class="opex-card-label">' + esc(item.label) + '</span>' +
-								'<span class="opex-card-count">' + fmtNum(item.count) + ' rows</span>' +
+								'<span class="opex-card-count">' + esc(count) + '</span>' +
 								'</button>';
 						}).join('') + '</div>'
-						: '<p class="opex-muted">No matches.</p>') +
+						: '<p class="opex-muted">' + esc( __( 'No matches.', 'open-export' ) ) + '</p>') +
 					'</div></div>';
 			}).join('');
 		}
-		return section(1, 'What do you want to export?', body);
+		return section(1, esc( __( 'What do you want to export?', 'open-export' ) ), body);
 	}
 
 	function filterFieldOptions() {
@@ -232,31 +248,35 @@
 				'<select class="opex-rule-op">' + OPS.map(function (op) {
 					return '<option value="' + op[0] + '"' + (rule.op === op[0] ? ' selected' : '') + '>' + esc(op[1]) + '</option>';
 				}).join('') + '</select>' +
-				'<input type="text" class="opex-rule-value" placeholder="value or last 30 days, this month…"' + (noValue ? ' disabled' : '') + ' value="' + esc(rule.value) + '">' +
-				'<button type="button" class="opex-icon-btn" data-act="del-rule" data-i="' + i + '" title="Remove rule">&times;</button>' +
+				'<input type="text" class="opex-rule-value" placeholder="' + esc( __( 'value or last 30 days, this month…', 'open-export' ) ) + '"' + (noValue ? ' disabled' : '') + ' value="' + esc(rule.value) + '">' +
+				'<button type="button" class="opex-icon-btn" data-act="del-rule" data-i="' + i + '" title="' + esc( __( 'Remove rule', 'open-export' ) ) + '">&times;</button>' +
 				'</div>';
 		}).join('');
 
 		const relation = state.rules.length > 1
-			? '<div class="opex-relation">Match <select id="opex-relation">' +
-				'<option value="AND"' + (state.relation === 'AND' ? ' selected' : '') + '>ALL rules (AND)</option>' +
-				'<option value="OR"' + (state.relation === 'OR' ? ' selected' : '') + '>ANY rule (OR)</option>' +
+			? '<div class="opex-relation">' + esc( __( 'Match', 'open-export' ) ) + ' <select id="opex-relation">' +
+				'<option value="AND"' + (state.relation === 'AND' ? ' selected' : '') + '>' + esc( __( 'ALL rules (AND)', 'open-export' ) ) + '</option>' +
+				'<option value="OR"' + (state.relation === 'OR' ? ' selected' : '') + '>' + esc( __( 'ANY rule (OR)', 'open-export' ) ) + '</option>' +
 				'</select></div>'
 			: '';
 
 		const preview = state.preview
 			? previewTable()
-			: '<p class="opex-muted">' + (state.previewBusy ? 'Loading preview…' : 'Use Preview to sanity-check before exporting.') + '</p>';
+			: '<p class="opex-muted">' + esc(state.previewBusy ? __( 'Loading preview…', 'open-export' ) : __( 'Use Preview to sanity-check before exporting.', 'open-export' )) + '</p>';
+
+		/* translators: %1$s, %2$s, %3$s: literal date-filter tokens; they must stay in English because the server parses them. */
+		const hint = sprintf( esc( __( 'Date filters accept tokens like %1$s, %2$s, %3$s (use with ≥ or ≤).', 'open-export' ) ),
+			'<code>last 30 days</code>', '<code>this month</code>', '<code>-7 days</code>' );
 
 		const body =
 			'<div class="opex-rules">' + rows + '</div>' + relation +
-			'<p class="opex-hint">Date filters accept tokens like <code>last 30 days</code>, <code>this month</code>, <code>-7 days</code> (use with ≥ or ≤).</p>' +
+			'<p class="opex-hint">' + hint + '</p>' +
 			'<div class="opex-row-actions">' +
-			'<button type="button" class="button" data-act="add-rule">+ Add filter</button> ' +
-			'<button type="button" class="button button-secondary" data-act="preview"' + (state.previewBusy ? ' disabled' : '') + '>Preview first 5 rows</button>' +
+			'<button type="button" class="button" data-act="add-rule">' + esc( __( '+ Add filter', 'open-export' ) ) + '</button> ' +
+			'<button type="button" class="button button-secondary" data-act="preview"' + (state.previewBusy ? ' disabled' : '') + '>' + esc( __( 'Preview first 5 rows', 'open-export' ) ) + '</button>' +
 			'</div>' + preview;
 
-		return section(2, 'Filter it down <span class="opex-optional">(optional)</span>', body);
+		return section(2, esc( __( 'Filter it down', 'open-export' ) ) + ' <span class="opex-optional">' + esc( __( '(optional)', 'open-export' ) ) + '</span>', body);
 	}
 
 	function previewTable() {
@@ -266,14 +286,16 @@
 			? p.rows.map(function (row) {
 				return '<tr>' + row.map(function (cell) { return '<td>' + esc(cell) + '</td>'; }).join('') + '</tr>';
 			}).join('')
-			: '<tr><td colspan="' + p.headers.length + '" class="opex-muted">No rows match your filters.</td></tr>';
-		return '<p class="opex-total"><strong>' + fmtNum(p.total) + '</strong> rows match.</p>' +
+			: '<tr><td colspan="' + p.headers.length + '" class="opex-muted">' + esc( __( 'No rows match your filters.', 'open-export' ) ) + '</td></tr>';
+		/* translators: %s: formatted number of matching rows. */
+		const total = sprintf( esc( _n( '%s row matches.', '%s rows match.', p.total || 0, 'open-export' ) ), '<strong>' + fmtNum(p.total) + '</strong>' );
+		return '<p class="opex-total">' + total + '</p>' +
 			'<div class="opex-table-scroll"><table class="opex-table"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 	}
 
 	function stepFields() {
 		if (!state.fieldGroups.length) {
-			return section(3, 'Pick your fields', '<p class="opex-muted">Loading fields…</p>');
+			return section(3, esc( __( 'Pick your fields', 'open-export' ) ), '<p class="opex-muted">' + esc( __( 'Loading fields…', 'open-export' ) ) + '</p>');
 		}
 
 		const q = state.search.toLowerCase();
@@ -286,7 +308,7 @@
 			return '<div class="opex-fgroup">' +
 				'<div class="opex-fgroup-head">' +
 				'<strong>' + esc(group.label) + '</strong> <span class="opex-muted">(' + fields.length + ')</span>' +
-				'<button type="button" class="opex-link" data-act="toggle-group" data-group="' + esc(group.label) + '">' + (allOn ? 'none' : 'all') + '</button>' +
+				'<button type="button" class="opex-link" data-act="toggle-group" data-group="' + esc(group.label) + '">' + esc(allOn ? __( 'none', 'open-export' ) : __( 'all', 'open-export' )) + '</button>' +
 				'</div>' +
 				'<div class="opex-checks">' + fields.map(function (f) {
 					const on = state.selected.indexOf(f.id) !== -1;
@@ -298,18 +320,21 @@
 
 		const chips = state.selected.length
 			? '<div class="opex-chips" id="opex-chips">' + state.selected.map(function (id) {
-				return '<span class="opex-chip" draggable="true" data-id="' + esc(id) + '" title="Drag to reorder">' +
+				return '<span class="opex-chip" draggable="true" data-id="' + esc(id) + '" title="' + esc( __( 'Drag to reorder', 'open-export' ) ) + '">' +
 					'<input type="text" class="opex-chip-label" data-id="' + esc(id) + '" value="' + esc(chipDisplayLabel(id)) + '">' +
-					'<button type="button" data-act="chip-remove" data-id="' + esc(id) + '" title="Remove">&times;</button></span>';
+					'<button type="button" data-act="chip-remove" data-id="' + esc(id) + '" title="' + esc( __( 'Remove', 'open-export' ) ) + '">&times;</button></span>';
 			}).join('') + '</div>'
-			: '<p class="opex-muted">Nothing selected yet — tick fields below. Drag chips to reorder; edit labels for custom column headers.</p>';
+			: '<p class="opex-muted">' + esc( __( 'Nothing selected yet; tick fields below. Drag chips to reorder; edit labels for custom column headers.', 'open-export' ) ) + '</p>';
+
+		/* translators: %d: number of selected fields. */
+		const selectedCount = sprintf( _n( '%d field selected', '%d fields selected', state.selected.length, 'open-export' ), state.selected.length );
 
 		const body =
-			'<div class="opex-selected"><strong>' + state.selected.length + ' selected</strong>' + chips + '</div>' +
-			'<input type="search" id="opex-search" class="opex-search" placeholder="Search fields…" value="' + esc(state.search) + '">' +
+			'<div class="opex-selected"><strong>' + esc(selectedCount) + '</strong>' + chips + '</div>' +
+			'<input type="search" id="opex-search" class="opex-search" placeholder="' + esc( __( 'Search fields…', 'open-export' ) ) + '" value="' + esc(state.search) + '">' +
 			groups;
 
-		return section(3, 'Pick your fields', body);
+		return section(3, esc( __( 'Pick your fields', 'open-export' ) ), body);
 	}
 
 	function stepExport() {
@@ -318,51 +343,58 @@
 
 		if (running) {
 			const pct = running.total > 0 ? Math.min(100, Math.round(running.processed / running.total * 100)) : (running.status === 'done' ? 100 : 0);
+			/* translators: %1$s: rows processed, %2$s: total rows, %3$s: percent complete. */
+			const progressText = sprintf( __( '%1$s / %2$s rows (%3$s%%)', 'open-export' ), fmtNum(running.processed), fmtNum(running.total), pct );
 			progress =
 				'<div class="opex-progress"><div class="opex-progress-bar' + (running.status === 'done' ? ' is-done' : '') + '" style="width:' + pct + '%"></div></div>' +
-				'<p class="opex-progress-text">' + fmtNum(running.processed) + ' / ' + fmtNum(running.total) + ' rows (' + pct + '%)' +
-				(running.status === 'running' ? ' <button type="button" class="opex-link" data-act="stop">stop</button>' : '') + '</p>';
+				'<p class="opex-progress-text">' + esc(progressText) +
+				(running.status === 'running' ? ' <button type="button" class="opex-link" data-act="stop">' + esc( __( 'stop', 'open-export' ) ) + '</button>' : '') + '</p>';
 			if (running.status === 'done') {
-				progress += '<p><a class="button button-primary" href="' + downloadUrl(running.id) + '">Download ' + esc(running.filename || 'file') + '</a></p>';
+				/* translators: %s: export file name. */
+				const downloadText = sprintf( __( 'Download %s', 'open-export' ), running.filename || __( 'file', 'open-export' ) );
+				progress += '<p><a class="button button-primary" href="' + downloadUrl(running.id) + '">' + esc(downloadText) + '</a></p>';
 			}
 			if (running.status === 'error') {
-				progress += '<p class="opex-error">' + esc(running.error || 'Export failed.') + ' <button type="button" class="opex-link" data-act="resume">retry / resume</button></p>';
+				progress += '<p class="opex-error">' + esc(running.error || __( 'Export failed.', 'open-export' )) + ' <button type="button" class="opex-link" data-act="resume">' + esc( __( 'retry / resume', 'open-export' ) ) + '</button></p>';
 			}
 			if (running.status === 'paused') {
-				progress += '<p class="opex-muted">Paused. <button type="button" class="opex-link" data-act="resume">resume</button></p>';
+				progress += '<p class="opex-muted">' + esc( __( 'Paused.', 'open-export' ) ) + ' <button type="button" class="opex-link" data-act="resume">' + esc( __( 'resume', 'open-export' ) ) + '</button></p>';
 			}
 		}
 
 		const delimBlock = state.format === 'csv'
-			? '<div><label class="opex-label">CSV delimiter</label><div class="opex-pills">' +
+			? '<div><label class="opex-label">' + esc( __( 'CSV delimiter', 'open-export' ) ) + '</label><div class="opex-pills">' +
 				Object.keys(DELIMITERS).map(function (k) {
 					return '<button type="button" class="opex-pill' + (state.csvDelimiter === k ? ' is-on' : '') + '" data-act="delimiter" data-v="' + k + '">' + esc(DELIMITERS[k].label) + '</button>';
 				}).join('') + '</div></div>'
 			: '';
 
+		/* translators: %s: name of the selected data source. */
+		const exportText = sprintf( __( 'Export %s', 'open-export' ), state.sourceLabel );
+
 		const body =
 			'<div class="opex-export-grid">' +
-			'<div><label class="opex-label">Format</label><div class="opex-pills">' +
+			'<div><label class="opex-label">' + esc( __( 'Format', 'open-export' ) ) + '</label><div class="opex-pills">' +
 			['csv', 'json', 'xml'].map(function (f) {
 				return '<button type="button" class="opex-pill' + (state.format === f ? ' is-on' : '') + '" data-act="format" data-v="' + f + '">' + f.toUpperCase() + '</button>';
 			}).join('') + '</div></div>' +
 			delimBlock +
-			'<div><label class="opex-label">Pacing <span class="opex-muted">(be kind to your host)</span></label><div class="opex-pills">' +
+			'<div><label class="opex-label">' + esc( __( 'Pacing', 'open-export' ) ) + ' <span class="opex-muted">' + esc( __( '(be kind to your host)', 'open-export' ) ) + '</span></label><div class="opex-pills">' +
 			Object.keys(PACING).map(function (k) {
 				return '<button type="button" class="opex-pill' + (state.pacing === k ? ' is-on' : '') + '" data-act="pacing" data-v="' + k + '" title="' + esc(PACING[k].label) + '">' +
-					k.charAt(0).toUpperCase() + k.slice(1) + '</button>';
+					esc(PACING[k].name) + '</button>';
 			}).join('') + '</div></div>' +
-			'<div><label class="opex-label" for="opex-label-input">Export name</label>' +
-			'<input type="text" id="opex-label-input" placeholder="' + esc(state.sourceLabel || 'my-export') + '" value="' + esc(state.label) + '"></div>' +
+			'<div><label class="opex-label" for="opex-label-input">' + esc( __( 'Export name', 'open-export' ) ) + '</label>' +
+			'<input type="text" id="opex-label-input" placeholder="' + esc(state.sourceLabel || __( 'my-export', 'open-export' )) + '" value="' + esc(state.label) + '"></div>' +
 			'</div>' +
 			'<p class="opex-run">' +
 			'<button type="button" class="button button-primary button-hero" data-act="export"' +
-			((state.running && state.running.status === 'running') || !state.selected.length ? ' disabled' : '') + '>Export ' + esc(state.sourceLabel) + '</button> ' +
-			'<button type="button" class="button" data-act="save-template"' + (!state.selected.length ? ' disabled' : '') + '>Save as template</button>' +
+			((state.running && state.running.status === 'running') || !state.selected.length ? ' disabled' : '') + '>' + esc(exportText) + '</button> ' +
+			'<button type="button" class="button" data-act="save-template"' + (!state.selected.length ? ' disabled' : '') + '>' + esc( __( 'Save as template', 'open-export' ) ) + '</button>' +
 			'</p>' +
 			progress;
 
-		return section(4, 'Export', body);
+		return section(4, esc( __( 'Export', 'open-export' ) ), body);
 	}
 
 	function savedTemplates() {
@@ -375,24 +407,24 @@
 				'<td>' + esc(tpl.config.format.toUpperCase()) + '</td>' +
 				'<td>' + esc(date) + '</td>' +
 				'<td class="opex-job-actions">' +
-				'<button type="button" class="button button-small" data-act="load-template" data-id="' + esc(tpl.id) + '">Load</button> ' +
-				'<button type="button" class="button button-small" data-act="del-template" data-id="' + esc(tpl.id) + '">Delete</button>' +
+				'<button type="button" class="button button-small" data-act="load-template" data-id="' + esc(tpl.id) + '">' + esc( __( 'Load', 'open-export' ) ) + '</button> ' +
+				'<button type="button" class="button button-small" data-act="del-template" data-id="' + esc(tpl.id) + '">' + esc( __( 'Delete', 'open-export' ) ) + '</button>' +
 				'</td></tr>';
 		}).join('');
 
 		const body = '<div class="opex-table-scroll"><table class="opex-table">' +
-			'<thead><tr><th>Name</th><th>Source</th><th>Format</th><th>Saved</th><th></th></tr></thead>' +
+			'<thead><tr><th>' + esc( __( 'Name', 'open-export' ) ) + '</th><th>' + esc( __( 'Source', 'open-export' ) ) + '</th><th>' + esc( __( 'Format', 'open-export' ) ) + '</th><th>' + esc( __( 'Saved', 'open-export' ) ) + '</th><th></th></tr></thead>' +
 			'<tbody>' + rows + '</tbody></table></div>';
 
-		return section('T', 'Saved templates', body, true);
+		return section('T', esc( __( 'Saved templates', 'open-export' ) ), body, true);
 	}
 
 	function recentJobs() {
 		if (!state.jobs.length) return '';
 		const rows = state.jobs.map(function (job) {
 			const date = new Date(job.created * 1000).toLocaleString();
-			const status = job.status === 'done' ? '<span class="opex-badge is-done">done</span>'
-				: job.status === 'error' ? '<span class="opex-badge is-error">error</span>'
+			const status = job.status === 'done' ? '<span class="opex-badge is-done">' + esc( __( 'done', 'open-export' ) ) + '</span>'
+				: job.status === 'error' ? '<span class="opex-badge is-error">' + esc( __( 'error', 'open-export' ) ) + '</span>'
 				: '<span class="opex-badge">' + esc(job.status) + '</span>';
 			return '<tr>' +
 				'<td>' + esc(job.label) + '</td>' +
@@ -402,18 +434,18 @@
 				'<td>' + esc(date) + '</td>' +
 				'<td>' + status + '</td>' +
 				'<td class="opex-job-actions">' +
-				'<button type="button" class="button button-small" data-act="load-job" data-id="' + esc(job.id) + '">Load</button> ' +
-				'<button type="button" class="button button-small" data-act="rerun-job" data-id="' + esc(job.id) + '">Re-run</button> ' +
-				(job.status === 'done' ? '<a class="button button-small" href="' + downloadUrl(job.id) + '">Download</a> ' : '') +
-				'<button type="button" class="button button-small" data-act="del-job" data-id="' + esc(job.id) + '">Delete</button>' +
+				'<button type="button" class="button button-small" data-act="load-job" data-id="' + esc(job.id) + '">' + esc( __( 'Load', 'open-export' ) ) + '</button> ' +
+				'<button type="button" class="button button-small" data-act="rerun-job" data-id="' + esc(job.id) + '">' + esc( __( 'Re-run', 'open-export' ) ) + '</button> ' +
+				(job.status === 'done' ? '<a class="button button-small" href="' + downloadUrl(job.id) + '">' + esc( __( 'Download', 'open-export' ) ) + '</a> ' : '') +
+				'<button type="button" class="button button-small" data-act="del-job" data-id="' + esc(job.id) + '">' + esc( __( 'Delete', 'open-export' ) ) + '</button>' +
 				'</td></tr>';
 		}).join('');
 
 		const body = '<div class="opex-table-scroll"><table class="opex-table">' +
-			'<thead><tr><th>Name</th><th>Format</th><th>Rows</th><th>Size</th><th>Created</th><th>Status</th><th></th></tr></thead>' +
+			'<thead><tr><th>' + esc( __( 'Name', 'open-export' ) ) + '</th><th>' + esc( __( 'Format', 'open-export' ) ) + '</th><th>' + esc( __( 'Rows', 'open-export' ) ) + '</th><th>' + esc( __( 'Size', 'open-export' ) ) + '</th><th>' + esc( __( 'Created', 'open-export' ) ) + '</th><th>' + esc( __( 'Status', 'open-export' ) ) + '</th><th></th></tr></thead>' +
 			'<tbody>' + rows + '</tbody></table></div>';
 
-		return section('H', 'Recent exports', body, true);
+		return section('H', esc( __( 'Recent exports', 'open-export' ) ), body, true);
 	}
 
 	function section(num, title, body, plain) {
@@ -657,7 +689,7 @@
 
 	function saveTemplate() {
 		if (!state.selected.length) return;
-		const name = window.prompt('Template name');
+		const name = window.prompt( __( 'Template name', 'open-export' ) );
 		if (!name || !name.trim()) return;
 		apiFetch({
 			path: '/' + BOOT.restBase + '/templates',
@@ -713,7 +745,7 @@
 	}
 
 	function doPreview() {
-		if (!state.selected.length) { state.error = 'Pick at least one field first.'; return render(); }
+		if (!state.selected.length) { state.error = __( 'Pick at least one field first.', 'open-export' ); return render(); }
 		state.previewBusy = true;
 		state.preview = null;
 		render();
@@ -769,7 +801,7 @@
 			})
 			.catch(function (err) {
 				state.running.status = 'error';
-				state.running.error = (err && err.message) || 'Request failed — your host may have hiccupped. Resume to continue where it left off.';
+				state.running.error = (err && err.message) || __( 'Request failed. Resume to continue where the export left off.', 'open-export' );
 				render();
 			});
 	}
@@ -802,7 +834,7 @@
 	}
 
 	function fail(err) {
-		state.error = (err && err.message) || 'Something went wrong.';
+		state.error = (err && err.message) || __( 'Something went wrong.', 'open-export' );
 		render();
 	}
 

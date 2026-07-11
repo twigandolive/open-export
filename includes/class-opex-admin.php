@@ -26,7 +26,8 @@ class OPEX_Admin {
 		}
 
 		wp_enqueue_style( 'opex-admin', OPEX_URL . 'assets/admin.css', array(), OPEX_VERSION );
-		wp_enqueue_script( 'opex-admin', OPEX_URL . 'assets/admin.js', array( 'wp-api-fetch' ), OPEX_VERSION, true );
+		wp_enqueue_script( 'opex-admin', OPEX_URL . 'assets/admin.js', array( 'wp-api-fetch', 'wp-i18n' ), OPEX_VERSION, true );
+		wp_set_script_translations( 'opex-admin', 'open-export' );
 
 		wp_localize_script( 'opex-admin', 'OPEX_BOOT', array(
 			'restBase'  => 'open-export/v1',
