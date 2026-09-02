@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Open Export
- * Plugin URI:        https://twigandolive.com/open-export/
+ * Plugin URI:        https://twigandolive.com/shop/
  * Description:       Export anything from your WordPress database: posts, users, comments, terms, or any table. Smart field discovery, powerful filters, host-friendly pacing, and CSV / JSON / XML output. Everything included. No upsells, no add-ons.
  * Version:           1.3.1
  * Requires at least: 7.0
@@ -102,9 +102,10 @@ function opex_plugin_row_meta( array $links, string $file ): array {
 		return $links;
 	}
 
+	// WordPress already renders a "Visit plugin site" link from Plugin URI, so
+	// these add only what it does not cover.
 	$meta = array(
-		array( __( 'https://twigandolive.com/open-export/', 'open-export' ), __( 'Documentation', 'open-export' ) ),
-		array( __( 'https://twigandolive.com/contact', 'open-export' ), __( 'Support', 'open-export' ) ),
+		array( __( 'https://twigandolive.com/contact-twig-and-olive/', 'open-export' ), __( 'Support', 'open-export' ) ),
 		array( __( 'https://twigandolive.com/privacy-policy/', 'open-export' ), __( 'Privacy', 'open-export' ) ),
 	);
 
