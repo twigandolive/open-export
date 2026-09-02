@@ -85,6 +85,28 @@ class OPEX_Catalog {
 			);
 		}
 
+		// WooCommerce orders lead the Content group, and the raw shop_order post
+		// type moves out of it: two tiles with identical row counts, one of them
+		// empty under HPOS, is a trap rather than a choice. The raw post type
+		// stays available under Advanced for anyone who wants it.
+		$woo         = OPEX_Woo::source_item();
+		$raw_orders  = array();
+		if ( $woo ) {
+			foreach ( $content as $i => $item ) {
+				if ( 'posts:' . OPEX_Woo::LEGACY_POST_TYPE === $item['id'] ) {
+					$item['label'] = sprintf(
+						/* translators: %s: the post type name, e.g. "Orders". */
+						__( '%s (raw post type)', 'open-export' ),
+						$item['label']
+					);
+					$raw_orders[] = $item;
+					unset( $content[ $i ] );
+				}
+			}
+			$content = array_values( $content );
+			array_unshift( $content, $woo );
+		}
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- cheap COUNTs for the picker UI.
 		$user_count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
 		$comment_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->comments}" );
@@ -104,7 +126,7 @@ class OPEX_Catalog {
 			);
 		}
 
-		$tables = array();
+		$tables = $raw_orders;
 		foreach ( self::table_status() as $table ) {
 			$tables[] = array(
 				'id'    => 'table:' . $table['name'],
@@ -112,14 +134,6 @@ class OPEX_Catalog {
 				'icon'  => 'dashicons-database',
 				'count' => $table['rows'],
 			);
-		}
-
-		// WooCommerce orders lead the Content group: under HPOS the shop_order
-		// post type still exists but holds no rows, so the generic entry below
-		// would export an empty file.
-		$woo = OPEX_Woo::source_item();
-		if ( $woo ) {
-			array_unshift( $content, $woo );
 		}
 
 		return array(

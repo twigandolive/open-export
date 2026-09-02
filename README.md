@@ -2,7 +2,7 @@
 
 Export anything from your WordPress database: every feature included, no add-ons, no upsells, ever.
 
-**Version:** 1.3.0  
+**Version:** 1.3.1  
 **Requires WordPress:** 7.0+  
 **Requires PHP:** 7.4+  
 **License:** [GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -102,6 +102,10 @@ The `languages/` directory ships empty on purpose: strings are extracted and ser
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for full release notes.
+
+### 1.3.1
+
+Fixes the assistant round trip: the capability document now describes every Common source, WooCommerce field ids work on both storage engines, and an unresolvable recipe is reported rather than applied as an empty selection.
 
 ### 1.3.0
 

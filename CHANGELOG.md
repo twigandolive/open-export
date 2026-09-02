@@ -5,6 +5,25 @@ All notable changes to Open Export are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-09-02
+
+Corrective release for the assistant round trip: hand the capability document
+to an AI, get a recipe back, paste it in, get the right CSV. Every change is
+additive; `opex_schema` stays at version 1.
+
+### Fixed
+
+- **The capability document described no fields.** `sources` was populated only when a source was already selected, so the default export carried an empty array — and an assistant told to use only the ids listed there had nothing to work from. Every Common source is now inlined with its full field catalogue and date columns. Advanced raw tables are inlined only on request, and any source whose custom-field list was shortened says so and gives the URL for its complete list.
+- **WooCommerce field ids changed with the storage engine.** `woo:` ids resolved only under High-Performance Order Storage; on a store keeping orders in `wp_posts` the catalogue emitted `core:`/`meta:` ids instead, so a recipe written against `woo:billing_state` matched nothing. The `woo:` ids are now canonical on both engines and the query layer translates them to the underlying post column or meta key. Pre-1.3.1 configs using the raw `core:`/`meta:` ids keep working.
+- **A recipe that resolved to nothing was applied as an empty selection.** Import now returns a resolution report naming every field, filter and date-range id as matched, substituted or dropped, each with a reason and a nearest-match suggestion. A recipe where nothing resolves is refused and the report shown, so the empty-selection state is unreachable through import.
+- **Orders appeared twice in Common sources** — once as WooCommerce Orders and once as the raw `shop_order` post type, with identical counts and one of them empty under HPOS. The raw post type moves to Advanced, labelled as such.
+- Legacy `_date_paid` and `_date_completed` are now usable as date-range columns. They hold UNIX timestamps, so they compare against epochs computed in PHP from the site's timezone rather than through `UNIX_TIMESTAMP()`, whose result depends on the database session timezone.
+
+### Added
+
+- Order fields `shipping_email` and `is_guest`, completing the coverage a shop report needs: order number, dates, status and currency; full billing and shipping address sets; payment method and title; order, tax, shipping, shipping-tax and discount totals; customer id and guest flag.
+- Every field in the capability document carries a `type` (`text`, `number`, `date`, `id`, `enum`, `email`, `url`, `boolean`), and every source carries its `group`, `tier` and row count, so the document mirrors the Common/Advanced split the picker draws and an assistant steers ordinary requests to Common sources.
+
 ## [1.3.0] - 2026-09-02
 
 ### Added

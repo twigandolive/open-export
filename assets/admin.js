@@ -76,6 +76,8 @@
 		aiRecipe: '',
 		aiNotes: [],
 		aiStatus: '',
+		aiStatusKind: '',
+		aiReport: null,
 	};
 
 	const app = document.getElementById('opex-app');
@@ -221,7 +223,9 @@
 			}).join('') + '</ul>'
 			: '';
 
-		const status = state.aiStatus ? '<p class="opex-ai-status">' + esc(state.aiStatus) + '</p>' : '';
+		const status = state.aiStatus
+			? '<p class="opex-ai-status' + (state.aiStatusKind ? ' is-' + esc(state.aiStatusKind) : '') + '">' + esc(state.aiStatus) + '</p>'
+			: '';
 
 		/* translators: %s: the selected source name, e.g. "WooCommerce Orders". */
 		const scopeNote = state.sourceId
@@ -247,7 +251,7 @@
 			'<textarea id="opex-ai-recipe" class="opex-ai-textarea" rows="7" spellcheck="false" placeholder="' + esc( '{ "source": "woo:orders", "fields": [ ... ] }' ) + '">' + esc(state.aiRecipe) + '</textarea>' +
 			'<div class="opex-row-actions">' +
 			'<button type="button" class="button button-primary" data-act="ai-apply"' + (state.aiBusy ? ' disabled' : '') + '>' + esc( __( 'Apply recipe', 'open-export' ) ) + '</button>' +
-			'</div>' + status + notes +
+			'</div>' + status + resolutionReport() + notes +
 			'</div></div>';
 
 		return '<section class="opex-section opex-ai">' +
@@ -255,6 +259,64 @@
 			esc( __( 'Work with an AI assistant', 'open-export' ) ) +
 			' <button type="button" class="opex-link opex-ai-close" data-act="ai-toggle">' + esc( __( 'hide', 'open-export' ) ) + '</button></h2>' +
 			'<div class="opex-section-body">' + body + '</div></section>';
+	}
+
+	/**
+	 * Every id the recipe asked for, and what became of it. An assistant is
+	 * guessing from a document, so a wrong guess has to be visible rather than
+	 * silently absent from the export.
+	 */
+	function resolutionReport() {
+		const r = state.aiReport;
+		if (!r) return '';
+
+		const row = function (id, status, reason, suggestion, extra) {
+			const cls = status === 'matched' ? 'is-matched' : (status === 'substituted' ? 'is-sub' : 'is-dropped');
+			const mark = status === 'matched' ? '✓' : (status === 'substituted' ? '~' : '✕');
+			let detail = reason ? esc(reason) : '';
+			if (suggestion) {
+				/* translators: %s: a field id being offered as a closer match. */
+				detail += (detail ? ' ' : '') + sprintf( esc( __( 'Did you mean %s?', 'open-export' ) ), '<code>' + esc(suggestion) + '</code>' );
+			}
+			if (extra) {
+				/* translators: %s: the field id that was used instead. */
+				detail += (detail ? ' ' : '') + sprintf( esc( __( 'Used %s instead.', 'open-export' ) ), '<code>' + esc(extra) + '</code>' );
+			}
+			return '<tr class="' + cls + '"><td class="opex-rr-mark">' + mark + '</td>' +
+				'<td><code>' + esc(id) + '</code></td>' +
+				'<td>' + (detail || '<span class="opex-muted">' + esc( __( 'matched', 'open-export' ) ) + '</span>') + '</td></tr>';
+		};
+
+		let rows = (r.fields || []).map(function (f) {
+			return row(f.id, f.status, f.reason, f.suggestion, null);
+		}).join('');
+
+		rows += (r.filters || []).map(function (f) {
+			return row(
+				/* translators: 1: a field id, 2: a filter operator. */
+				sprintf( __( 'filter: %1$s %2$s', 'open-export' ), f.field, f.op ),
+				f.status, f.reason, f.suggestion, null
+			);
+		}).join('');
+
+		if (r.date_range) {
+			rows += row(
+				/* translators: %s: a date field id. */
+				sprintf( __( 'date range: %s', 'open-export' ), r.date_range.field || '(none)' ),
+				r.date_range.status, r.date_range.reason, r.date_range.suggestion, r.date_range.used_instead
+			);
+		}
+
+		if (!rows) return '';
+
+		const s = r.summary || {};
+		/* translators: 1: number of fields matched, 2: number requested. */
+		const head = sprintf( esc( __( '%1$d of %2$d fields resolved', 'open-export' ) ), s.fields_matched || 0, s.fields_requested || 0 );
+
+		return '<div class="opex-rr">' +
+			'<p class="opex-rr-head">' + head + '</p>' +
+			'<table class="opex-rr-table"><tbody>' + rows + '</tbody></table>' +
+			'</div>';
 	}
 
 	function stepSource() {
@@ -1055,7 +1117,9 @@
 		const text = (box ? box.value : state.aiRecipe).trim();
 		state.aiRecipe = text;
 		state.aiNotes = [];
+		state.aiReport = null;
 		state.aiStatus = '';
+		state.aiStatusKind = '';
 
 		if (!text) {
 			state.aiStatus = __( 'Paste the recipe JSON first.', 'open-export' );
@@ -1077,15 +1141,31 @@
 			.then(function (result) {
 				state.aiBusy = false;
 				state.aiNotes = result.notes || [];
+				state.aiReport = result.report || null;
+
+				// Nothing resolved: refuse rather than hand back an empty
+				// selection that looks like a successful import.
+				if (!result.ok || !result.config) {
+					state.aiStatusKind = 'error';
+					state.aiStatus = (result.report && result.report.reason) ||
+						__( 'That recipe could not be applied.', 'open-export' );
+					return render();
+				}
+
+				const s = (result.report && result.report.summary) || {};
 				return applyConfig(result.config, result.name || '').then(function () {
-					state.aiStatus = state.aiNotes.length
-						? __( 'Recipe applied, with the notes below. Review, then press Start export.', 'open-export' )
+					state.aiStatusKind = s.fields_dropped ? 'warn' : 'ok';
+					state.aiStatus = s.fields_dropped
+						/* translators: %d: number of field ids that could not be resolved. */
+						? sprintf( __( 'Recipe applied, but %d id could not be resolved and was left out. Review below, then press Start export.', 'open-export' ), s.fields_dropped )
 						: __( 'Recipe applied in full. Review the fields, then press Start export.', 'open-export' );
 					render();
 				});
 			})
 			.catch(function (err) {
 				state.aiBusy = false;
+				state.aiReport = null;
+				state.aiStatusKind = 'error';
 				state.aiStatus = (err && err.message) || __( 'That recipe could not be applied.', 'open-export' );
 				render();
 			});

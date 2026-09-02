@@ -47,6 +47,24 @@ class OPEX_Query {
 	}
 
 	/**
+	 * Translate a canonical woo: field id into the core:/meta: id that holds
+	 * the same value when orders live in wp_posts.
+	 *
+	 * This is what lets one recipe work on either storage engine: the ids in
+	 * the capability document never change, only where they are read from.
+	 */
+	private static function resolve_field( array $src, string $field ): string {
+		if ( 0 !== strpos( $field, 'woo:' ) ) {
+			return $field;
+		}
+		if ( 'posts' === $src['type'] && ! empty( $src['woo'] ) ) {
+			$legacy = OPEX_Woo::legacy_field( $field );
+			return '' !== $legacy ? $legacy : $field;
+		}
+		return $field;
+	}
+
+	/**
 	 * Whether a field id can actually resolve to a value for this source.
 	 *
 	 * This mirrors exactly what field_value() will do at read time, so it is the
@@ -57,6 +75,8 @@ class OPEX_Query {
 	 * blank cell rather than a mistake.
 	 */
 	public static function is_valid_field( array $src, string $field ): bool {
+		$field = self::resolve_field( $src, $field );
+
 		if ( 0 === strpos( $field, 'meta:' ) ) {
 			return 'table' !== $src['type'] && '' !== substr( $field, 5 );
 		}
@@ -108,7 +128,7 @@ class OPEX_Query {
 			// the shop_order post type, so every existing code path applies.
 			return OPEX_Woo::use_hpos()
 				? array( 'type' => 'woo_orders' )
-				: array( 'type' => 'posts', 'post_type' => OPEX_Woo::LEGACY_POST_TYPE );
+				: array( 'type' => 'posts', 'post_type' => OPEX_Woo::LEGACY_POST_TYPE, 'woo' => true );
 		}
 		if ( 'users' === $source_id ) {
 			return array( 'type' => 'users' );
@@ -315,6 +335,14 @@ class OPEX_Query {
 				return OPEX_Woo::hpos_date_fields();
 
 			case 'posts':
+				if ( ! empty( $src['woo'] ) ) {
+					// Orders name their dates by what they mean, plus the raw
+					// post columns for anyone who wants them.
+					return OPEX_Woo::legacy_date_fields() + array(
+						'core:post_date'     => array( 'label' => __( 'Order date (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
+						'core:post_date_gmt' => array( 'label' => __( 'Order date (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
+					);
+				}
 				return array(
 					'core:post_date'         => array( 'label' => __( 'Date published (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
 					'core:post_date_gmt'     => array( 'label' => __( 'Date published (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
@@ -388,6 +416,12 @@ class OPEX_Query {
 		}
 		$def = $defs[ $field ];
 
+		// Some order dates are not columns at all: legacy WooCommerce keeps
+		// _date_paid and _date_completed in postmeta as UNIX timestamps.
+		if ( 'meta_epoch' === ( $def['kind'] ?? 'column' ) ) {
+			return self::meta_epoch_range( $def, $from, $to, $args );
+		}
+
 		$parts = array();
 
 		$start = OPEX_Dates::boundary( $from, $def['tz'], 0 );
@@ -436,15 +470,19 @@ class OPEX_Query {
 			}
 			// Not a date we could parse. Compare it as text anyway, so the
 			// column is never cast down to a bare year.
-			return self::value_condition( $date_defs[ $field ]['sql'], $op, $value, $args, true );
+			if ( isset( $date_defs[ $field ]['sql'] ) ) {
+				return self::value_condition( $date_defs[ $field ]['sql'], $op, $value, $args, true );
+			}
 		}
 
-		// Friendly WooCommerce field rule, e.g. woo:status. Only reachable
-		// under HPOS; legacy resolves these to core:/meta: ids in the catalog.
+		// Friendly WooCommerce field rule, e.g. woo:status.
 		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
 			$map = OPEX_Woo::field_map();
 			return self::value_condition( $map[ $field ]['expr'], $op, $value, $args );
 		}
+
+		// On a legacy store the same id is a post column or a meta key.
+		$field = self::resolve_field( $src, $field );
 
 		// Core column rule, e.g. core:post_status.
 		if ( 0 === strpos( $field, 'core:' ) ) {
@@ -548,6 +586,43 @@ class OPEX_Query {
 	}
 
 	/**
+	 * Range over a meta value holding a UNIX timestamp, as legacy WooCommerce
+	 * stores _date_paid and _date_completed.
+	 *
+	 * The epochs are computed in PHP from the site's timezone, so the result
+	 * does not depend on the database session timezone the way UNIX_TIMESTAMP()
+	 * would. EXISTS also means an order with no such meta row is excluded,
+	 * which is right: an unpaid order has no paid date to fall inside a range.
+	 */
+	private static function meta_epoch_range( array $def, string $from, string $to, array &$args ): string {
+		$inner = array( 'm.meta_key = %s', "m.meta_value <> ''" );
+		$vals  = array( $def['key'] );
+
+		$start = OPEX_Dates::epoch( $from, 0 );
+		if ( null !== $start ) {
+			$inner[] = 'CAST(m.meta_value AS UNSIGNED) >= %d';
+			$vals[]  = $start;
+		}
+
+		$end = OPEX_Dates::epoch( $to, 1 );
+		if ( null !== $end ) {
+			$inner[] = 'CAST(m.meta_value AS UNSIGNED) < %d';
+			$vals[]  = $end;
+		}
+
+		if ( count( $vals ) < 2 ) {
+			return '';
+		}
+
+		foreach ( $vals as $value ) {
+			$args[] = $value;
+		}
+
+		return "EXISTS (SELECT 1 FROM {$def['table']} m WHERE m.{$def['fk']} = {$def['outer']} AND " .
+			implode( ' AND ', $inner ) . ')';
+	}
+
+	/**
 	 * Comparison against a column known to hold dates.
 	 *
 	 * A bare Y-m-d names a whole day, so the comparison is built from that day's
@@ -560,6 +635,10 @@ class OPEX_Query {
 	 */
 	private static function date_condition( array $def, string $op, string $value, array &$args ): ?string {
 		if ( ! in_array( $op, array( 'eq', 'neq', 'gt', 'gte', 'lt', 'lte' ), true ) ) {
+			return null;
+		}
+		if ( 'meta_epoch' === ( $def['kind'] ?? 'column' ) ) {
+			// Epoch meta has no column to compare against; ranges handle these.
 			return null;
 		}
 
@@ -872,10 +951,11 @@ class OPEX_Query {
 		$meta_keys = array();
 		$tax_names = array();
 		foreach ( $fields as $field ) {
-			if ( 0 === strpos( $field, 'meta:' ) ) {
-				$meta_keys[] = substr( $field, 5 );
-			} elseif ( 0 === strpos( $field, 'tax:' ) ) {
-				$tax_names[] = substr( $field, 4 );
+			$resolved = self::resolve_field( $src, $field );
+			if ( 0 === strpos( $resolved, 'meta:' ) ) {
+				$meta_keys[] = substr( $resolved, 5 );
+			} elseif ( 0 === strpos( $resolved, 'tax:' ) ) {
+				$tax_names[] = substr( $resolved, 4 );
 			}
 		}
 
@@ -898,9 +978,22 @@ class OPEX_Query {
 	}
 
 	private static function field_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
+		$is_guest_field = 'woo:is_guest' === $field;
+
 		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
 			$alias = OPEX_Woo::field_map()[ $field ]['alias'];
-			return self::flatten( $row->{$alias} ?? '' );
+			$value = self::flatten( $row->{$alias} ?? '' );
+			return $is_guest_field ? self::guest_flag( $value ) : $value;
+		}
+
+		// A woo: id on a legacy store reads from the post column or meta key
+		// that actually holds it.
+		$field = self::resolve_field( $src, $field );
+		if ( $is_guest_field ) {
+			$raw = 0 === strpos( $field, 'meta:' )
+				? ( isset( $meta[ $id ][ substr( $field, 5 ) ] ) ? self::flatten_many( $meta[ $id ][ substr( $field, 5 ) ] ) : '' )
+				: '';
+			return self::guest_flag( $raw );
 		}
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
@@ -922,6 +1015,12 @@ class OPEX_Query {
 			return self::computed_value( $src, $row, substr( $field, 9 ), $id );
 		}
 		return '';
+	}
+
+	/** WooCommerce writes customer id 0 (or nothing) for a guest checkout. */
+	private static function guest_flag( string $customer_id ): string {
+		$customer_id = trim( $customer_id );
+		return ( '' === $customer_id || '0' === $customer_id ) ? 'yes' : 'no';
 	}
 
 	private static function computed_value( array $src, object $row, string $what, int $id ): string {

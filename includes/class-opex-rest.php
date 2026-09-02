@@ -197,6 +197,9 @@ class OPEX_Rest {
 		$notes  = array();
 		$result = OPEX_Schema::recipe_to_config( $body, $notes );
 
+		// A recipe that resolves to nothing is a reportable outcome, not a
+		// transport error: the client needs the report to show the user which
+		// ids failed and why. Only a malformed request is an error status.
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 

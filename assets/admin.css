@@ -362,6 +362,38 @@
 .opex-ai-notes li { margin: 0 0 4px; }
 .opex-ai-notes li:last-child { margin-bottom: 0; }
 
+.opex-ai-status.is-ok    { color: #1d7a4c; }
+.opex-ai-status.is-warn  { color: #8a6100; }
+.opex-ai-status.is-error { color: #b32d2e; }
+
+.opex-rr { margin: 10px 0 0; }
+
+.opex-rr-head {
+	margin: 0 0 6px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--opex-muted);
+}
+
+.opex-rr-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.opex-rr-table td {
+	padding: 4px 6px;
+	border-bottom: 1px solid var(--opex-border, #e0e0e6);
+	vertical-align: top;
+}
+
+.opex-rr-mark { width: 18px; text-align: center; font-weight: 700; }
+.opex-rr-table tr.is-matched .opex-rr-mark { color: #1d7a4c; }
+.opex-rr-table tr.is-sub     .opex-rr-mark { color: #8a6100; }
+.opex-rr-table tr.is-dropped .opex-rr-mark { color: #b32d2e; }
+.opex-rr-table tr.is-dropped td { background: #fdf3f3; }
+.opex-rr-table code { font-size: 11px; }
+
 /* Date range -------------------------------------------------------- */
 
 .opex-daterange {

@@ -143,6 +143,34 @@ class OPEX_Dates {
 	}
 
 	/**
+	 * Epoch seconds for a calendar date's midnight in the site's timezone.
+	 * Used for meta values that store a UNIX timestamp, where comparing
+	 * against a datetime literal would be meaningless.
+	 */
+	public static function epoch( string $date, int $day_offset = 0 ): ?int {
+		$date = self::normalize_date( $date );
+		if ( '' === $date ) {
+			return null;
+		}
+
+		try {
+			$moment = new DateTimeImmutable( $date . ' 00:00:00', self::site_timezone() );
+		} catch ( Exception $e ) {
+			unset( $e );
+			return null;
+		}
+
+		if ( 0 !== $day_offset ) {
+			$moment = $moment->modify( sprintf( '%+d days', $day_offset ) );
+			if ( ! $moment instanceof DateTimeImmutable ) {
+				return null;
+			}
+		}
+
+		return $moment->getTimestamp();
+	}
+
+	/**
 	 * Split a filter value into a comparable moment.
 	 * Returns array( sql_value, is_whole_day ), or null when the value is not a
 	 * date at all and should be left to ordinary string comparison.

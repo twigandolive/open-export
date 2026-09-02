@@ -4,7 +4,7 @@ Tags: export, csv export, woocommerce export, json export, database export
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ Uninstalling removes everything: saved templates, job history, cached data, and 
 
 == Upgrade Notice ==
 
+= 1.3.1 =
+Fixes the AI round trip: the capability document now describes every Common source, WooCommerce ids work on both storage engines, and a recipe that does not resolve is reported rather than silently applied.
+
 = 1.3.0 =
 Hand a JSON description of your site to an AI assistant and paste back the export recipe it writes. Also fixes date filters that excluded the last day of a range.
 
@@ -97,6 +100,15 @@ Security and stability update: blocks credential columns on raw table exports, a
 Initial release.
 
 == Changelog ==
+
+= 1.3.1 =
+* Fixed: the capability document listed no fields unless a source was already selected, leaving an AI nothing to compose a recipe from. Every Common source is now described in full.
+* Fixed: WooCommerce field ids only worked on stores using High-Performance Order Storage. The same woo: ids now work on both storage engines, so one recipe fits any store.
+* Fixed: a recipe whose ids did not resolve was applied as an empty selection. Import now shows a report naming every id as matched, substituted or dropped, with a reason and a suggested correction, and refuses a recipe where nothing resolves.
+* Fixed: Orders appeared twice in Common sources; the raw shop_order post type moved to Advanced.
+* Fixed: date paid and date completed are now usable date ranges on stores that keep orders as posts.
+* Added: shipping email and guest flag order fields; a type on every field and a tier on every source in the capability document.
+
 
 = 1.3.0 =
 * Added: an AI assistant panel that exports a JSON description of this site's sources, fields, operators, date columns, and legal field values, complete with the instructions and return format an assistant needs.

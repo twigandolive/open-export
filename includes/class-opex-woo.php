@@ -129,6 +129,7 @@ class OPEX_Woo {
 			'customer_email'    => array( 'o.billing_email', 'meta:_billing_email', $cust ),
 			'customer_ip'       => array( 'o.ip_address', 'meta:_customer_ip_address', $cust ),
 			'customer_agent'    => array( 'o.user_agent', 'meta:_customer_user_agent', $cust ),
+			'is_guest'          => array( 'o.customer_id', 'meta:_customer_user', $cust ),
 
 			// --- Billing ----------------------------------------------------
 			'billing_first_name' => array( 'ba.first_name', 'meta:_billing_first_name', $bill ),
@@ -154,6 +155,7 @@ class OPEX_Woo {
 			'shipping_postcode'   => array( 'sa.postcode', 'meta:_shipping_postcode', $ship ),
 			'shipping_country'    => array( 'sa.country', 'meta:_shipping_country', $ship ),
 			'shipping_phone'      => array( 'sa.phone', 'meta:_shipping_phone', $ship ),
+			'shipping_email'      => array( 'sa.email', 'meta:_shipping_email', $ship ),
 
 			// --- Totals -----------------------------------------------------
 			'total'             => array( 'o.total_amount', 'meta:_order_total', $money ),
@@ -214,24 +216,101 @@ class OPEX_Woo {
 			'woo:date_created'   => array(
 				'label' => __( 'Order date (created)', 'open-export' ),
 				'tz'    => OPEX_Dates::TZ_UTC,
+				'kind'  => 'column',
 				'sql'   => 'o.date_created_gmt',
 			),
 			'woo:date_paid'      => array(
 				'label' => __( 'Date paid', 'open-export' ),
 				'tz'    => OPEX_Dates::TZ_UTC,
+				'kind'  => 'column',
 				'sql'   => 'od.date_paid_gmt',
 			),
 			'woo:date_completed' => array(
 				'label' => __( 'Date completed', 'open-export' ),
 				'tz'    => OPEX_Dates::TZ_UTC,
+				'kind'  => 'column',
 				'sql'   => 'od.date_completed_gmt',
 			),
 			'woo:date_modified'  => array(
 				'label' => __( 'Last modified', 'open-export' ),
 				'tz'    => OPEX_Dates::TZ_UTC,
+				'kind'  => 'column',
 				'sql'   => 'o.date_updated_gmt',
 			),
 		);
+	}
+
+	/**
+	 * Date columns for orders stored as posts.
+	 *
+	 * post_date is a real column. _date_paid and _date_completed are postmeta
+	 * holding a UNIX timestamp, so they compare as integers against epochs
+	 * computed in PHP — never against a datetime literal, and never through
+	 * MySQL's UNIX_TIMESTAMP(), whose result depends on the session timezone.
+	 */
+	public static function legacy_date_fields(): array {
+		global $wpdb;
+
+		return array(
+			'woo:date_created'   => array(
+				'label' => __( 'Order date (created)', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'p.post_date',
+			),
+			'woo:date_paid'      => array(
+				'label' => __( 'Date paid', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'meta_epoch',
+				'key'   => '_date_paid',
+				'table' => $wpdb->postmeta,
+				'fk'    => 'post_id',
+				'outer' => 'p.ID',
+			),
+			'woo:date_completed' => array(
+				'label' => __( 'Date completed', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'meta_epoch',
+				'key'   => '_date_completed',
+				'table' => $wpdb->postmeta,
+				'fk'    => 'post_id',
+				'outer' => 'p.ID',
+			),
+			'woo:date_modified'  => array(
+				'label' => __( 'Last modified', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'p.post_modified',
+			),
+		);
+	}
+
+	/** The core:/meta: field id a woo: id means when orders live in wp_posts. */
+	public static function legacy_field( string $field ): string {
+		$map = self::field_map();
+		return $map[ $field ]['legacy'] ?? '';
+	}
+
+	/** Coarse type hint for the capability document. */
+	public static function field_type( string $field ): string {
+		$name = substr( $field, 4 );
+
+		if ( 0 === strpos( $name, 'date_' ) ) {
+			return 'date';
+		}
+		if ( 'is_guest' === $name ) {
+			return 'boolean';
+		}
+		if ( 'status' === $name ) {
+			return 'enum';
+		}
+		if ( in_array( $name, array( 'order_id', 'order_number', 'customer_id', 'parent_order_id' ), true ) ) {
+			return 'id';
+		}
+		if ( in_array( $name, array( 'total', 'tax_total', 'shipping_total', 'shipping_tax', 'discount_total', 'discount_tax' ), true ) ) {
+			return 'number';
+		}
+		return 'text';
 	}
 
 	/**
@@ -284,15 +363,16 @@ class OPEX_Woo {
 			__( 'Fulfilment', 'open-export' ),
 		);
 
-		$hpos    = self::use_hpos();
 		$buckets = array();
 
 		foreach ( self::field_map() as $id => $field ) {
-			// Under legacy storage the friendly id resolves to an existing
-			// core:/meta: id, so saved configs stay portable either way.
+			// The SAME id on both engines. The query layer translates woo: ids
+			// to their core:/meta: equivalents when orders live in wp_posts, so
+			// one recipe works on any store and a migration changes nothing.
 			$buckets[ $field['group'] ][] = array(
-				'id'    => $hpos ? $id : $field['legacy'],
+				'id'    => $id,
 				'label' => $field['label'],
+				'type'  => self::field_type( $id ),
 			);
 		}
 
