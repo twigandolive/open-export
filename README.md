@@ -5,7 +5,7 @@ Export anything from your WordPress database: every feature included, no add-ons
 **Version:** 1.3.1  
 **Requires WordPress:** 7.0+  
 **Requires PHP:** 7.4+  
-**License:** [GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html)
+**License:** [GPLv2 or later](LICENSE)
 
 ---
 
@@ -134,6 +134,12 @@ Security and stability: blocks credential columns on raw table exports, REST non
 ### 1.0.0
 
 Initial release.
+
+## Contributing
+
+Issues and pull requests are welcome at [github.com/twigandolive/open-export](https://github.com/twigandolive/open-export).
+
+Open Export is [GPLv2 or later](LICENSE): you already have the right to use, study, modify, and redistribute it. Forks are fine, and so is lifting a piece of it for your own project.
 
 ## Author
 
