@@ -15,23 +15,54 @@ class OPEX_Exporter {
 	 * Validate a raw config from the client and reduce it to exactly the
 	 * shape the query layer expects. Returns WP_Error on bad input.
 	 */
-	public static function sanitize_config( array $raw ) {
+	public static function sanitize_config( array $raw, array &$notes = array() ) {
 		$source = sanitize_text_field( (string) ( $raw['source'] ?? '' ) );
-		if ( ! OPEX_Query::parse_source( $source ) ) {
+		$src    = OPEX_Query::parse_source( $source );
+		if ( ! $src ) {
 			return new WP_Error( 'opex_bad_source', __( 'Unknown data source.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
 		$fields = array();
+
 		foreach ( array_slice( (array) ( $raw['fields'] ?? array() ), 0, 300 ) as $field ) {
 			$field = (string) $field;
-			if ( ! preg_match( '/^(core|meta|tax|computed|col):[\S]/', $field ) ) {
+			if ( ! preg_match( '/^(core|meta|tax|computed|col|woo):[\S]/', $field ) ) {
+				$notes[] = sprintf(
+					/* translators: %s: the rejected field id. */
+					__( 'Field "%s" was ignored: it is not a recognised field id.', 'open-export' ),
+					$field
+				);
 				continue;
 			}
 			if ( preg_match( '/^col:(.+)$/', $field, $matches ) && OPEX_Query::is_forbidden_column( $matches[1] ) ) {
+				$notes[] = sprintf(
+					/* translators: %s: the rejected field id. */
+					__( 'Field "%s" was ignored: that column can never be exported.', 'open-export' ),
+					$field
+				);
+				continue;
+			}
+			// A raw table has no meta, no taxonomies and no computed values, so
+			// asking for them used to produce silent empty columns.
+			if ( 'table' === $src['type'] && 0 !== strpos( $field, 'col:' ) ) {
+				$notes[] = sprintf(
+					/* translators: %s: the rejected field id. */
+					__( 'Field "%s" was ignored: a raw database table only has its own columns.', 'open-export' ),
+					$field
+				);
+				continue;
+			}
+			if ( ! OPEX_Query::is_valid_field( $src, $field ) ) {
+				$notes[] = sprintf(
+					/* translators: %s: the rejected field id. */
+					__( 'Field "%s" was ignored: this source does not have it.', 'open-export' ),
+					$field
+				);
 				continue;
 			}
 			$fields[] = $field;
 		}
+		$fields = array_values( array_unique( $fields ) );
 		if ( ! $fields ) {
 			return new WP_Error( 'opex_no_fields', __( 'Pick at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
 		}
@@ -42,12 +73,27 @@ class OPEX_Exporter {
 			$filters['relation'] = 'OR';
 		}
 		foreach ( array_slice( (array) ( $raw_f['rules'] ?? array() ), 0, 20 ) as $rule ) {
+			$rule_field = sanitize_text_field( (string) ( $rule['field'] ?? '' ) );
+			$rule_op    = sanitize_key( (string) ( $rule['op'] ?? 'eq' ) );
+
+			if ( ! OPEX_Query::is_valid_op( $rule_op ) ) {
+				$notes[] = sprintf(
+					/* translators: 1: the operator, 2: the field it was used on. */
+					__( 'Filter operator "%1$s" on "%2$s" is not supported and was dropped.', 'open-export' ),
+					$rule_op,
+					$rule_field
+				);
+				continue;
+			}
+
 			$filters['rules'][] = array(
-				'field' => sanitize_text_field( (string) ( $rule['field'] ?? '' ) ),
-				'op'    => sanitize_key( (string) ( $rule['op'] ?? 'eq' ) ),
+				'field' => $rule_field,
+				'op'    => $rule_op,
 				'value' => (string) ( $rule['value'] ?? '' ),
 			);
 		}
+
+		$date_range = self::sanitize_date_range( $src, (array) ( $raw['date_range'] ?? array() ) );
 
 		$format = in_array( $raw['format'] ?? '', self::FORMATS, true ) ? $raw['format'] : 'csv';
 		$batch  = max( 10, min( 5000, (int) ( $raw['batch_size'] ?? 500 ) ) );
@@ -55,6 +101,10 @@ class OPEX_Exporter {
 		$delim_key = sanitize_key( (string) ( $raw['csv_delimiter'] ?? 'comma' ) );
 		if ( ! in_array( $delim_key, array( 'comma', 'semicolon', 'tab' ), true ) ) {
 			$delim_key = 'comma';
+		}
+
+		if ( ! $date_range['field'] && ! empty( $raw['date_range'] ) && 'all_time' !== ( $raw['date_range']['preset'] ?? 'all_time' ) ) {
+			$notes[] = __( 'The date range was dropped: this source has no date column to filter on.', 'open-export' );
 		}
 
 		$labels = array();
@@ -73,11 +123,83 @@ class OPEX_Exporter {
 			'source'        => $source,
 			'fields'        => $fields,
 			'filters'       => $filters,
+			'date_range'    => $date_range,
 			'format'        => $format,
 			'batch_size'    => $batch,
 			'csv_delimiter' => $delim_key,
 			'column_labels' => $labels,
 		);
+	}
+
+	/**
+	 * Validate the date range. The field is checked against the source's own
+	 * allowlist of real date columns, so nothing caller-supplied can reach SQL;
+	 * an unrecognised field simply disables the range rather than failing the
+	 * export. Relative presets are stored unresolved so a saved template still
+	 * means "last 30 days" the next time it runs, not the 30 days it meant when
+	 * it was saved.
+	 */
+	private static function sanitize_date_range( array $src, array $raw ): array {
+		$empty = array( 'field' => '', 'preset' => 'all_time', 'from' => '', 'to' => '' );
+
+		$preset = sanitize_key( (string) ( $raw['preset'] ?? 'all_time' ) );
+		if ( ! in_array( $preset, OPEX_Dates::PRESETS, true ) ) {
+			$preset = 'all_time';
+		}
+		if ( 'all_time' === $preset ) {
+			return $empty;
+		}
+
+		$defs  = OPEX_Query::date_fields( $src );
+		if ( ! $defs ) {
+			return $empty;
+		}
+
+		$field = sanitize_text_field( (string) ( $raw['field'] ?? '' ) );
+		if ( ! isset( $defs[ $field ] ) ) {
+			// Fall back to the source's primary date column rather than
+			// silently exporting everything.
+			$keys  = array_keys( $defs );
+			$field = (string) reset( $keys );
+		}
+
+		$from = 'custom' === $preset ? OPEX_Dates::normalize_date( (string) ( $raw['from'] ?? '' ) ) : '';
+		$to   = 'custom' === $preset ? OPEX_Dates::normalize_date( (string) ( $raw['to'] ?? '' ) ) : '';
+
+		if ( 'custom' === $preset ) {
+			if ( '' === $from && '' === $to ) {
+				return $empty;
+			}
+			// A backwards range would match nothing at all; swapping is what
+			// the user meant and is cheaper than an error round-trip.
+			if ( '' !== $from && '' !== $to && $from > $to ) {
+				list( $from, $to ) = array( $to, $from );
+			}
+		}
+
+		return array( 'field' => $field, 'preset' => $preset, 'from' => $from, 'to' => $to );
+	}
+
+	/**
+	 * Pin a relative preset to concrete dates for the life of one job, so a
+	 * long export that crosses midnight keeps counting and streaming the same
+	 * rows it started with.
+	 */
+	public static function freeze_date_range( array $config ): array {
+		$range = (array) ( $config['date_range'] ?? array() );
+		$preset = (string) ( $range['preset'] ?? 'all_time' );
+
+		if ( 'all_time' === $preset || 'custom' === $preset ) {
+			return $config;
+		}
+
+		list( $from, $to ) = OPEX_Dates::preset_range( $preset );
+
+		$range['from']         = $from;
+		$range['to']           = $to;
+		$config['date_range']  = $range;
+
+		return $config;
 	}
 
 	/**
@@ -91,7 +213,7 @@ class OPEX_Exporter {
 			if ( isset( $custom[ $field ] ) && '' !== trim( (string) $custom[ $field ] ) ) {
 				$label = sanitize_text_field( (string) $custom[ $field ] );
 			} else {
-				$label = (string) preg_replace( '/^(core|meta|tax|computed|col):/', '', $field );
+				$label = (string) preg_replace( '/^(core|meta|tax|computed|col|woo):/', '', $field );
 			}
 			$base = $label;
 			$n    = 2;
@@ -124,7 +246,8 @@ class OPEX_Exporter {
 
 	/** Create a job: count, open the file, write the format header. */
 	public static function create( array $config, string $label ) {
-		$total = OPEX_Query::count( $config );
+		$config = self::freeze_date_range( $config );
+		$total  = OPEX_Query::count( $config );
 
 		$slug     = sanitize_file_name( sanitize_title( $label ) );
 		$slug     = $slug ? $slug : 'export';

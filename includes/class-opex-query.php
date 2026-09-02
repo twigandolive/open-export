@@ -37,6 +37,58 @@ class OPEX_Query {
 	/** Columns that must never leave the database, no matter what is asked for. */
 	private const FORBIDDEN = array( 'user_pass', 'user_activation_key' );
 
+	/** The filter operators this plugin understands. */
+	public static function ops(): array {
+		return self::OPS;
+	}
+
+	public static function is_valid_op( string $op ): bool {
+		return in_array( $op, self::OPS, true );
+	}
+
+	/**
+	 * Whether a field id can actually resolve to a value for this source.
+	 *
+	 * This mirrors exactly what field_value() will do at read time, so it is the
+	 * authoritative answer — not the picker catalog, which samples meta keys
+	 * under a LIMIT and lists a slightly narrower set of core columns.
+	 *
+	 * Meta keys always pass: any key may exist on any row, and absence is a
+	 * blank cell rather than a mistake.
+	 */
+	public static function is_valid_field( array $src, string $field ): bool {
+		if ( 0 === strpos( $field, 'meta:' ) ) {
+			return 'table' !== $src['type'] && '' !== substr( $field, 5 );
+		}
+
+		if ( 0 === strpos( $field, 'core:' ) ) {
+			return self::valid_core_col( $src['type'], substr( $field, 5 ) );
+		}
+
+		if ( 0 === strpos( $field, 'col:' ) ) {
+			return 'table' === $src['type'] && self::valid_table_col( $src['table'], substr( $field, 4 ) );
+		}
+
+		if ( 0 === strpos( $field, 'tax:' ) ) {
+			return 'posts' === $src['type'] && taxonomy_exists( substr( $field, 4 ) );
+		}
+
+		if ( 0 === strpos( $field, 'woo:' ) ) {
+			return 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field );
+		}
+
+		if ( 0 === strpos( $field, 'computed:' ) ) {
+			$what  = substr( $field, 9 );
+			$known = array(
+				'posts' => array( 'permalink', 'attachment_url', 'featured_image_url', 'author_display_name', 'author_email' ),
+				'users' => array( 'roles' ),
+			);
+			return in_array( $what, $known[ $src['type'] ] ?? array(), true );
+		}
+
+		return false;
+	}
+
 	/** Whether a column name is blocked from every export path (core, col, filters). */
 	public static function is_forbidden_column( string $col ): bool {
 		return in_array( $col, self::FORBIDDEN, true );
@@ -47,6 +99,17 @@ class OPEX_Query {
 	 * Returns null for unknown sources; downstream code never trusts raw input.
 	 */
 	public static function parse_source( string $source_id ): ?array {
+		if ( OPEX_Woo::SOURCE === $source_id ) {
+			if ( ! OPEX_Woo::is_active() ) {
+				return null;
+			}
+			// One source id, two storage engines. Under HPOS it becomes a
+			// joined query over the custom order tables; otherwise it is just
+			// the shop_order post type, so every existing code path applies.
+			return OPEX_Woo::use_hpos()
+				? array( 'type' => 'woo_orders' )
+				: array( 'type' => 'posts', 'post_type' => OPEX_Woo::LEGACY_POST_TYPE );
+		}
 		if ( 'users' === $source_id ) {
 			return array( 'type' => 'users' );
 		}
@@ -77,7 +140,7 @@ class OPEX_Query {
 			return 0;
 		}
 
-		list( $from, $where, $args, ) = self::build_query_parts( $src, $config['filters'] ?? array() );
+		list( $from, $where, $args, ) = self::build_query_parts( $src, $config );
 
 		$sql = "SELECT COUNT(*) FROM {$from}" . ( $where ? " WHERE {$where}" : '' );
 		if ( $args ) {
@@ -105,7 +168,7 @@ class OPEX_Query {
 
 		$limit = max( 1, min( 5000, $limit ) );
 
-		list( $from, $where, $args, $pk ) = self::build_query_parts( $src, $config['filters'] ?? array() );
+		list( $from, $where, $args, $pk ) = self::build_query_parts( $src, $config );
 
 		$select = self::select_list( $src, $config['fields'] );
 
@@ -154,10 +217,20 @@ class OPEX_Query {
 	 * FROM clause, WHERE clause (sans pagination), prepare args, and the
 	 * qualified primary-key column for keyset paging ('' = offset paging).
 	 */
-	private static function build_query_parts( array $src, array $filters ): array {
+	private static function build_query_parts( array $src, array $config ): array {
 		global $wpdb;
 
+		$filters = (array) ( $config['filters'] ?? array() );
+
 		switch ( $src['type'] ) {
+			case 'woo_orders':
+				$from = OPEX_Woo::from_clause();
+				// Refunds share the orders table; excluding them keeps one row
+				// per order and stops refund rows corrupting reported totals.
+				$base = array( "o.type = 'shop_order'" );
+				$args = array();
+				$pk   = 'o.id';
+				break;
 			case 'posts':
 				$from  = "{$wpdb->posts} p";
 				$base  = array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" );
@@ -206,7 +279,139 @@ class OPEX_Query {
 			$base[] = '(' . implode( " {$relation} ", $clauses ) . ')';
 		}
 
+		// The date range is deliberately not a rule. It is ANDed on its own so
+		// that choosing "match ANY rule (OR)" cannot widen it back out to every
+		// row, which is the whole point of asking for a range.
+		$date = self::date_range_clause( $src, (array) ( $config['date_range'] ?? array() ), $args );
+		if ( '' !== $date ) {
+			$base[] = $date;
+		}
+
 		return array( $from, implode( ' AND ', $base ), $args, $pk );
+	}
+
+	/**
+	 * Date columns a range filter may target for this source, with how each one
+	 * is stored. This doubles as the allowlist: a range naming anything not in
+	 * here is dropped, so no caller-supplied string ever reaches the SQL.
+	 *
+	 * @return array<string, array{label: string, tz: string, sql: string}>
+	 */
+	public static function date_fields( array $src ): array {
+		static $memo = array();
+		$key = md5( (string) wp_json_encode( $src ) );
+		if ( isset( $memo[ $key ] ) ) {
+			return $memo[ $key ];
+		}
+
+		$memo[ $key ] = self::build_date_fields( $src );
+		return $memo[ $key ];
+	}
+
+	/** @see date_fields() — split out so the memo above wraps every branch. */
+	private static function build_date_fields( array $src ): array {
+		switch ( $src['type'] ) {
+			case 'woo_orders':
+				return OPEX_Woo::hpos_date_fields();
+
+			case 'posts':
+				return array(
+					'core:post_date'         => array( 'label' => __( 'Date published (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
+					'core:post_date_gmt'     => array( 'label' => __( 'Date published (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
+					'core:post_modified'     => array( 'label' => __( 'Last modified (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_modified' ),
+					'core:post_modified_gmt' => array( 'label' => __( 'Last modified (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_modified_gmt' ),
+				);
+
+			case 'users':
+				// WordPress writes user_registered in UTC.
+				return array(
+					'core:user_registered' => array( 'label' => __( 'Registered', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'u.user_registered' ),
+				);
+
+			case 'comments':
+				return array(
+					'core:comment_date'     => array( 'label' => __( 'Comment date (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'c.comment_date' ),
+					'core:comment_date_gmt' => array( 'label' => __( 'Comment date (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'c.comment_date_gmt' ),
+				);
+
+			case 'table':
+				$out = array();
+				foreach ( OPEX_Catalog::table_columns( $src['table'] ) as $col ) {
+					if ( ! preg_match( '/^(datetime|timestamp|date)\b/i', $col['type'] ) ) {
+						continue;
+					}
+					if ( self::is_forbidden_column( $col['name'] ) ) {
+						continue;
+					}
+					// A bare table tells us nothing about its timezone, so go by
+					// the naming convention every WordPress and WooCommerce table
+					// follows and treat the rest as site-local.
+					$utc = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
+					$out[ 'col:' . $col['name'] ] = array(
+						'label' => $col['name'] . ( $utc ? ' (UTC)' : '' ),
+						'tz'    => $utc ? OPEX_Dates::TZ_UTC : OPEX_Dates::TZ_LOCAL,
+						'sql'   => '`' . str_replace( '`', '', $col['name'] ) . '`',
+					);
+				}
+				return $out;
+		}
+
+		return array();
+	}
+
+	/**
+	 * Compile the date range into a half-open interval, [start, end).
+	 *
+	 * Using "< the day after" rather than "<= the end date" is what makes an
+	 * inclusive end date actually inclusive: a plain "<= 2026-03-31" is widened
+	 * by MySQL to 2026-03-31 00:00:00 and drops that entire day's rows.
+	 */
+	private static function date_range_clause( array $src, array $range, array &$args ): string {
+		$field  = (string) ( $range['field'] ?? '' );
+		$preset = (string) ( $range['preset'] ?? 'all_time' );
+		$from   = (string) ( $range['from'] ?? '' );
+		$to     = (string) ( $range['to'] ?? '' );
+
+		// A relative preset that has not been pinned yet — a preview, or a
+		// template loaded straight from storage — resolves against now.
+		if ( '' === $from && '' === $to && 'all_time' !== $preset && 'custom' !== $preset ) {
+			list( $from, $to ) = OPEX_Dates::preset_range( $preset );
+		}
+
+		if ( '' === $from && '' === $to ) {
+			return '';
+		}
+
+		$defs = self::date_fields( $src );
+		if ( ! isset( $defs[ $field ] ) ) {
+			return '';
+		}
+		$def = $defs[ $field ];
+
+		$parts = array();
+
+		$start = OPEX_Dates::boundary( $from, $def['tz'], 0 );
+		if ( '' !== $start ) {
+			$args[]  = $start;
+			$parts[] = "{$def['sql']} >= %s";
+		}
+
+		// +1 day turns the user's inclusive end date into the exclusive bound.
+		$end = OPEX_Dates::boundary( $to, $def['tz'], 1 );
+		if ( '' !== $end ) {
+			$args[]  = $end;
+			$parts[] = "{$def['sql']} < %s";
+		}
+
+		if ( ! $parts ) {
+			return '';
+		}
+
+		// A NULL date (an unpaid order has no date_paid_gmt) must fall outside
+		// every range rather than being swept in by a one-sided comparison.
+		$parts[] = "{$def['sql']} IS NOT NULL";
+
+		return '(' . implode( ' AND ', $parts ) . ')';
 	}
 
 	/** Compile one filter rule into SQL, appending its values to $args. */
@@ -217,6 +422,28 @@ class OPEX_Query {
 
 		if ( ! in_array( $op, self::OPS, true ) ) {
 			return '';
+		}
+
+		// A rule on a real date column gets calendar semantics: "on or before
+		// 2026-03-31" means through the end of that day, and a value like
+		// 20260301 is a date, not a number to cast the column down to.
+		$date_defs = self::date_fields( $src );
+		$is_date   = isset( $date_defs[ $field ] );
+		if ( $is_date ) {
+			$clause = self::date_condition( $date_defs[ $field ], $op, $value, $args );
+			if ( null !== $clause ) {
+				return $clause;
+			}
+			// Not a date we could parse. Compare it as text anyway, so the
+			// column is never cast down to a bare year.
+			return self::value_condition( $date_defs[ $field ]['sql'], $op, $value, $args, true );
+		}
+
+		// Friendly WooCommerce field rule, e.g. woo:status. Only reachable
+		// under HPOS; legacy resolves these to core:/meta: ids in the catalog.
+		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
+			$map = OPEX_Woo::field_map();
+			return self::value_condition( $map[ $field ]['expr'], $op, $value, $args );
 		}
 
 		// Core column rule, e.g. core:post_status.
@@ -263,6 +490,14 @@ class OPEX_Query {
 	/**
 	 * Turn relative date tokens into concrete datetimes for filter values.
 	 * Supports: last N days/weeks/months, today, yesterday, this/last month/year, -N days.
+	 *
+	 * These resolve in the SITE's timezone, matching post_date, comment_date and
+	 * post_modified. They used to resolve in UTC, which WordPress sets as the PHP
+	 * process timezone: on a UTC-8 site every evening after 4pm local, "today"
+	 * produced tomorrow's UTC date and the filter matched nothing at all.
+	 *
+	 * For a *_gmt column, use the date-range control instead — it knows which
+	 * columns are UTC and converts accordingly.
 	 */
 	private static function resolve_filter_value( string $value ): string {
 		$value = trim( $value );
@@ -272,16 +507,28 @@ class OPEX_Query {
 
 		$lower = strtolower( $value );
 
+		try {
+			$now = new DateTimeImmutable( 'now', OPEX_Dates::site_timezone() );
+		} catch ( Exception $e ) {
+			unset( $e );
+			return $value;
+		}
+
+		$out = static function ( $moment ) use ( $value ) {
+			return $moment instanceof DateTimeImmutable ? $moment->format( 'Y-m-d H:i:s' ) : $value;
+		};
+
 		if ( preg_match( '/^last\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)$/i', $value, $matches ) ) {
 			$n    = (int) $matches[1];
 			$unit = rtrim( strtolower( $matches[2] ), 's' ) . 's';
-			$ts   = strtotime( '-' . $n . ' ' . $unit );
-			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+			return $out( $now->modify( '-' . $n . ' ' . $unit ) );
 		}
 
+		// Each of these names a day, so they start at midnight rather than at
+		// whatever time of day the export happens to run.
 		$phrases = array(
 			'today'      => 'today',
-			'yesterday'  => 'yesterday',
+			'yesterday'  => '-1 day',
 			'this month' => 'first day of this month',
 			'last month' => 'first day of last month',
 			'this year'  => 'first day of january this year',
@@ -289,20 +536,90 @@ class OPEX_Query {
 		);
 
 		if ( isset( $phrases[ $lower ] ) ) {
-			$ts = strtotime( $phrases[ $lower ] );
-			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+			$moment = 'today' === $phrases[ $lower ] ? $now : $now->modify( $phrases[ $lower ] );
+			return $out( $moment instanceof DateTimeImmutable ? $moment->setTime( 0, 0, 0 ) : $moment );
 		}
 
 		if ( preg_match( '/^-\d+\s+(day|days|week|weeks|month|months|year|years)$/i', $value ) ) {
-			$ts = strtotime( $value );
-			return false !== $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : $value;
+			return $out( $now->modify( $value ) );
 		}
 
 		return $value;
 	}
 
-	/** Direct comparison against a validated column reference. */
-	private static function value_condition( string $lhs, string $op, string $value, array &$args ): string {
+	/**
+	 * Comparison against a column known to hold dates.
+	 *
+	 * A bare Y-m-d names a whole day, so the comparison is built from that day's
+	 * boundaries rather than from midnight alone: "<= 2026-03-31" becomes
+	 * "< 2026-04-01", which is what a person means by an end date. Values are
+	 * read as site-local and shifted into the column's own timezone.
+	 *
+	 * Returns null when the value is not a date at all, so the caller can fall
+	 * back to ordinary string comparison.
+	 */
+	private static function date_condition( array $def, string $op, string $value, array &$args ): ?string {
+		if ( ! in_array( $op, array( 'eq', 'neq', 'gt', 'gte', 'lt', 'lte' ), true ) ) {
+			return null;
+		}
+
+		$parsed = OPEX_Dates::parse_value( $value, $def['tz'] );
+		if ( null === $parsed ) {
+			return null;
+		}
+
+		list( $stamp, $whole_day ) = $parsed;
+		$col = $def['sql'];
+
+		if ( ! $whole_day ) {
+			// An explicit time compares literally, with no day rounding.
+			$sym    = array( 'eq' => '=', 'neq' => '<>', 'gt' => '>', 'gte' => '>=', 'lt' => '<', 'lte' => '<=' )[ $op ];
+			$args[] = $stamp;
+			return "{$col} {$sym} %s";
+		}
+
+		$day_start  = OPEX_Dates::boundary( $stamp, $def['tz'], 0 );
+		$next_start = OPEX_Dates::boundary( $stamp, $def['tz'], 1 );
+		if ( '' === $day_start || '' === $next_start ) {
+			return null;
+		}
+
+		switch ( $op ) {
+			case 'eq':
+				$args[] = $day_start;
+				$args[] = $next_start;
+				return "({$col} >= %s AND {$col} < %s)";
+			case 'neq':
+				$args[] = $day_start;
+				$args[] = $next_start;
+				return "({$col} < %s OR {$col} >= %s)";
+			case 'gte':
+				$args[] = $day_start;
+				return "{$col} >= %s";
+			case 'gt':
+				// Strictly after that day.
+				$args[] = $next_start;
+				return "{$col} >= %s";
+			case 'lt':
+				$args[] = $day_start;
+				return "{$col} < %s";
+			case 'lte':
+				// Through the end of that day.
+				$args[] = $next_start;
+				return "{$col} < %s";
+		}
+
+		return null;
+	}
+
+	/**
+	 * Direct comparison against a validated column reference.
+	 *
+	 * $textual forbids the numeric branch below. Casting a DATETIME column to
+	 * DECIMAL yields the year and nothing else, so a date column must never
+	 * take that path however numeric the value happens to look.
+	 */
+	private static function value_condition( string $lhs, string $op, string $value, array &$args, bool $textual = false ): string {
 		global $wpdb;
 
 		switch ( $op ) {
@@ -329,7 +646,7 @@ class OPEX_Query {
 			case 'lt':
 			case 'lte':
 				$sym = array( 'gt' => '>', 'gte' => '>=', 'lt' => '<', 'lte' => '<=' )[ $op ];
-				if ( is_numeric( $value ) ) {
+				if ( ! $textual && is_numeric( $value ) ) {
 					$args[] = (float) $value;
 					return "CAST({$lhs} AS DECIMAL(24,6)) {$sym} %f";
 				}
@@ -362,10 +679,11 @@ class OPEX_Query {
 		global $wpdb;
 
 		$map = array(
-			'posts'    => array( $wpdb->postmeta, 'post_id', 'p.ID' ),
-			'users'    => array( $wpdb->usermeta, 'user_id', 'u.ID' ),
-			'comments' => array( $wpdb->commentmeta, 'comment_id', 'c.comment_ID' ),
-			'terms'    => array( $wpdb->termmeta, 'term_id', 't.term_id' ),
+			'posts'      => array( $wpdb->postmeta, 'post_id', 'p.ID' ),
+			'users'      => array( $wpdb->usermeta, 'user_id', 'u.ID' ),
+			'comments'   => array( $wpdb->commentmeta, 'comment_id', 'c.comment_ID' ),
+			'terms'      => array( $wpdb->termmeta, 'term_id', 't.term_id' ),
+			'woo_orders' => array( OPEX_Woo::table( 'meta' ), 'order_id', 'o.id' ),
 		);
 		if ( ! isset( $map[ $src['type'] ] ) ) {
 			return '';
@@ -442,10 +760,13 @@ class OPEX_Query {
 	}
 
 	private static function alias( string $type ): string {
-		return array( 'posts' => 'p', 'users' => 'u', 'comments' => 'c', 'terms' => 't' )[ $type ] ?? 'p';
+		return array( 'posts' => 'p', 'users' => 'u', 'comments' => 'c', 'terms' => 't', 'woo_orders' => 'o' )[ $type ] ?? 'p';
 	}
 
 	private static function valid_core_col( string $type, string $col ): bool {
+		if ( self::is_forbidden_column( $col ) ) {
+			return false;
+		}
 		switch ( $type ) {
 			case 'posts':
 				return in_array( $col, self::POST_COLS, true );
@@ -499,6 +820,9 @@ class OPEX_Query {
 
 	/** SELECT list: raw tables fetch only requested columns plus the PK. */
 	private static function select_list( array $src, array $fields ): string {
+		if ( 'woo_orders' === $src['type'] ) {
+			return OPEX_Woo::select_list();
+		}
 		if ( 'table' !== $src['type'] ) {
 			$alias = self::alias( $src['type'] );
 			if ( 'terms' === $src['type'] ) {
@@ -537,7 +861,7 @@ class OPEX_Query {
 			return array();
 		}
 
-		$id_prop = array( 'posts' => 'ID', 'users' => 'ID', 'comments' => 'comment_ID', 'terms' => 'term_id' )[ $src['type'] ] ?? '';
+		$id_prop = array( 'posts' => 'ID', 'users' => 'ID', 'comments' => 'comment_ID', 'terms' => 'term_id', 'woo_orders' => 'id' )[ $src['type'] ] ?? '';
 		$ids     = array();
 		if ( $id_prop ) {
 			foreach ( $rows as $row ) {
@@ -574,6 +898,10 @@ class OPEX_Query {
 	}
 
 	private static function field_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
+		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
+			$alias = OPEX_Woo::field_map()[ $field ]['alias'];
+			return self::flatten( $row->{$alias} ?? '' );
+		}
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			return in_array( $col, self::FORBIDDEN, true ) ? '' : self::flatten( $row->{$col} ?? '' );
@@ -624,10 +952,11 @@ class OPEX_Query {
 		global $wpdb;
 
 		$map = array(
-			'posts'    => array( $wpdb->postmeta, 'post_id' ),
-			'users'    => array( $wpdb->usermeta, 'user_id' ),
-			'comments' => array( $wpdb->commentmeta, 'comment_id' ),
-			'terms'    => array( $wpdb->termmeta, 'term_id' ),
+			'posts'      => array( $wpdb->postmeta, 'post_id' ),
+			'users'      => array( $wpdb->usermeta, 'user_id' ),
+			'comments'   => array( $wpdb->commentmeta, 'comment_id' ),
+			'terms'      => array( $wpdb->termmeta, 'term_id' ),
+			'woo_orders' => array( OPEX_Woo::table( 'meta' ), 'order_id' ),
 		);
 		if ( ! isset( $map[ $type ] ) ) {
 			return array();

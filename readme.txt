@@ -1,10 +1,10 @@
 === Open Export ===
 Contributors: twigandolive
-Tags: export, csv export, xml export, json export, database export
+Tags: export, csv export, woocommerce export, json export, database export
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,12 +22,23 @@ Open Export gets your data out of WordPress with a clean four-step flow: pick a 
 * **Templates and re-run**: save export setups, load them later, or re-run a previous export in one click.
 * **Column control**: drag chips to reorder columns; rename headers for spreadsheet-friendly output.
 * **CSV delimiters**: comma, semicolon, or tab for Excel-friendly regional formats.
+* **Works with AI assistants**: export a JSON description of everything this site can export, hand it to an assistant such as Claude or ChatGPT, and paste back the short recipe it replies with. The screen configures itself and tells you about anything in the recipe it could not honour. Nothing exports until you press the button.
+* **WooCommerce orders**: a dedicated Orders source that reads whichever storage your store uses, classic post storage or High-Performance Order Storage, and presents the same friendly fields either way: order number, status, customer, billing and shipping address, totals, and payment details.
+* **Date ranges**: pick a preset (today, last 30 days, last month, this quarter…) or set a From and To date. Whole days in your site's timezone, end date included.
 * **Relative date filters**: use tokens like `last 30 days` or `this month` in filter rules.
 * **Secure by default**: administrator capability plus REST nonces on every endpoint, prepared statements throughout, export files stored in a protected directory with unguessable names, and password hashes are never exportable.
 
 No Pro version. No add-ons to buy. This is all of it.
 
 WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, and other plugin names are trademarks of their respective owners and are used here only to describe compatibility. Open Export is an independent project and is not affiliated with or endorsed by any of them.
+
+== Installation ==
+
+1. Upload the `open-export` folder to `/wp-content/plugins/`, or install it from the Plugins screen in your WordPress admin.
+2. Activate the plugin through the **Plugins** screen.
+3. Go to **Tools → Open Export**, or use the **Open Export** link on the Plugins screen.
+
+No configuration is required. Exports are written to a protected folder inside your uploads directory and streamed to you through an authenticated download.
 
 == Third-Party Services ==
 
@@ -64,6 +75,12 @@ Uninstalling removes everything: saved templates, job history, cached data, and 
 
 == Upgrade Notice ==
 
+= 1.3.0 =
+Hand a JSON description of your site to an AI assistant and paste back the export recipe it writes. Also fixes date filters that excluded the last day of a range.
+
+= 1.2.0 =
+WooCommerce order exports (HPOS and classic) and a proper date-range filter. Fixes relative date tokens that resolved in UTC, and an attribute-escaping issue in the admin screen.
+
 = 1.1.2 =
 Compliance and translation release: the whole admin app is now translatable, uninstall wipes every trace (multisite included), and filter values with backslashes export correctly. Now requires WordPress 7.0.
 
@@ -80,6 +97,25 @@ Security and stability update: blocks credential columns on raw table exports, a
 Initial release.
 
 == Changelog ==
+
+= 1.3.0 =
+* Added: an AI assistant panel that exports a JSON description of this site's sources, fields, operators, date columns, and legal field values, complete with the instructions and return format an assistant needs.
+* Added: paste the JSON recipe an assistant replies with and the export screen configures itself; nothing runs until you press Start export.
+* Added: recipes are validated field by field, and anything unrecognised is reported in plain language instead of silently exporting a blank column.
+* Added: REST endpoints /schema and /recipe, behind the same administrator capability and nonce as every other route.
+* Fixed: a date rule using "is on or before" excluded the whole of the end date; date columns now compare by calendar day.
+* Fixed: a compact date such as 20260301 was treated as a number and matched nothing.
+* Fixed: custom fields, taxonomies, and computed fields chosen on a raw database table exported as silently empty columns.
+* Fixed: post_modified_gmt is now offered in the field picker.
+
+
+= 1.2.0 =
+* Added: WooCommerce Orders source that works with both High-Performance Order Storage and classic post storage, exposing order, customer, billing, shipping, totals, and payment fields under the same names on either engine.
+* Added: date-range filter on every source, with presets (today, last 7/30/90 days, this or last week/month/quarter/year) and a custom From/To range.
+* Added: date ranges are whole days in your site's timezone and the end date is fully included; the range is always combined with AND, so choosing "match ANY rule" cannot widen it.
+* Fixed: relative date tokens (`today`, `this month`, `last 30 days`) resolved against UTC instead of the site timezone, so on a UTC-8 site `today` returned no rows at all from late afternoon onward.
+* Fixed: `this month`, `last month`, `this year`, and `last year` started at the current time of day instead of midnight.
+* Security: the admin app escaped `&`, `<`, and `>` but not quotes when building HTML attributes, so a meta key, post type label, or table name containing a double quote could inject markup into the export screen.
 
 = 1.1.2 =
 * Added: full internationalization of the admin app; every UI string now runs through WordPress translation functions.

@@ -4,8 +4,9 @@ Upcoming work for Open Export, grouped by target release. Plans may change as fe
 
 ## Version 1.5
 
-Scheduled exports and richer WooCommerce order data:
+Scheduled exports, richer WooCommerce order data, and room for it all:
 
+- **Interface refactor**: the single-page flow has taken on templates, history, date ranges, and the AI handoff, and adding scheduling and delivery on top will not fit. Reorganise into a tabbed or wizard layout with a persistent summary of the current export, so each step stays legible and new features have somewhere to live.
 - WP-Cron scheduled exports
 - Incremental export (new or changed records since last run)
 - Email on completion (download link or attachment)
@@ -13,7 +14,6 @@ Scheduled exports and richer WooCommerce order data:
 - External cron trigger URL (secret key for server cron)
 - Background processing (exports continue with the browser tab closed)
 - WP-CLI command (`wp opex run …`)
-- WooCommerce HPOS orders source (joined, friendly field view)
 - WooCommerce order line items (one row per line item)
 
 ## Version 2.0

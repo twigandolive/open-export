@@ -35,6 +35,31 @@ class OPEX_Rest {
 			),
 		) );
 
+		register_rest_route( self::NS, '/schema', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'schema' ),
+			'args'                => array(
+				'source' => array(
+					'type'              => 'string',
+					'default'           => '',
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+				'scope'  => array(
+					'type'              => 'string',
+					'default'           => 'source',
+					'enum'              => array( 'source', 'all' ),
+					'sanitize_callback' => 'sanitize_key',
+				),
+			),
+		) );
+
+		register_rest_route( self::NS, '/recipe', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => $can,
+			'callback'            => array( __CLASS__, 'recipe' ),
+		) );
+
 		register_rest_route( self::NS, '/preview', array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'permission_callback' => $can,
@@ -115,8 +140,64 @@ class OPEX_Rest {
 		return rest_ensure_response( OPEX_Catalog::sources() );
 	}
 
+	/**
+	 * Field groups for a source, plus everything the date-range control needs:
+	 * which columns are real dates for this source and what the presets are
+	 * called. One round trip instead of three.
+	 */
 	public static function fields( WP_REST_Request $request ): WP_REST_Response {
-		return rest_ensure_response( OPEX_Catalog::fields( (string) $request['source'] ) );
+		$source = (string) $request['source'];
+		$src    = OPEX_Query::parse_source( $source );
+
+		$date_fields = array();
+		if ( $src ) {
+			foreach ( OPEX_Query::date_fields( $src ) as $id => $def ) {
+				$date_fields[] = array( 'id' => $id, 'label' => $def['label'] );
+			}
+		}
+
+		$presets = array();
+		foreach ( OPEX_Dates::PRESETS as $preset ) {
+			$presets[] = array( 'id' => $preset, 'label' => OPEX_Dates::preset_label( $preset ) );
+		}
+
+		return rest_ensure_response( array(
+			'groups'      => OPEX_Catalog::fields( $source ),
+			'date_fields' => $date_fields,
+			'presets'     => $presets,
+			'timezone'    => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
+		) );
+	}
+
+	/**
+	 * The site's export surface as JSON, for handing to an AI assistant.
+	 * ?scope=all describes every source, which is large on a busy site.
+	 */
+	public static function schema( WP_REST_Request $request ): WP_REST_Response {
+		return rest_ensure_response(
+			OPEX_Schema::build( (string) $request['source'], 'all' === (string) $request['scope'] )
+		);
+	}
+
+	/**
+	 * Turn an assistant's recipe into a validated config for the UI to apply.
+	 * This configures the screen; it does not start an export.
+	 */
+	public static function recipe( WP_REST_Request $request ) {
+		$body = $request->get_json_params();
+		if ( ! is_array( $body ) ) {
+			return new WP_Error( 'opex_recipe_json', __( 'That is not valid JSON. Paste the whole object, including its outer braces.', 'open-export' ), array( 'status' => 400 ) );
+		}
+
+		// Tolerate a recipe wrapped in an outer key, which assistants often add.
+		if ( ! isset( $body['source'] ) && isset( $body['recipe'] ) && is_array( $body['recipe'] ) ) {
+			$body = $body['recipe'];
+		}
+
+		$notes  = array();
+		$result = OPEX_Schema::recipe_to_config( $body, $notes );
+
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
 	public static function preview( WP_REST_Request $request ) {

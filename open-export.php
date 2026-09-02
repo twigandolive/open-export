@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:       Open Export
- * Plugin URI:        https://twigandolive.com
+ * Plugin URI:        https://twigandolive.com/open-export/
  * Description:       Export anything from your WordPress database: posts, users, comments, terms, or any table. Smart field discovery, powerful filters, host-friendly pacing, and CSV / JSON / XML output. Everything included. No upsells, no add-ons.
- * Version:           1.1.2
+ * Version:           1.3.0
  * Requires at least: 7.0
  * Requires PHP:      7.4
  * Author:            Twig & Olive
@@ -15,18 +15,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'OPEX_VERSION', '1.1.2' );
+define( 'OPEX_VERSION', '1.3.0' );
 define( 'OPEX_FILE', __FILE__ );
 define( 'OPEX_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPEX_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPEX_BASENAME', plugin_basename( __FILE__ ) );
 
+require_once OPEX_DIR . 'includes/class-opex-dates.php';
+require_once OPEX_DIR . 'includes/class-opex-woo.php';
 require_once OPEX_DIR . 'includes/class-opex-catalog.php';
 require_once OPEX_DIR . 'includes/class-opex-query.php';
 require_once OPEX_DIR . 'includes/class-opex-writers.php';
 require_once OPEX_DIR . 'includes/class-opex-jobs.php';
 require_once OPEX_DIR . 'includes/class-opex-templates.php';
 require_once OPEX_DIR . 'includes/class-opex-exporter.php';
+require_once OPEX_DIR . 'includes/class-opex-schema.php';
 require_once OPEX_DIR . 'includes/class-opex-rest.php';
 require_once OPEX_DIR . 'includes/class-opex-admin.php';
 
@@ -99,16 +102,21 @@ function opex_plugin_row_meta( array $links, string $file ): array {
 		return $links;
 	}
 
-	return array_merge(
-		$links,
-		array(
-			sprintf(
-				'<a href="%s">%s</a>',
-				esc_url( __( 'https://twigandolive.com/open-export/', 'open-export' ) ),
-				esc_html__( 'Documentation', 'open-export' )
-			),
-		)
+	$meta = array(
+		array( __( 'https://twigandolive.com/open-export/', 'open-export' ), __( 'Documentation', 'open-export' ) ),
+		array( __( 'https://twigandolive.com/contact', 'open-export' ), __( 'Support', 'open-export' ) ),
+		array( __( 'https://twigandolive.com/privacy-policy/', 'open-export' ), __( 'Privacy', 'open-export' ) ),
 	);
+
+	foreach ( $meta as $item ) {
+		$links[] = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( $item[0] ),
+			esc_html( $item[1] )
+		);
+	}
+
+	return $links;
 }
 
 add_action( 'rest_api_init', array( 'OPEX_Rest', 'register_routes' ) );

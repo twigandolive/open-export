@@ -49,6 +49,10 @@
 		columnLabels: {},
 		relation: 'AND',
 		rules: [],
+		dateRange: { field: '', preset: 'all_time', from: '', to: '' },
+		dateFields: [],
+		presets: [],
+		timezone: '',
 		format: 'csv',
 		csvDelimiter: 'comma',
 		pacing: 'balanced',
@@ -66,14 +70,31 @@
 		collapsed: {},
 		collapsedReady: false,
 		error: '',
+		aiOpen: false,
+		aiScopeAll: false,
+		aiBusy: false,
+		aiRecipe: '',
+		aiNotes: [],
+		aiStatus: '',
 	};
 
 	const app = document.getElementById('opex-app');
 
+	/**
+	 * Escape for both text and quoted-attribute contexts.
+	 *
+	 * The previous textContent -> innerHTML round-trip escaped & < > only, and
+	 * every call site here interpolates into a double-quoted attribute. Values
+	 * such as meta keys and post-type labels come from the database, where any
+	 * plugin can put a quote character, so quotes have to go too.
+	 */
 	function esc(value) {
-		const div = document.createElement('div');
-		div.textContent = value == null ? '' : String(value);
-		return div.innerHTML;
+		return String(value == null ? '' : value)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
 	}
 
 	function fmtNum(n) {
@@ -89,7 +110,7 @@
 	}
 
 	function fieldLabel(id) {
-		return id.replace(/^(core|meta|tax|computed|col):/, '');
+		return id.replace(/^(core|meta|tax|computed|col|woo):/, '');
 	}
 
 	function chipDisplayLabel(id) {
@@ -123,6 +144,7 @@
 		app.innerHTML =
 			header() +
 			introSteps() +
+			aiSection() +
 			stepSource() +
 			(state.sourceId ? stepFilters() + stepFields() + stepExport() : '') +
 			savedTemplates() +
@@ -183,6 +205,58 @@
 		});
 	}
 
+	function aiSection() {
+		if (!state.aiOpen) {
+			return '<section class="opex-section opex-ai-closed">' +
+				'<button type="button" class="opex-ai-open" data-act="ai-toggle">' +
+				'<span class="dashicons dashicons-editor-code"></span> ' +
+				esc( __( 'Work with an AI assistant', 'open-export' ) ) +
+				' <span class="opex-muted">' + esc( __( 'describe this site to it, then paste back what it asks for', 'open-export' ) ) + '</span>' +
+				'</button></section>';
+		}
+
+		const notes = state.aiNotes.length
+			? '<ul class="opex-ai-notes">' + state.aiNotes.map(function (n) {
+				return '<li>' + esc(n) + '</li>';
+			}).join('') + '</ul>'
+			: '';
+
+		const status = state.aiStatus ? '<p class="opex-ai-status">' + esc(state.aiStatus) + '</p>' : '';
+
+		/* translators: %s: the selected source name, e.g. "WooCommerce Orders". */
+		const scopeNote = state.sourceId
+			? sprintf( esc( __( 'Describes %s in full.', 'open-export' ) ), '<strong>' + esc(state.sourceLabel) + '</strong>' )
+			: esc( __( 'Pick a source first for a detailed description, or send the site overview as it is.', 'open-export' ) );
+
+		const body =
+			'<div class="opex-ai-grid">' +
+			'<div class="opex-ai-half">' +
+			'<h3>' + esc( __( '1. Describe this site', 'open-export' ) ) + '</h3>' +
+			'<p class="opex-muted">' + scopeNote + '</p>' +
+			'<p class="opex-hint">' + esc( __( 'Copy this JSON into your assistant and tell it what report you want. It lists every source, field, operator, and date option this site has.', 'open-export' ) ) + '</p>' +
+			'<label class="opex-ai-check"><input type="checkbox" data-act="ai-scope"' + (state.aiScopeAll ? ' checked' : '') + '> ' +
+			esc( __( 'Include every source, not just the selected one (much larger)', 'open-export' ) ) + '</label>' +
+			'<div class="opex-row-actions">' +
+			'<button type="button" class="button button-secondary" data-act="ai-copy"' + (state.aiBusy ? ' disabled' : '') + '>' + esc( __( 'Copy schema', 'open-export' ) ) + '</button> ' +
+			'<button type="button" class="button" data-act="ai-download"' + (state.aiBusy ? ' disabled' : '') + '>' + esc( __( 'Download .json', 'open-export' ) ) + '</button>' +
+			'</div></div>' +
+
+			'<div class="opex-ai-half">' +
+			'<h3>' + esc( __( '2. Paste what it sends back', 'open-export' ) ) + '</h3>' +
+			'<p class="opex-hint">' + esc( __( 'The assistant replies with a short JSON recipe. Paste it here and the screen configures itself; nothing exports until you press Start export.', 'open-export' ) ) + '</p>' +
+			'<textarea id="opex-ai-recipe" class="opex-ai-textarea" rows="7" spellcheck="false" placeholder="' + esc( '{ "source": "woo:orders", "fields": [ ... ] }' ) + '">' + esc(state.aiRecipe) + '</textarea>' +
+			'<div class="opex-row-actions">' +
+			'<button type="button" class="button button-primary" data-act="ai-apply"' + (state.aiBusy ? ' disabled' : '') + '>' + esc( __( 'Apply recipe', 'open-export' ) ) + '</button>' +
+			'</div>' + status + notes +
+			'</div></div>';
+
+		return '<section class="opex-section opex-ai">' +
+			'<h2><span class="opex-step is-plain"><span class="dashicons dashicons-editor-code"></span></span> ' +
+			esc( __( 'Work with an AI assistant', 'open-export' ) ) +
+			' <button type="button" class="opex-link opex-ai-close" data-act="ai-toggle">' + esc( __( 'hide', 'open-export' ) ) + '</button></h2>' +
+			'<div class="opex-section-body">' + body + '</div></section>';
+	}
+
 	function stepSource() {
 		let body;
 		if (!state.sources.length) {
@@ -240,6 +314,42 @@
 		return opts;
 	}
 
+	function dateRangeBlock() {
+		if (!state.dateFields.length) return '';
+
+		const dr = state.dateRange;
+		const custom = dr.preset === 'custom';
+
+		const presetOpts = state.presets.map(function (p) {
+			return '<option value="' + esc(p.id) + '"' + (dr.preset === p.id ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+		}).join('');
+
+		const fieldOpts = state.dateFields.map(function (f) {
+			return '<option value="' + esc(f.id) + '"' + (dr.field === f.id ? ' selected' : '') + '>' + esc(f.label) + '</option>';
+		}).join('');
+
+		const customRow = custom
+			? '<div class="opex-date-custom">' +
+				'<label>' + esc( __( 'From', 'open-export' ) ) + ' <input type="date" id="opex-date-from" value="' + esc(dr.from) + '"></label>' +
+				'<label>' + esc( __( 'To', 'open-export' ) ) + ' <input type="date" id="opex-date-to" value="' + esc(dr.to) + '"></label>' +
+				'</div>'
+			: '';
+
+		const showField = dr.preset !== 'all_time' && state.dateFields.length > 1;
+
+		/* translators: %s: the site's timezone, e.g. America/Los_Angeles. */
+		const tzNote = state.timezone
+			? '<p class="opex-hint">' + esc( sprintf( __( 'Dates are whole days in your site timezone (%s). The end date is included in full.', 'open-export' ), state.timezone ) ) + '</p>'
+			: '';
+
+		return '<div class="opex-daterange">' +
+			'<div class="opex-date-row">' +
+			'<label>' + esc( __( 'Date range', 'open-export' ) ) + ' <select id="opex-date-preset">' + presetOpts + '</select></label>' +
+			(showField ? '<label>' + esc( __( 'based on', 'open-export' ) ) + ' <select id="opex-date-field">' + fieldOpts + '</select></label>' : '') +
+			'</div>' + customRow + (dr.preset !== 'all_time' ? tzNote : '') +
+			'</div>';
+	}
+
 	function stepFilters() {
 		const rows = state.rules.map(function (rule, i) {
 			const noValue = rule.op === 'empty' || rule.op === 'not_empty';
@@ -269,6 +379,7 @@
 			'<code>last 30 days</code>', '<code>this month</code>', '<code>-7 days</code>' );
 
 		const body =
+			dateRangeBlock() +
 			'<div class="opex-rules">' + rows + '</div>' + relation +
 			'<p class="opex-hint">' + hint + '</p>' +
 			'<div class="opex-row-actions">' +
@@ -481,10 +592,44 @@
 			el.querySelector('.opex-rule-value').addEventListener('input', function () { rule.value = this.value; });
 		});
 
+		const recipeBox = document.getElementById('opex-ai-recipe');
+		if (recipeBox) {
+			recipeBox.addEventListener('input', function () { state.aiRecipe = this.value; });
+		}
+
 		const relation = document.getElementById('opex-relation');
 		if (relation) {
 			relation.addEventListener('change', function () { state.relation = this.value; });
 		}
+
+		const preset = document.getElementById('opex-date-preset');
+		if (preset) {
+			preset.addEventListener('change', function () {
+				state.dateRange.preset = this.value;
+				if (this.value !== 'custom') { state.dateRange.from = ''; state.dateRange.to = ''; }
+				if (!state.dateRange.field && state.dateFields.length) state.dateRange.field = state.dateFields[0].id;
+				state.preview = null;
+				render();
+			});
+		}
+
+		const dateField = document.getElementById('opex-date-field');
+		if (dateField) {
+			dateField.addEventListener('change', function () {
+				state.dateRange.field = this.value;
+				state.preview = null;
+			});
+		}
+
+		['from', 'to'].forEach(function (end) {
+			const input = document.getElementById('opex-date-' + end);
+			if (input) {
+				input.addEventListener('change', function () {
+					state.dateRange[end] = this.value;
+					state.preview = null;
+				});
+			}
+		});
 
 		const search = document.getElementById('opex-search');
 		if (search) {
@@ -608,6 +753,11 @@
 		if (act === 'del-template') return deleteTemplate(btn.dataset.id);
 		if (act === 'del-job') return deleteJob(btn.dataset.id);
 		if (act === 'dismiss-error') { state.error = ''; return render(); }
+		if (act === 'ai-toggle') { state.aiOpen = !state.aiOpen; state.aiStatus = ''; return render(); }
+		if (act === 'ai-scope') { state.aiScopeAll = btn.checked; return render(); }
+		if (act === 'ai-copy') return copySchema();
+		if (act === 'ai-download') return downloadSchema();
+		if (act === 'ai-apply') return applyRecipe();
 	});
 
 	function pickSource(id, label) {
@@ -617,13 +767,16 @@
 		state.selected = [];
 		state.columnLabels = {};
 		state.rules = [];
+		state.dateRange = { field: '', preset: 'all_time', from: '', to: '' };
+		state.dateFields = [];
 		state.preview = null;
 		state.running = null;
 		render();
 
 		apiFetch({ path: '/' + BOOT.restBase + '/fields?source=' + encodeURIComponent(id) })
-			.then(function (groups) {
-				state.fieldGroups = groups;
+			.then(function (payload) {
+				applyFieldsPayload(payload);
+				const groups = state.fieldGroups;
 				const core = groups.find(function (g) { return g.label.indexOf('Core') === 0 || g.label === 'Columns'; });
 				state.selected = core ? core.fields.map(function (f) { return f.id; }) : [];
 				render();
@@ -640,6 +793,12 @@
 		state.rules = (cfg.filters && cfg.filters.rules) ? cfg.filters.rules.map(function (r) {
 			return { field: r.field || '', op: r.op || 'eq', value: r.value || '' };
 		}) : [];
+		state.dateRange = {
+			field: (cfg.date_range && cfg.date_range.field) || '',
+			preset: (cfg.date_range && cfg.date_range.preset) || 'all_time',
+			from: (cfg.date_range && cfg.date_range.from) || '',
+			to: (cfg.date_range && cfg.date_range.to) || ''
+		};
 		state.format = cfg.format || 'csv';
 		state.csvDelimiter = cfg.csv_delimiter || 'comma';
 		state.pacing = inferPacing(cfg.batch_size);
@@ -654,8 +813,8 @@
 		}
 
 		return apiFetch({ path: '/' + BOOT.restBase + '/fields?source=' + encodeURIComponent(cfg.source) })
-			.then(function (groups) {
-				state.fieldGroups = groups;
+			.then(function (payload) {
+				applyFieldsPayload(payload);
 				render();
 			});
 	}
@@ -700,6 +859,29 @@
 			.catch(fail);
 	}
 
+	/**
+	 * The /fields endpoint used to return a bare array of groups and now returns
+	 * an object carrying the date metadata too. Accept both so a cached script
+	 * from a previous version does not break the screen mid-upgrade.
+	 */
+	function applyFieldsPayload(payload) {
+		if (Array.isArray(payload)) {
+			state.fieldGroups = payload;
+			state.dateFields = [];
+			state.presets = [];
+			return;
+		}
+		state.fieldGroups = payload.groups || [];
+		state.dateFields = payload.date_fields || [];
+		state.presets = payload.presets || [];
+		state.timezone = payload.timezone || '';
+
+		const known = state.dateFields.some(function (f) { return f.id === state.dateRange.field; });
+		if (!known) {
+			state.dateRange.field = state.dateFields.length ? state.dateFields[0].id : '';
+		}
+	}
+
 	function toggleField(id, on) {
 		const at = state.selected.indexOf(id);
 		if (on && at === -1) state.selected.push(id);
@@ -736,6 +918,7 @@
 			source: state.sourceId,
 			fields: state.selected,
 			filters: { relation: state.relation, rules: state.rules.filter(function (r) { return r.field; }) },
+			date_range: state.dateRange,
 			format: state.format,
 			csv_delimiter: state.csvDelimiter,
 			column_labels: labels,
@@ -804,6 +987,113 @@
 				state.running.error = (err && err.message) || __( 'Request failed. Resume to continue where the export left off.', 'open-export' );
 				render();
 			});
+	}
+
+	function schemaPath() {
+		return '/' + BOOT.restBase + '/schema?scope=' + (state.aiScopeAll ? 'all' : 'source') +
+			'&source=' + encodeURIComponent(state.sourceId || '');
+	}
+
+	function fetchSchema() {
+		state.aiBusy = true;
+		state.aiStatus = '';
+		render();
+		return apiFetch({ path: schemaPath() })
+			.then(function (doc) {
+				state.aiBusy = false;
+				return JSON.stringify(doc, null, 2);
+			})
+			.catch(function (err) { state.aiBusy = false; fail(err); throw err; });
+	}
+
+	function copySchema() {
+		fetchSchema().then(function (text) {
+			const done = function () {
+				/* translators: %s: size of the copied JSON, e.g. "48 KB". */
+				state.aiStatus = sprintf( __( 'Schema copied (%s). Paste it into your assistant.', 'open-export' ), fmtSize(text.length) );
+				render();
+			};
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+			} else {
+				fallbackCopy(text, done);
+			}
+		}).catch(function () {});
+	}
+
+	function fallbackCopy(text, done) {
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.setAttribute('readonly', '');
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		try { document.execCommand('copy'); done(); }
+		catch (e) { state.error = __( 'Could not copy. Use Download .json instead.', 'open-export' ); render(); }
+		document.body.removeChild(ta);
+	}
+
+	function downloadSchema() {
+		fetchSchema().then(function (text) {
+			const blob = new Blob([text], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'open-export-schema.json';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+			state.aiStatus = __( 'Schema downloaded.', 'open-export' );
+			render();
+		}).catch(function () {});
+	}
+
+	function applyRecipe() {
+		const box = document.getElementById('opex-ai-recipe');
+		const text = (box ? box.value : state.aiRecipe).trim();
+		state.aiRecipe = text;
+		state.aiNotes = [];
+		state.aiStatus = '';
+
+		if (!text) {
+			state.aiStatus = __( 'Paste the recipe JSON first.', 'open-export' );
+			return render();
+		}
+
+		let parsed;
+		try {
+			parsed = JSON.parse(stripFences(text));
+		} catch (e) {
+			state.aiStatus = __( 'That is not valid JSON. Copy the whole object, including its outer braces.', 'open-export' );
+			return render();
+		}
+
+		state.aiBusy = true;
+		render();
+
+		apiFetch({ path: '/' + BOOT.restBase + '/recipe', method: 'POST', data: parsed })
+			.then(function (result) {
+				state.aiBusy = false;
+				state.aiNotes = result.notes || [];
+				return applyConfig(result.config, result.name || '').then(function () {
+					state.aiStatus = state.aiNotes.length
+						? __( 'Recipe applied, with the notes below. Review, then press Start export.', 'open-export' )
+						: __( 'Recipe applied in full. Review the fields, then press Start export.', 'open-export' );
+					render();
+				});
+			})
+			.catch(function (err) {
+				state.aiBusy = false;
+				state.aiStatus = (err && err.message) || __( 'That recipe could not be applied.', 'open-export' );
+				render();
+			});
+	}
+
+	/** Assistants often wrap JSON in a markdown code fence; drop it. */
+	function stripFences(text) {
+		return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 	}
 
 	function refreshJobs() {

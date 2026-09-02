@@ -114,6 +114,14 @@ class OPEX_Catalog {
 			);
 		}
 
+		// WooCommerce orders lead the Content group: under HPOS the shop_order
+		// post type still exists but holds no rows, so the generic entry below
+		// would export an empty file.
+		$woo = OPEX_Woo::source_item();
+		if ( $woo ) {
+			array_unshift( $content, $woo );
+		}
+
 		return array(
 			array(
 				'id'    => 'content',
@@ -143,6 +151,26 @@ class OPEX_Catalog {
 				'items' => $tables,
 			),
 		);
+	}
+
+	/**
+	 * Flat map of field id => label for a source, for validating a config
+	 * against what the source actually offers.
+	 *
+	 * Meta keys are sampled with a LIMIT, so this list is complete for core,
+	 * computed, taxonomy and column fields but NOT for meta. Callers must treat
+	 * a missing meta: id as "unknown", never as "invalid".
+	 */
+	public static function field_ids( string $source_id ): array {
+		$out = array();
+		foreach ( self::fields( $source_id ) as $group ) {
+			foreach ( (array) ( $group['fields'] ?? array() ) as $field ) {
+				if ( isset( $field['id'] ) ) {
+					$out[ (string) $field['id'] ] = (string) ( $field['label'] ?? $field['id'] );
+				}
+			}
+		}
+		return $out;
 	}
 
 	/** All tables in the database with approximate row counts. */
@@ -212,7 +240,13 @@ class OPEX_Catalog {
 			return array();
 		}
 
+		if ( OPEX_Woo::SOURCE === $source_id ) {
+			return OPEX_Woo::fields();
+		}
+
 		switch ( $src['type'] ) {
+			case 'woo_orders':
+				return OPEX_Woo::fields();
 			case 'posts':
 				return self::post_fields( $src['post_type'] );
 			case 'users':
@@ -230,7 +264,7 @@ class OPEX_Catalog {
 	private static function post_fields( string $post_type ): array {
 		$core = array(
 			'ID', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_name',
-			'post_date', 'post_date_gmt', 'post_modified', 'post_author', 'post_parent',
+			'post_date', 'post_date_gmt', 'post_modified', 'post_modified_gmt', 'post_author', 'post_parent',
 			'menu_order', 'comment_status', 'ping_status', 'comment_count', 'guid',
 		);
 		if ( 'attachment' === $post_type ) {
@@ -418,7 +452,7 @@ class OPEX_Catalog {
 	 * Sort raw meta keys into labelled groups: known plugins first, then
 	 * Custom Fields, with underscored/technical keys tucked in last.
 	 */
-	private static function grouped_meta( array $keys, array $acf_keys ): array {
+	public static function grouped_meta( array $keys, array $acf_keys ): array {
 		$buckets = array();
 
 		foreach ( $keys as $key ) {
