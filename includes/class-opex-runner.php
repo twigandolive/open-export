@@ -12,7 +12,8 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Runner {
 
-	private const STALL_AFTER = 600;
+	private const STALL_AFTER  = 600;
+	private const DELIVER_LOCK = 300;
 	private const HOOKS       = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
 
 	/** Add the cron callbacks and the hourly maintenance event. */
@@ -21,6 +22,7 @@ class OPEX_Runner {
 		add_action( 'opex_run_job', array( __CLASS__, 'on_cron' ) );
 		add_action( 'opex_deliver', array( __CLASS__, 'deliver' ) );
 		add_action( 'opex_maintenance', array( __CLASS__, 'maintenance' ) );
+		add_action( 'opex_job_done', array( __CLASS__, 'on_job_done' ), 20 );
 		if ( ! wp_next_scheduled( 'opex_maintenance' ) ) {
 			wp_schedule_event( time() + 60, 'hourly', 'opex_maintenance' );
 		}
@@ -160,28 +162,73 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Whether a job has a delivery item that can still be tried. */
+	/** Whether a job has a delivery item that can still be tried (new, or failed with attempts left). */
 	private static function has_pending( ?array $job ): bool {
 		foreach ( (array) ( $job['deliveries'] ?? array() ) as $item ) {
-			if ( 'pending' === ( $item['status'] ?? '' ) && (int) ( $item['attempts'] ?? 0 ) < 3 ) {
+			if ( in_array( $item['status'] ?? '', array( 'pending', 'failed' ), true ) && (int) ( $item['attempts'] ?? 0 ) < OPEX_Delivery::MAX_ATTEMPTS ) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	/** Cron entry: run the pending deliveries of one job. */
-	public static function deliver( $job_id ): void {
-		$job_id = (string) $job_id;
-		$job    = OPEX_Jobs::get( $job_id );
-		if ( ! class_exists( 'OPEX_Delivery' ) || ! $job || ! self::has_pending( $job ) ) {
+	/**
+	 * Hook for `opex_job_done`: queue the job's deliveries so they run soon,
+	 * whatever mode the job ran in.
+	 *
+	 * @param array $job Finished job record.
+	 */
+	public static function on_job_done( $job ): void {
+		$id = is_array( $job ) ? (string) ( $job['id'] ?? '' ) : '';
+		if ( '' === $id || ! self::has_pending( $job ) || wp_next_scheduled( 'opex_deliver', array( $id ) ) ) {
 			return;
 		}
-		$list  = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ) );
-		$fresh = OPEX_Jobs::get( $job_id );
-		if ( $fresh ) {
-			$fresh['deliveries'] = $list;
-			OPEX_Jobs::save( $fresh );
+		wp_schedule_single_event( time(), 'opex_deliver', array( $id ) );
+		spawn_cron();
+	}
+
+	/**
+	 * Cron entry: run the pending deliveries of one job. A lock keeps cron and
+	 * the command line from both sending. The job is read again under the lock,
+	 * and the next try is queued for when the earliest failed item is due.
+	 */
+	public static function deliver( $job_id ): void {
+		$job_id = (string) $job_id;
+		if ( ! class_exists( 'OPEX_Delivery' ) || ! self::has_pending( OPEX_Jobs::get( $job_id ) ) ) {
+			return;
+		}
+		$token = OPEX_Lock::acquire( 'deliver_' . $job_id, self::DELIVER_LOCK );
+		if ( false === $token ) {
+			return;
+		}
+		try {
+			$job = OPEX_Jobs::get( $job_id );
+			if ( ! $job || ! self::has_pending( $job ) ) {
+				return;
+			}
+			$list  = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ) );
+			$fresh = OPEX_Jobs::get( $job_id );
+			if ( $fresh ) {
+				$fresh['deliveries'] = $list;
+				OPEX_Jobs::save( $fresh );
+				self::queue_retry( $job_id, $list );
+			}
+		} finally {
+			OPEX_Lock::release( 'deliver_' . $job_id, $token );
+		}
+	}
+
+	/**
+	 * Schedule the next delivery attempt, if any item still has one coming.
+	 *
+	 * @param string $job_id Job id.
+	 * @param array  $list   The job's deliveries after this pass.
+	 */
+	private static function queue_retry( string $job_id, array $list ): void {
+		wp_clear_scheduled_hook( 'opex_deliver', array( $job_id ) );
+		$next = OPEX_Delivery::next_attempt_at( $list );
+		if ( $next > 0 ) {
+			wp_schedule_single_event( max( $next, time() + 1 ), 'opex_deliver', array( $job_id ) );
 		}
 	}
 }

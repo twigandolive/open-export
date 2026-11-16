@@ -167,6 +167,7 @@ class EngineJobsTest extends TestCase {
 	 * so no row is doubled.
 	 *
 	 * @param string $format Output format.
+	 * @dataProvider formats
 	 */
 	#[DataProvider( 'formats' )]
 	public function test_replayed_batch_writes_rows_once( string $format ): void {
@@ -242,34 +243,94 @@ class EngineJobsTest extends TestCase {
 	/** S-6: the lock is one atomic option row. */
 	public function test_lock_is_an_atomic_option(): void {
 		global $wpdb;
-		$name = 'jtestlock' . wp_rand( 1000, 9999 );
-		$this->assertTrue( OPEX_Lock::acquire( $name, 60 ) );
+		$name  = 'jtestlock' . wp_rand( 1000, 9999 );
+		$token = OPEX_Lock::acquire( $name, 60 );
+		$this->assertIsString( $token );
 		$this->assertFalse( OPEX_Lock::acquire( $name, 60 ), 'a second caller is refused' );
 		$this->assertTrue( OPEX_Lock::is_held( $name ) );
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value, autoload FROM {$wpdb->options} WHERE option_name = %s", 'opex_lock_' . $name ) );
 		$this->assertNotNull( $row );
 		$this->assertContains( $row->autoload, array( 'no', 'off' ), 'the lock never autoloads' );
 		$this->assertEqualsWithDelta( time() + 60, (int) $row->option_value, 3 );
-		OPEX_Lock::release( $name );
+		$this->assertStringEndsWith( ':' . $token, $row->option_value, 'the value carries the owner token' );
+		OPEX_Lock::release( $name, $token );
 		$this->assertFalse( OPEX_Lock::is_held( $name ) );
-		$this->assertTrue( OPEX_Lock::acquire( $name, 60 ) );
-		OPEX_Lock::release( $name );
+		$again = OPEX_Lock::acquire( $name, 60 );
+		$this->assertIsString( $again );
+		OPEX_Lock::release( $name, $again );
 	}
 
 	/** S-6: an expired lock is taken over, and refresh pushes the expiry out. */
 	public function test_stale_lock_is_taken_over_and_refresh_extends(): void {
 		global $wpdb;
-		$name = 'jtestlock' . wp_rand( 1000, 9999 );
-		$this->assertTrue( OPEX_Lock::acquire( $name, 60 ) );
-		$wpdb->update( $wpdb->options, array( 'option_value' => (string) ( time() - 5 ) ), array( 'option_name' => 'opex_lock_' . $name ) );
+		$name  = 'jtestlock' . wp_rand( 1000, 9999 );
+		$first = OPEX_Lock::acquire( $name, 60 );
+		$this->assertIsString( $first );
+		$wpdb->update( $wpdb->options, array( 'option_value' => ( time() - 5 ) . ':' . $first ), array( 'option_name' => 'opex_lock_' . $name ) );
 		$this->assertFalse( OPEX_Lock::is_held( $name ) );
-		$this->assertTrue( OPEX_Lock::acquire( $name, 60 ), 'a stale lock is taken over' );
+		$second = OPEX_Lock::acquire( $name, 60 );
+		$this->assertIsString( $second, 'a stale lock is taken over' );
 		$this->assertFalse( OPEX_Lock::acquire( $name, 60 ) );
-		$wpdb->update( $wpdb->options, array( 'option_value' => (string) ( time() + 1 ) ), array( 'option_name' => 'opex_lock_' . $name ) );
-		OPEX_Lock::refresh( $name, 300 );
+		$wpdb->update( $wpdb->options, array( 'option_value' => ( time() + 1 ) . ':' . $second ), array( 'option_name' => 'opex_lock_' . $name ) );
+		$this->assertTrue( OPEX_Lock::refresh( $name, $second, 300 ) );
 		$value = (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'opex_lock_' . $name ) );
 		$this->assertEqualsWithDelta( time() + 300, $value, 3 );
-		OPEX_Lock::release( $name );
+		OPEX_Lock::release( $name, $second );
+	}
+
+	/** Lock ownership: a holder that went stale cannot refresh or release the new holder's lock. */
+	public function test_stale_holder_cannot_touch_the_new_holders_lock(): void {
+		global $wpdb;
+		$name  = 'jtestlock' . wp_rand( 1000, 9999 );
+		$old   = OPEX_Lock::acquire( $name, 60 );
+		$wpdb->update( $wpdb->options, array( 'option_value' => ( time() - 5 ) . ':' . $old ), array( 'option_name' => 'opex_lock_' . $name ) );
+		$new = OPEX_Lock::acquire( $name, 60 );
+		$this->assertIsString( $new );
+		$this->assertNotSame( $old, $new );
+
+		$this->assertFalse( OPEX_Lock::refresh( $name, $old, 600 ), 'the old holder cannot refresh' );
+		OPEX_Lock::release( $name, $old );
+		$this->assertTrue( OPEX_Lock::is_held( $name ), 'the old holder cannot release' );
+		$this->assertTrue( OPEX_Lock::owns( $name, $new ) );
+		$value = (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'opex_lock_' . $name ) );
+		$this->assertEqualsWithDelta( time() + 60, $value, 3, 'the expiry did not move' );
+		$this->assertFalse( OPEX_Lock::refresh( $name, '', 60 ) );
+
+		$this->assertTrue( OPEX_Lock::refresh( $name, $new, 120 ) );
+		OPEX_Lock::release( $name, $new );
+		$this->assertFalse( OPEX_Lock::is_held( $name ) );
+	}
+
+	/** Lock ownership: a run that lost its lock writes nothing and saves nothing. */
+	public function test_run_that_lost_its_lock_writes_nothing(): void {
+		global $wpdb;
+		$job  = $this->job( array( 'batch_size' => 10 ), 'lost lock' );
+		$id   = $job['id'];
+		$path = OPEX_Jobs::file_path( OPEX_Jobs::get( $id ) );
+		$size = filesize( $path );
+		$before = OPEX_Jobs::get( $id );
+
+		// While the batch query runs, another worker takes over the lock.
+		$swap = static function ( $sql ) use ( $wpdb, $id ) {
+			if ( false !== strpos( $sql, 'ORDER BY p.ID' ) ) {
+				$wpdb->update( $wpdb->options, array( 'option_value' => ( time() + 90 ) . ':otherholder1234' ), array( 'option_name' => 'opex_lock_' . $id ) );
+			}
+			return $sql;
+		};
+		add_filter( 'query', $swap );
+		$out = OPEX_Exporter::run( $id );
+		remove_filter( 'query', $swap );
+
+		$this->assertWPError( $out );
+		$this->assertSame( 'opex_locked', $out->get_error_code() );
+		clearstatcache( true, $path );
+		$this->assertSame( $size, filesize( $path ), 'nothing was appended' );
+		$after = OPEX_Jobs::get( $id );
+		$this->assertSame( $before['cursor'], $after['cursor'] );
+		$this->assertSame( $before['processed'], $after['processed'] );
+		$this->assertSame( 'running', $after['status'] );
+		$this->assertTrue( OPEX_Lock::owns( $id, 'otherholder1234' ), 'the new holder keeps its lock' );
+		OPEX_Lock::force_release( $id );
 	}
 
 	/** S-6: a caller locked out does not change the job's status. */

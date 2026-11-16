@@ -37,6 +37,7 @@ class SourcesTest extends CharacterizationCase {
 	 * @param string $source   Source id.
 	 * @param array  $fields   Fields.
 	 * @param int    $expected Expected rows or -1 to only compare with count().
+	 * @dataProvider sources
 	 */
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'sources' )]
 	public function test_source_through_engine( string $source, array $fields, int $expected ): void {

@@ -56,6 +56,7 @@ class EngineWritersTest extends TestCase {
 	 *
 	 * @param string $format  Format.
 	 * @param array  $options Writer options.
+	 * @dataProvider formats
 	 */
 	#[DataProvider( 'formats' )]
 	public function test_restore_undoes_a_replayed_batch( string $format, array $options ): void {

@@ -26,6 +26,10 @@ class PrivacyTest extends TestCase {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		require_once ABSPATH . 'wp-admin/includes/class-wp-privacy-policy-content.php';
 		$prop = new ReflectionProperty( 'WP_Privacy_Policy_Content', 'policy_content' );
+		if ( PHP_VERSION_ID < 80100 ) {
+			// Private members need this before PHP 8.1. Newer versions do not, and 8.5 deprecates the call.
+			$prop->setAccessible( true );
+		}
 		return $prop->getValue();
 	}
 

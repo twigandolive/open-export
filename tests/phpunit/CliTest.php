@@ -172,6 +172,66 @@ class CliTest extends TestCase {
 		$this->assertSame( $this->expected_rows( $tpl ), $first['rows'] );
 	}
 
+	public function test_run_a_schedule_with_delivery_name_and_watermark() {
+		$rec = OPEX_Schedules::save(
+			array(
+				'name'        => 'CLI run schedule',
+				'config'      => array( 'source' => 'posts:post', 'fields' => array( 'core:ID', 'core:post_title' ), 'batch_size' => 10 ),
+				'frequency'   => 'daily',
+				'time'        => '03:30',
+				'enabled'     => true,
+				'incremental' => array( 'enabled' => true, 'field' => 'core:post_date_gmt' ),
+				'filename'    => 'cli-{label}',
+			)
+		);
+		$this->assertIsArray( $rec );
+		$this->schedule_ids[] = $rec['id'];
+		$out = $this->tmp . '/schedule.csv';
+		$res = $this->wp( array( 'opex', 'run', $rec['id'], '--output=' . $out ) );
+		$this->assertSame( 0, $res['code'], $res['err'] );
+		$this->assertSame( (int) OPEX_Query::count( $rec['config'] ), $this->csv_rows( $out ) );
+
+		$this->bust();
+		$after = OPEX_Schedules::get( $rec['id'] );
+		$this->assertSame( 'done', $after['last_run']['status'] );
+		$job = OPEX_Jobs::get( $after['last_run']['job_id'] );
+		$this->assertSame( 'cli', $job['origin'] );
+		$this->assertSame( $rec['id'], $job['schedule_id'] );
+		$this->assertSame( 'background', $job['mode'] );
+		$this->assertSame( 'cli-CLI-run-schedule', $job['delivery_name'] );
+		$this->assertSame( gmdate( 'Y-m-d H:i:s', $job['created'] ), $after['watermark'] );
+		$this->assertGreaterThan( time(), $after['next_run'], 'the next run stays set' );
+
+		// A schedule keeps its own settings.
+		$res = $this->wp( array( 'opex', 'run', $rec['id'], '--since=2020-01-01' ) );
+		$this->assertSame( 1, $res['code'] );
+		$this->assertStringContainsString( 'templates only', $res['err'] );
+	}
+
+	public function test_run_with_since_exports_only_newer_rows() {
+		global $wpdb;
+		$tpl = $this->template();
+		$cut = (string) $wpdb->get_var( "SELECT post_date FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status <> 'auto-draft' ORDER BY post_date ASC LIMIT 1 OFFSET 20" );
+		$this->assertNotSame( '', $cut );
+		$expect = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status <> 'auto-draft' AND post_date > %s", $cut ) );
+		$this->assertGreaterThan( 0, $expect );
+		$this->assertLessThan( $this->expected_rows( $tpl ), $expect );
+
+		$out = $this->tmp . '/since.csv';
+		$res = $this->wp( array( 'opex', 'run', $tpl['id'], '--since=' . $cut, '--output=' . $out ) );
+		$this->assertSame( 0, $res['code'], $res['err'] );
+		$this->assertSame( $expect, $this->csv_rows( $out ) );
+
+		$none = $this->tmp . '/none.csv';
+		$res  = $this->wp( array( 'opex', 'run', $tpl['id'], '--since=2999-01-01', '--output=' . $none ) );
+		$this->assertSame( 0, $res['code'], $res['err'] );
+		$this->assertSame( 0, $this->csv_rows( $none ) );
+
+		$res = $this->wp( array( 'opex', 'run', $tpl['id'], '--since=yesterday' ) );
+		$this->assertSame( 1, $res['code'] );
+		$this->assertStringContainsString( 'YYYY-MM-DD', $res['err'] );
+	}
+
 	public function test_run_by_name_and_refuses_overwrite_without_force() {
 		$tpl = $this->template();
 		$out = $this->tmp . '/keep.csv';

@@ -22,6 +22,9 @@ class OPEX_Rest_Public {
 	private const WORK_SECS  = 20;
 	private const DUMMY_KEY  = 'opex-no-such-schedule-key-for-timing-0000';
 	private const TRANSIENT  = 'opex_trigger_';
+	private const FAIL_KEY   = 'opex_trig_fail_';
+	private const FAIL_LIMIT = 10;
+	private const FAIL_SPAN  = 600;
 
 	/**
 	 * Registers the routes.
@@ -96,15 +99,54 @@ class OPEX_Rest_Public {
 	 * @return true|WP_Error
 	 */
 	public static function can_trigger( WP_REST_Request $request ) {
-		$schedule = OPEX_Schedules::get( (string) $request['id'] );
+		$id       = (string) $request['id'];
+		$schedule = OPEX_Schedules::get( $id );
 		$stored   = $schedule ? (string) $schedule['trigger_key'] : '';
 		$known    = '' !== $stored ? $stored : self::DUMMY_KEY;
 		$given    = self::plain_string( $request->get_param( 'key' ) );
 		$match    = hash_equals( $known, $given );
+
+		// Known and unknown ids take this same path. After too many wrong keys
+		// the id answers 429 until the window ends, even for the right key.
+		$fails = self::failures( $id );
+		if ( $fails['count'] >= self::FAIL_LIMIT ) {
+			return new WP_Error(
+				'opex_too_many',
+				__( 'Too many tries. Wait a few minutes.', 'open-export' ),
+				array( 'status' => 429 )
+			);
+		}
 		if ( $match && $schedule && '' !== $stored ) {
 			return true;
 		}
+		self::count_failure( $id, $fails );
 		return self::denied( 403 );
+	}
+
+	/**
+	 * The failed-key counter for one schedule id.
+	 *
+	 * @param string $id Schedule id from the URL.
+	 * @return array count and until (end of the window).
+	 */
+	private static function failures( string $id ): array {
+		$saved = get_transient( self::FAIL_KEY . $id );
+		if ( is_array( $saved ) && (int) ( $saved['until'] ?? 0 ) > time() ) {
+			return array( 'count' => (int) ( $saved['count'] ?? 0 ), 'until' => (int) $saved['until'] );
+		}
+		return array( 'count' => 0, 'until' => 0 );
+	}
+
+	/**
+	 * Adds one failed key. The window starts at the first failure and does not
+	 * move, so a steady trickle of guesses cannot keep it open forever.
+	 *
+	 * @param string $id    Schedule id.
+	 * @param array  $fails Current counter.
+	 */
+	private static function count_failure( string $id, array $fails ): void {
+		$until = $fails['until'] > 0 ? $fails['until'] : time() + self::FAIL_SPAN;
+		set_transient( self::FAIL_KEY . $id, array( 'count' => $fails['count'] + 1, 'until' => $until ), max( 1, $until - time() ) );
 	}
 
 	/**

@@ -283,15 +283,55 @@ class OPEX_Schedules {
 		if ( 'cron' === $origin && ! $s['enabled'] ) {
 			return new WP_Error( 'opex_disabled', __( 'This schedule is turned off.', 'open-export' ), array( 'status' => 409 ) );
 		}
-		foreach ( OPEX_Jobs::all() as $job ) {
-			if ( ( $job['schedule_id'] ?? '' ) === $id && 'running' === $job['status'] ) {
-				return new WP_Error( 'opex_busy', __( 'This schedule is still running.', 'open-export' ), array( 'status' => 409 ) );
+		// The check and the job creation happen under one lock, so two starts
+		// (the trigger URL, cron, a person) cannot both see "idle".
+		$token = OPEX_Lock::acquire( 'sched_' . $id, 60 );
+		if ( false === $token ) {
+			return self::busy();
+		}
+		try {
+			foreach ( OPEX_Jobs::all() as $job ) {
+				if ( ( $job['schedule_id'] ?? '' ) === $id && 'running' === $job['status'] ) {
+					return self::busy();
+				}
 			}
+			$job = OPEX_Exporter::create( $s['config'], $s['name'], self::job_extra( $s, $origin ) );
+		} finally {
+			OPEX_Lock::release( 'sched_' . $id, $token );
+		}
+		if ( is_wp_error( $job ) ) {
+			return $job;
 		}
 
+		// A job that finished inside create() already updated the schedule through
+		// opex_job_done, so read the record again before saving the next run.
+		$s = self::get( $id ) ?? $s;
+		if ( 'running' === $job['status'] ) {
+			$s['last_run'] = array( 'time' => time(), 'job_id' => (string) $job['id'], 'status' => (string) $job['status'], 'rows' => (int) $job['processed'] );
+		}
+		self::refresh( $s );
+
+		if ( 'running' === $job['status'] ) {
+			OPEX_Runner::dispatch( (string) $job['id'] );
+		}
+		return $job;
+	}
+
+	/** The error for a schedule that is already running. */
+	private static function busy(): WP_Error {
+		return new WP_Error( 'opex_busy', __( 'This schedule is still running.', 'open-export' ), array( 'status' => 409 ) );
+	}
+
+	/**
+	 * What a schedule hands to OPEX_Exporter::create().
+	 *
+	 * @param array  $s      Schedule record.
+	 * @param string $origin Who started it.
+	 */
+	private static function job_extra( array $s, string $origin ): array {
 		$extra = array(
 			'mode'          => 'background',
-			'schedule_id'   => $id,
+			'schedule_id'   => (string) $s['id'],
 			'origin'        => in_array( $origin, array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? $origin : 'manual',
 			'delivery'      => $s['delivery'],
 			'delivery_name' => OPEX_Filename::render(
@@ -299,7 +339,7 @@ class OPEX_Schedules {
 				array(
 					'label'  => $s['name'],
 					'source' => (string) ( $s['config']['source'] ?? '' ),
-					'id'     => $id,
+					'id'     => (string) $s['id'],
 				)
 			),
 		);
@@ -307,19 +347,7 @@ class OPEX_Schedules {
 		if ( $s['incremental']['enabled'] && '' !== $field && '' !== (string) $s['watermark'] ) {
 			$extra['since'] = array( 'field' => $field, 'after' => (string) $s['watermark'] );
 		}
-
-		$job = OPEX_Exporter::create( $s['config'], $s['name'], $extra );
-		if ( is_wp_error( $job ) ) {
-			return $job;
-		}
-
-		$s['last_run'] = array( 'time' => time(), 'job_id' => (string) $job['id'], 'status' => (string) $job['status'], 'rows' => (int) $job['processed'] );
-		self::refresh( $s );
-
-		if ( 'running' === $job['status'] ) {
-			OPEX_Runner::dispatch( (string) $job['id'] );
-		}
-		return $job;
+		return $extra;
 	}
 
 	/**

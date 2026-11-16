@@ -406,6 +406,13 @@ class OPEX_Rest_Delivery {
 					'sodium'        => function_exists( 'sodium_crypto_secretbox' ),
 					'zip'           => class_exists( 'ZipArchive' ),
 					'cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
+					'background'    => (bool) OPEX_Settings::get( 'background' ),
+				),
+				'limits'           => array(
+					'filter_depth'    => OPEX_Filter_Tree::MAX_DEPTH,
+					'filter_rules'    => OPEX_Filter_Tree::MAX_RULES,
+					'transform_steps' => OPEX_Transforms::MAX_STEPS,
+					'custom_columns'  => OPEX_Custom_Columns::MAX_COLUMNS,
 				),
 			)
 		);

@@ -12,7 +12,10 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Config {
 
-	private const FORMATS = array( 'csv', 'json', 'xml' );
+	private const FORMATS        = array( 'csv', 'json', 'xml' );
+	private const CSV_ENCODINGS  = array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' );
+	private const CSV_EOLS       = array( 'lf', 'crlf' );
+	private const XML_PART_MAX   = 20000;
 
 	/**
 	 * Validate a raw config from the client and reduce it to exactly the
@@ -27,8 +30,22 @@ class OPEX_Config {
 
 		$fields = array();
 
+		// Custom columns come first: their ids may be listed in `fields` to set the column order.
+		$custom     = OPEX_Transforms::sanitize_custom_columns(
+			$raw['custom_columns'] ?? array(),
+			static function ( $id ) use ( $src ): bool {
+				return OPEX_Config::is_referencable( $src, (string) $id );
+			},
+			$notes
+		);
+		$custom_ids = wp_list_pluck( $custom, 'id' );
+
 		foreach ( array_slice( (array) ( $raw['fields'] ?? array() ), 0, 300 ) as $field ) {
 			$field = self::text( $field );
+			if ( in_array( $field, $custom_ids, true ) ) {
+				$fields[] = $field;
+				continue;
+			}
 			if ( ! OPEX_Query::is_field_id( $field ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
@@ -73,56 +90,28 @@ class OPEX_Config {
 			}
 			$fields[] = $field;
 		}
-		$fields = array_values( array_unique( $fields ) );
-		if ( ! $fields ) {
+		// A custom column that is not listed goes last, so defining one is enough to export it.
+		$fields = array_values( array_unique( array_merge( $fields, $custom_ids ) ) );
+		$config = array( 'source' => $source, 'fields' => $fields, 'custom_columns' => $custom );
+		if ( ! $fields || ! self::fetch_fields( $config ) ) {
 			return new WP_Error( 'opex_no_fields', __( 'Pick at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
-		$filters = array( 'relation' => 'AND', 'rules' => array() );
-		$raw_f   = (array) ( $raw['filters'] ?? array() );
-		$filters['relation'] = OPEX_Query::normalize_relation( $raw_f['relation'] ?? 'AND' );
-		foreach ( array_slice( (array) ( $raw_f['rules'] ?? array() ), 0, 20 ) as $rule ) {
-			if ( ! is_array( $rule ) ) {
-				continue;
-			}
-			$rule_field = sanitize_text_field( self::text( $rule['field'] ?? '' ) );
-			$rule_op    = sanitize_key( self::text( $rule['op'] ?? 'eq' ) );
-
-			// A rule on a field this source does not have would be dropped at
-			// query time, and the export would quietly widen. Refuse it instead.
-			if ( ! OPEX_Query::is_filterable_field( $src, $rule_field ) ) {
-				return new WP_Error(
-					'opex_bad_filter',
-					sprintf(
-						/* translators: %s: the field id a filter rule names. */
-						__( 'The filter uses a field this source cannot filter on: "%s". Remove the rule or pick another field.', 'open-export' ),
-						$rule_field
-					),
-					array( 'status' => 400 )
-				);
-			}
-
-			if ( ! OPEX_Query::is_valid_op( $rule_op ) ) {
-				$notes[] = sprintf(
-					/* translators: 1: the operator, 2: the field it was used on. */
-					__( 'Filter operator "%1$s" on "%2$s" is not supported and was dropped.', 'open-export' ),
-					$rule_op,
-					$rule_field
-				);
-				continue;
-			}
-
-			$filters['rules'][] = array(
-				'field' => $rule_field,
-				'op'    => $rule_op,
-				'value' => self::text( $rule['value'] ?? '' ),
-			);
+		$filters = OPEX_Filter_Tree::sanitize( (array) ( $raw['filters'] ?? array() ), $src, $notes );
+		if ( is_wp_error( $filters ) ) {
+			return $filters;
 		}
 
 		$raw_range  = (array) ( $raw['date_range'] ?? array() );
 		$date_range = self::sanitize_date_range( $src, $raw_range );
 
 		$format = in_array( $raw['format'] ?? '', self::FORMATS, true ) ? $raw['format'] : 'csv';
+		if ( 'xlsx' === ( $raw['format'] ?? '' ) ) {
+			if ( ! class_exists( 'ZipArchive' ) ) {
+				return new WP_Error( 'opex_no_zip', __( 'Excel export needs the PHP zip extension, which is not installed on this server. Pick CSV, JSON or XML.', 'open-export' ), array( 'status' => 400 ) );
+			}
+			$format = 'xlsx';
+		}
 		// Anything that is not a number falls back to the default size.
 		$batch_raw = $raw['batch_size'] ?? 500;
 		$batch     = max( 10, min( 5000, is_numeric( $batch_raw ) ? (int) $batch_raw : 500 ) );
@@ -136,6 +125,21 @@ class OPEX_Config {
 			$notes[] = __( 'The date range was dropped: this source has no date column to filter on.', 'open-export' );
 		}
 
+		$encoding = sanitize_key( self::text( $raw['csv_encoding'] ?? 'utf8_bom' ) );
+		$encoding = in_array( $encoding, self::CSV_ENCODINGS, true ) ? $encoding : 'utf8_bom';
+		$eol      = sanitize_key( self::text( $raw['csv_eol'] ?? 'lf' ) );
+		$eol      = in_array( $eol, self::CSV_EOLS, true ) ? $eol : 'lf';
+
+		$template = self::sanitize_xml_template( $raw['xml_template'] ?? array() );
+		if ( 'xml' === $format && '' !== $template['row'] ) {
+			$checked = OPEX_Writer_XML_Template::validate( $template, $fields );
+			if ( is_wp_error( $checked ) ) {
+				return new WP_Error( $checked->get_error_code(), $checked->get_error_message(), array( 'status' => 400 ) );
+			}
+		}
+
+		$transforms = OPEX_Transforms::sanitize( $raw['transforms'] ?? array(), $fields, $notes );
+
 		$labels = array();
 		foreach ( (array) ( $raw['column_labels'] ?? array() ) as $field_id => $label ) {
 			$field_id = (string) $field_id;
@@ -148,7 +152,7 @@ class OPEX_Config {
 			}
 		}
 
-		return array(
+		$config = array(
 			'source'        => $source,
 			'fields'        => $fields,
 			'filters'       => $filters,
@@ -158,6 +162,97 @@ class OPEX_Config {
 			'csv_delimiter' => $delim_key,
 			'column_labels' => $labels,
 		);
+
+		// Newer keys are saved only when they differ from their default, so a
+		// plain export keeps exactly the shape version 1.3.1 saved.
+		$optional = array(
+			'csv_encoding'   => $encoding,
+			'csv_eol'        => $eol,
+			'xml_template'   => $template,
+			'transforms'     => $transforms,
+			'custom_columns' => $custom,
+			'network'        => ! empty( $raw['network'] ) && rest_sanitize_boolean( $raw['network'] ),
+		);
+		foreach ( $optional as $key => $value ) {
+			if ( OPEX_Jobs::CONFIG_DEFAULTS[ $key ] !== $value ) {
+				$config[ $key ] = $value;
+			}
+		}
+		return $config;
+	}
+
+	/**
+	 * Clean the XML template: three text parts, each capped, no control characters.
+	 *
+	 * @param mixed $raw Raw template.
+	 */
+	private static function sanitize_xml_template( $raw ): array {
+		$raw = is_array( $raw ) ? $raw : array();
+		$out = array();
+		foreach ( array( 'header', 'row', 'footer' ) as $part ) {
+			$text         = self::text( $raw[ $part ] ?? '' );
+			$text         = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $text );
+			$out[ $part ] = function_exists( 'mb_substr' ) ? mb_substr( $text, 0, self::XML_PART_MAX ) : substr( $text, 0, self::XML_PART_MAX );
+		}
+		return $out;
+	}
+
+	/**
+	 * Whether a custom column may read this field: a real field of the source
+	 * that is not a credential or a blocked column.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id.
+	 */
+	public static function is_referencable( array $src, string $field ): bool {
+		if ( ! OPEX_Query::is_field_id( $field ) ) {
+			return false;
+		}
+		if ( 0 === strpos( $field, 'col:' ) && OPEX_Query::is_forbidden_column( substr( $field, 4 ) ) ) {
+			return false;
+		}
+		return OPEX_Query::is_valid_field( $src, $field );
+	}
+
+	/**
+	 * Fields the query must fetch: the selected fields that are not custom,
+	 * then the real fields custom columns read.
+	 *
+	 * @param array $config Sanitized config.
+	 * @return string[]
+	 */
+	public static function fetch_fields( array $config ): array {
+		$src    = OPEX_Query::parse_source( (string) ( $config['source'] ?? '' ) );
+		$custom = (array) ( $config['custom_columns'] ?? array() );
+		$ids    = wp_list_pluck( $custom, 'id' );
+		$out    = array();
+		foreach ( (array) ( $config['fields'] ?? array() ) as $field ) {
+			if ( ! in_array( $field, $ids, true ) ) {
+				$out[] = (string) $field;
+			}
+		}
+		if ( $src ) {
+			foreach ( OPEX_Transforms::referenced_fields( $custom ) as $field ) {
+				if ( self::is_referencable( $src, $field ) ) {
+					$out[] = $field;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Header labels: the saved column labels plus the name of each custom column.
+	 *
+	 * @param array $config Sanitized config.
+	 * @return array Field id => label.
+	 */
+	public static function label_map( array $config ): array {
+		$labels = array();
+		foreach ( (array) ( $config['custom_columns'] ?? array() ) as $col ) {
+			$labels[ (string) $col['id'] ] = (string) $col['label'];
+		}
+		return array_merge( $labels, (array) ( $config['column_labels'] ?? array() ) );
 	}
 
 	/** A scalar as text. Anything else (an array in a bad request) becomes ''. */
@@ -269,6 +364,9 @@ class OPEX_Config {
 	public static function writer_options( array $config ): array {
 		return array(
 			'csv_delimiter' => self::csv_delimiter_char( $config['csv_delimiter'] ?? 'comma' ),
+			'csv_encoding'  => (string) ( $config['csv_encoding'] ?? 'utf8_bom' ),
+			'csv_eol'       => (string) ( $config['csv_eol'] ?? 'lf' ),
+			'xml_template'  => (array) ( $config['xml_template'] ?? array() ),
 		);
 	}
 }

@@ -28,6 +28,7 @@ require_once OPEX_DIR . 'includes/class-opex-woo-format.php';
 require_once OPEX_DIR . 'includes/class-opex-catalog.php';
 require_once OPEX_DIR . 'includes/class-opex-query.php';
 require_once OPEX_DIR . 'includes/class-opex-query-filters.php';
+require_once OPEX_DIR . 'includes/class-opex-filter-tree.php';
 require_once OPEX_DIR . 'includes/class-opex-query-dates.php';
 require_once OPEX_DIR . 'includes/class-opex-query-rows.php';
 require_once OPEX_DIR . 'includes/class-opex-writers.php';
@@ -104,6 +105,7 @@ function opex_deactivate(): void {
 	foreach ( array_keys( OPEX_Jobs::all() ) as $id ) {
 		OPEX_Jobs::release_lock( $id );
 	}
+	OPEX_Runner::unregister();
 }
 
 /**
@@ -153,6 +155,10 @@ function opex_plugin_row_meta( array $links, string $file ): array {
 }
 
 add_action( 'rest_api_init', array( 'OPEX_Rest', 'register_routes' ) );
+add_action( 'rest_api_init', array( 'OPEX_Rest_Schedules', 'register_routes' ) );
+add_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+add_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+add_action( 'opex_job_done', array( 'OPEX_Schedules', 'on_job_done' ) );
 add_action( 'admin_menu', array( 'OPEX_Admin', 'register_menu' ) );
 add_action( 'admin_enqueue_scripts', array( 'OPEX_Admin', 'enqueue' ) );
 add_filter( 'plugin_action_links_' . OPEX_BASENAME, 'opex_plugin_action_links' );
@@ -161,6 +167,8 @@ add_filter( 'plugin_row_meta', 'opex_plugin_row_meta', 10, 2 );
 OPEX_Privacy::register();
 OPEX_Site_Health::register();
 OPEX_Abilities::register();
+OPEX_Runner::register();
+OPEX_CLI::register();
 
 register_activation_hook( __FILE__, 'opex_export_dir' );
 register_deactivation_hook( __FILE__, 'opex_deactivate' );

@@ -152,6 +152,43 @@ class OPEX_Query_Dates {
 	}
 
 	/**
+	 * The "since" term of an incremental run: rows dated strictly after a UTC
+	 * moment. The field must be one of the source's own date fields. A bad
+	 * field matches nothing, so a broken incremental run never exports
+	 * everything again.
+	 *
+	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array $src   Parsed source.
+	 * @param array $since Array with field and after (a UTC Y-m-d H:i:s).
+	 * @param array $args  Receives prepare() values.
+	 * @return string The condition, or '' when there is no since term.
+	 */
+	public static function since_clause( array $src, array $since, array &$args ): string {
+		$field = (string) ( $since['field'] ?? '' );
+		$after = (string) ( $since['after'] ?? '' );
+		if ( '' === $field && '' === $after ) {
+			return '';
+		}
+		$defs = self::date_fields( $src );
+		$utc  = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $after, new DateTimeZone( 'UTC' ) );
+		if ( ! isset( $defs[ $field ] ) || ! $utc ) {
+			return '1=0';
+		}
+		$def = $defs[ $field ];
+
+		if ( 'meta_epoch' === ( $def['kind'] ?? 'column' ) ) {
+			$args[] = $def['key'];
+			$args[] = $utc->getTimestamp();
+			return "EXISTS (SELECT 1 FROM {$def['table']} m WHERE m.{$def['fk']} = {$def['outer']} AND m.meta_key = %s AND m.meta_value <> '' AND CAST(m.meta_value AS UNSIGNED) > %d)";
+		}
+
+		$moment = OPEX_Dates::TZ_UTC === $def['tz'] ? $utc : $utc->setTimezone( OPEX_Dates::site_timezone() );
+		$args[] = $moment->format( 'Y-m-d H:i:s' );
+		return "({$def['sql']} > %s AND {$def['sql']} IS NOT NULL)";
+	}
+
+	/**
 	 * Range over a meta value holding a UNIX timestamp, as legacy WooCommerce
 	 * stores _date_paid and _date_completed.
 	 *

@@ -43,6 +43,7 @@ class FormatsTest extends CharacterizationCase {
 	 *
 	 * @param string $format    Format.
 	 * @param string $delimiter Delimiter key.
+	 * @dataProvider combos
 	 */
 	#[DataProvider( 'combos' )]
 	public function test_posts_formats( string $format, string $delimiter ): void {

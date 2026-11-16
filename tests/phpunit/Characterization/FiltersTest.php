@@ -214,15 +214,15 @@ class FiltersTest extends CharacterizationCase {
 	}
 
 	/**
-	 * At most 20 rules survive sanitizing.
+	 * At most 50 rules survive sanitizing (the 1.3.1 limit was 20).
 	 */
 	public function test_rule_cap(): void {
 		$rules = array();
-		for ( $i = 0; $i < 30; $i++ ) {
+		for ( $i = 0; $i < 60; $i++ ) {
 			$rules[] = array( 'field' => 'core:ID', 'op' => 'gt', 'value' => (string) $i );
 		}
 		$config = $this->config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'filters' => array( 'relation' => 'AND', 'rules' => $rules ) ) );
-		$this->assertCount( 20, $config['filters']['rules'] );
+		$this->assertCount( 50, $config['filters']['rules'] );
 	}
 
 	/**

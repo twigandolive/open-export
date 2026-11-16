@@ -59,6 +59,7 @@ class OrdersTest extends CharacterizationCase {
 	 * Orders in every format, several batches.
 	 *
 	 * @param string $format Format.
+	 * @dataProvider formats
 	 */
 	#[DataProvider( 'formats' )]
 	public function test_orders_formats( string $format ): void {

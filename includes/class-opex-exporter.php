@@ -9,6 +9,9 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Exporter {
 
+	/** Exception code for a worker that lost its lock. */
+	private const LOCK_LOST = 7001;
+
 	/**
 	 * Validate a raw config and reduce it to the saved shape. See OPEX_Config.
 	 */
@@ -36,11 +39,22 @@ class OPEX_Exporter {
 		return OPEX_Config::writer_options( $config );
 	}
 
-	/** Create a job: count, open the file, write the format header. */
-	public static function create( array $config, string $label ) {
+	/**
+	 * Create a job: count, open the file, write the format header.
+	 *
+	 * @param array  $config Sanitized export config.
+	 * @param string $label  Name shown in the job list.
+	 * @param array  $extra  Optional: mode, schedule_id, origin, delivery, since, delivery_name, notes.
+	 * @return array|WP_Error The exposed job, or an error.
+	 */
+	public static function create( array $config, string $label, array $extra = array() ) {
 		$config = self::freeze_date_range( $config );
+		$since  = self::clean_since( $extra['since'] ?? array(), $config );
+		if ( is_wp_error( $since ) ) {
+			return $since;
+		}
 		try {
-			$total = OPEX_Query::count( $config );
+			$total = OPEX_Query::count( self::query_config( $config, $since ) );
 		} catch ( Throwable $e ) {
 			self::log_exception( $e );
 			return new WP_Error( 'opex_db', self::public_error_message( $e ), array( 'status' => 500 ) );
@@ -51,21 +65,32 @@ class OPEX_Exporter {
 		$id       = 'j' . substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 12 );
 		$filename = $slug . '-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 12, false ) . '.' . $config['format'];
 
+		$mode     = 'background' === ( $extra['mode'] ?? '' ) ? 'background' : 'browser';
+		$notes    = array_merge( OPEX_Query::export_notes( $config ), array_map( 'strval', array_values( (array) ( $extra['notes'] ?? array() ) ) ) );
+		$delivery = self::clean_delivery( $extra['delivery'] ?? array(), $notes );
+
 		$job = array(
-			'id'         => $id,
-			'label'      => $label,
-			'config'     => $config,
-			'headers'    => self::header_map( $config['fields'], $config['column_labels'] ?? array() ),
-			'status'     => 'running',
-			'total'      => $total,
-			'processed'  => 0,
-			'cursor'     => 0,
-			'created'    => time(),
-			'filename'   => $filename,
-			'filesize'   => 0,
-			'error'      => '',
-			'checkpoint' => array(),
-			'notes'      => OPEX_Query::export_notes( $config ),
+			'id'            => $id,
+			'label'         => $label,
+			'config'        => $config,
+			'headers'       => self::header_map( $config['fields'], OPEX_Config::label_map( $config ) ),
+			'status'        => 'running',
+			'total'         => $total,
+			'processed'     => 0,
+			'cursor'        => 0,
+			'created'       => time(),
+			'filename'      => $filename,
+			'filesize'      => 0,
+			'error'         => '',
+			'checkpoint'    => array(),
+			'notes'         => $notes,
+			'mode'          => $mode,
+			'origin'        => in_array( $extra['origin'] ?? '', array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? (string) $extra['origin'] : 'manual',
+			'schedule_id'   => preg_match( '/^s[a-f0-9]{12}$/', (string) ( $extra['schedule_id'] ?? '' ) ) ? (string) $extra['schedule_id'] : '',
+			'heartbeat'     => 'background' === $mode ? time() : 0,
+			'delivery_name' => mb_substr( sanitize_text_field( (string) ( $extra['delivery_name'] ?? '' ) ), 0, 150 ),
+			'delivery'      => $delivery,
+			'since'         => $since,
 		);
 
 		try {
@@ -73,7 +98,7 @@ class OPEX_Exporter {
 			$writer->start();
 			if ( 0 === $total ) {
 				$writer->finish();
-				$job['status']   = 'done';
+				$job             = self::completed( $job );
 				$job['filesize'] = self::output_size( $job );
 			}
 			$job['checkpoint'] = $writer->checkpoint();
@@ -83,8 +108,78 @@ class OPEX_Exporter {
 		}
 
 		OPEX_Jobs::save( $job );
+		if ( 'done' === $job['status'] ) {
+			do_action( 'opex_job_done', OPEX_Jobs::get( $id ) );
+		}
 
-		return OPEX_Jobs::expose( $job );
+		return OPEX_Jobs::expose( OPEX_Jobs::get( $id ) );
+	}
+
+	/**
+	 * Mark a job done and plan its deliveries. The caller saves it, so the
+	 * status and the plan land in one write.
+	 *
+	 * @param array $job Job record.
+	 */
+	private static function completed( array $job ): array {
+		$job['status']     = 'done';
+		$job['finished']   = time();
+		$job['deliveries'] = OPEX_Delivery::plan( (array) ( $job['delivery'] ?? array() ) );
+		return $job;
+	}
+
+	/**
+	 * Clean the delivery settings sent with a job. Nothing is stored unless a
+	 * channel is on, so a job never carries a webhook secret for no reason.
+	 *
+	 * @param mixed    $raw   Raw delivery settings.
+	 * @param string[] $notes Receives notes.
+	 */
+	private static function clean_delivery( $raw, array &$notes ): array {
+		if ( ! is_array( $raw ) || ! $raw ) {
+			return array();
+		}
+		$clean = OPEX_Delivery::sanitize( $raw, $notes );
+		return OPEX_Delivery::plan( $clean ) ? $clean : array();
+	}
+
+	/**
+	 * Check the "since" term of an incremental run.
+	 *
+	 * @param mixed $raw    Array with field and after (UTC Y-m-d H:i:s), or empty.
+	 * @param array $config Export config.
+	 * @return array|WP_Error Clean since, or array() for none.
+	 */
+	private static function clean_since( $raw, array $config ) {
+		if ( ! is_array( $raw ) || ! $raw ) {
+			return array();
+		}
+		$field = (string) ( $raw['field'] ?? '' );
+		$after = (string) ( $raw['after'] ?? '' );
+		$src   = OPEX_Query::parse_source( (string) ( $config['source'] ?? '' ) );
+		$ok    = $src && isset( OPEX_Query::date_fields( $src )[ $field ] ) && 1 === preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $after );
+		if ( ! $ok ) {
+			return new WP_Error( 'opex_bad_since', __( 'The incremental date field is not a date field of this source.', 'open-export' ), array( 'status' => 400 ) );
+		}
+		return array( 'field' => $field, 'after' => $after );
+	}
+
+	/**
+	 * The config the query layer reads: it fetches the real fields (including
+	 * those custom columns read) and carries the job's since term. This copy
+	 * is never saved.
+	 *
+	 * @param array $config Job config.
+	 * @param array $since  Job since term.
+	 */
+	private static function query_config( array $config, array $since = array() ): array {
+		if ( is_array( $config['fields'] ?? null ) ) {
+			$config['fields'] = OPEX_Config::fetch_fields( $config );
+		}
+		if ( $since ) {
+			$config['since'] = $since;
+		}
+		return $config;
 	}
 
 	/**
@@ -139,8 +234,12 @@ class OPEX_Exporter {
 		}
 
 		$config = $job['config'];
-		$tick   = static function () use ( $id ): void {
-			OPEX_Jobs::refresh_lock( $id );
+		$query  = self::query_config( $config, (array) $job['since'] );
+		// A worker that lost its lock must stop at once: the new holder owns the job.
+		$guard  = static function () use ( $id ): void {
+			if ( ! OPEX_Jobs::refresh_lock( $id ) ) {
+				throw new RuntimeException( 'The export lock was lost.', self::LOCK_LOST );
+			}
 		};
 
 		try {
@@ -149,9 +248,10 @@ class OPEX_Exporter {
 			if ( $job['checkpoint'] ) {
 				$writer->restore( (array) $job['checkpoint'] );
 			}
-			$batch = OPEX_Query::batch( $config, (int) $job['cursor'], (int) $config['batch_size'], $tick );
-			$writer->append( $batch['items'], 0 === (int) $job['processed'] );
-			$tick();
+			$batch = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $guard );
+			$guard();
+			$writer->append( OPEX_Transforms::apply( $batch['items'], $config ), 0 === (int) $job['processed'] );
+			$guard();
 
 			// Save the cursor and the file checkpoint together, before anything else can fail.
 			$saved = self::save_progress( $id, $job, array(
@@ -164,19 +264,35 @@ class OPEX_Exporter {
 			}
 
 			if ( $batch['done'] ) {
+				$guard();
 				$writer->finish();
+				$guard();
 				$saved = self::save_progress( $id, $saved, array(
-					'status'   => 'done',
-					'total'    => max( (int) $saved['total'], (int) $saved['processed'] ),
-					'filesize' => self::output_size( $saved ),
-					'finished' => time(),
+					'status'     => 'done',
+					'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
+					'filesize'   => self::output_size( $saved ),
+					'finished'   => time(),
+					'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
 				) );
 				if ( ! $saved ) {
 					return self::missing();
 				}
+				do_action( 'opex_job_done', $saved );
 			}
 			return OPEX_Jobs::expose( $saved );
 		} catch ( Throwable $e ) {
+			if ( $e instanceof RuntimeException && self::LOCK_LOST === $e->getCode() ) {
+				// A deleted job also loses its lock. Then its file goes too.
+				if ( ! OPEX_Jobs::get( $id ) ) {
+					OPEX_Jobs::discard_files( $job );
+					return self::missing();
+				}
+				return new WP_Error(
+					'opex_locked',
+					__( 'This export is already running in another window.', 'open-export' ),
+					array( 'status' => 409 )
+				);
+			}
 			self::log_exception( $e );
 			$fresh = OPEX_Jobs::get( $id );
 			if ( ! $fresh ) {
@@ -268,9 +384,9 @@ class OPEX_Exporter {
 
 	/** First rows and total count for the preview step. */
 	public static function preview( array $config ) {
-		$headers = self::header_map( $config['fields'], $config['column_labels'] ?? array() );
+		$headers = self::header_map( $config['fields'], OPEX_Config::label_map( $config ) );
 		try {
-			$batch = OPEX_Query::batch( $config, 0, 5 );
+			$batch = OPEX_Query::batch( self::query_config( $config ), 0, 5 );
 			$total = OPEX_Query::count( $config );
 		} catch ( Throwable $e ) {
 			self::log_exception( $e );
@@ -278,7 +394,7 @@ class OPEX_Exporter {
 		}
 
 		$rows = array();
-		foreach ( $batch['items'] as $item ) {
+		foreach ( OPEX_Transforms::apply( $batch['items'], $config ) as $item ) {
 			$row = array();
 			foreach ( array_keys( $headers ) as $field ) {
 				$value = (string) ( $item[ $field ] ?? '' );

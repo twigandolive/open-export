@@ -13,6 +13,9 @@ class OPEX_Jobs {
 	private const MAX_HISTORY = 50;
 	private const LOCK_TTL    = 120;
 
+	/** Lock owner tokens held by this process, by job id. */
+	private static array $tokens = array();
+
 	/**
 	 * Every key a job record can have, with the value an older record gets
 	 * when it lacks the key. The first twelve are the original record; the
@@ -48,7 +51,7 @@ class OPEX_Jobs {
 	);
 
 	/** Config keys an old record might lack, with their defaults. */
-	private const CONFIG_DEFAULTS = array(
+	public const CONFIG_DEFAULTS = array(
 		'source'        => '',
 		'fields'        => array(),
 		'filters'       => array( 'relation' => 'AND', 'rules' => array() ),
@@ -57,6 +60,12 @@ class OPEX_Jobs {
 		'batch_size'    => 500,
 		'csv_delimiter' => 'comma',
 		'column_labels' => array(),
+		'csv_encoding'   => 'utf8_bom',
+		'csv_eol'        => 'lf',
+		'xml_template'   => array( 'header' => '', 'row' => '', 'footer' => '' ),
+		'transforms'     => array(),
+		'custom_columns' => array(),
+		'network'        => false,
 	);
 
 	/** The stored registry, exactly as saved. */
@@ -85,7 +94,11 @@ class OPEX_Jobs {
 
 	public static function save( array $job ): void {
 		// Keep records lean: an optional key at its default is left out and read back by get().
+		// The mode, origin and schedule are always written: they say where a job came from.
 		foreach ( array_slice( array_keys( self::DEFAULTS ), 12 ) as $key ) {
+			if ( in_array( $key, array( 'mode', 'origin', 'schedule_id' ), true ) ) {
+				continue;
+			}
 			if ( array_key_exists( $key, $job ) && self::DEFAULTS[ $key ] === $job[ $key ] ) {
 				unset( $job[ $key ] );
 			}
@@ -109,7 +122,8 @@ class OPEX_Jobs {
 	}
 
 	public static function delete( string $id ): void {
-		self::release_lock( $id );
+		unset( self::$tokens[ $id ] );
+		OPEX_Lock::force_release( $id );
 		$jobs = self::stored();
 		if ( isset( $jobs[ $id ] ) ) {
 			self::remove_file( $jobs[ $id ] );
@@ -148,7 +162,36 @@ class OPEX_Jobs {
 			'filename'  => $job['filename'],
 			'filesize'  => (int) ( $job['filesize'] ?? 0 ),
 			'error'     => (string) ( $job['error'] ?? '' ),
+			'mode'          => (string) ( $job['mode'] ?? 'browser' ),
+			'origin'        => (string) ( $job['origin'] ?? 'manual' ),
+			'schedule_id'   => (string) ( $job['schedule_id'] ?? '' ),
+			'deliveries'    => self::expose_deliveries( (array) ( $job['deliveries'] ?? array() ) ),
+			'notes'         => array_map( 'strval', array_values( (array) ( $job['notes'] ?? array() ) ) ),
+			'delivery_name' => (string) ( $job['delivery_name'] ?? '' ),
 		);
+	}
+
+	/**
+	 * The delivery list as people see it: channel, status, attempts, message and
+	 * time. Nothing else is copied, so no setting can leak through it.
+	 *
+	 * @param array $items Stored delivery items.
+	 */
+	private static function expose_deliveries( array $items ): array {
+		$out = array();
+		foreach ( $items as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+			$out[] = array(
+				'channel'  => (string) ( $item['channel'] ?? '' ),
+				'status'   => (string) ( $item['status'] ?? 'pending' ),
+				'attempts' => (int) ( $item['attempts'] ?? 0 ),
+				'message'  => (string) ( $item['message'] ?? '' ),
+				'time'     => (int) ( $item['time'] ?? 0 ),
+			);
+		}
+		return $out;
 	}
 
 	/** Job record including full export config for load / re-run. */
@@ -165,18 +208,37 @@ class OPEX_Jobs {
 		return trailingslashit( opex_export_dir() ) . $job['filename'];
 	}
 
-	/** Prevent two workers from processing the same job at once. */
+	/**
+	 * Prevent two workers from processing the same job at once. The owner
+	 * token stays in this process, so refresh and release act only on a lock
+	 * this process still owns.
+	 */
 	public static function acquire_lock( string $id ): bool {
-		return OPEX_Lock::acquire( $id, self::LOCK_TTL );
+		$token = OPEX_Lock::acquire( $id, self::LOCK_TTL );
+		if ( false === $token ) {
+			return false;
+		}
+		self::$tokens[ $id ] = $token;
+		return true;
 	}
 
-	/** Push the lock's expiry forward while a long batch runs. */
-	public static function refresh_lock( string $id ): void {
-		OPEX_Lock::refresh( $id, self::LOCK_TTL );
+	/**
+	 * Push the lock's expiry forward while a long batch runs.
+	 *
+	 * @return bool False when the lock was lost to another worker.
+	 */
+	public static function refresh_lock( string $id ): bool {
+		return isset( self::$tokens[ $id ] ) && OPEX_Lock::refresh( $id, self::$tokens[ $id ], self::LOCK_TTL );
 	}
 
+	/** Give the lock up. With no token held here (cleanup), remove it outright. */
 	public static function release_lock( string $id ): void {
-		OPEX_Lock::release( $id );
+		if ( isset( self::$tokens[ $id ] ) ) {
+			OPEX_Lock::release( $id, self::$tokens[ $id ] );
+			unset( self::$tokens[ $id ] );
+			return;
+		}
+		OPEX_Lock::force_release( $id );
 	}
 
 	/** Delete the output file of a job that no longer has a record. */

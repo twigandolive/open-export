@@ -388,18 +388,10 @@ class OPEX_Query {
 				break;
 		}
 
-		$relation = self::normalize_relation( $filters['relation'] ?? 'AND' );
-		$clauses  = array();
-
-		foreach ( (array) ( $filters['rules'] ?? array() ) as $rule ) {
-			$clause = OPEX_Query_Filters::rule_clause( $src, $rule, $args );
-			if ( $clause ) {
-				$clauses[] = $clause;
-			}
-		}
-
-		if ( $clauses ) {
-			$base[] = '(' . implode( " {$relation} ", $clauses ) . ')';
+		// A flat 1.3.1 filter list is a one-level tree, so it compiles the same way.
+		$tree = OPEX_Filter_Tree::compile( $src, $filters, $args );
+		if ( '' !== $tree ) {
+			$base[] = $tree;
 		}
 
 		// The date range is deliberately not a rule. It is ANDed on its own so
@@ -408,6 +400,13 @@ class OPEX_Query {
 		$date = OPEX_Query_Dates::date_range_clause( $src, (array) ( $config['date_range'] ?? array() ), $args );
 		if ( '' !== $date ) {
 			$base[] = $date;
+		}
+
+		// "Since" is the third independent AND term, for incremental runs. It is
+		// set by the job, never by the saved config.
+		$since = OPEX_Query_Dates::since_clause( $src, (array) ( $config['since'] ?? array() ), $args );
+		if ( '' !== $since ) {
+			$base[] = $since;
 		}
 
 		return array( $from, implode( ' AND ', $base ), $args, $pk );

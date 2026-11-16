@@ -163,7 +163,7 @@ class RestDeliveryTest extends TestCase {
 		$this->assertArrayHasKey( 'xlsx', $o['formats'] );
 		$this->assertCount( 7, $o['weekdays'] );
 		$this->assertSame( wp_timezone_string(), $o['timezone'] );
-		$this->assertSame( array( 'multisite', 'woocommerce', 'ftp', 'sodium', 'zip', 'cron_disabled' ), array_keys( $o['features'] ) );
+		$this->assertSame( array( 'multisite', 'woocommerce', 'ftp', 'sodium', 'zip', 'cron_disabled', 'background' ), array_keys( $o['features'] ) );
 		foreach ( $o['features'] as $flag ) {
 			$this->assertIsBool( $flag );
 		}

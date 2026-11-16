@@ -56,7 +56,7 @@ class UninstallTest extends TestCase {
 		delete_option( 'other_plugin_opex_jobs' );
 		delete_transient( 'other_transient' );
 		delete_option( 'other_lock_j2' );
-		OPEX_Lock::release( 'j2' );
+		OPEX_Lock::force_release( 'j2' );
 		foreach ( array( 'opex_run_schedule' => array( 's1' ), 'opex_run_job' => array( 'j1' ), 'opex_deliver' => array( 'j1' ), 'opex_maintenance' => array(), 'other_plugin_hook' => array() ) as $hook => $args ) {
 			wp_clear_scheduled_hook( $hook, $args );
 		}

@@ -213,8 +213,6 @@ class OPEX_Rest {
 	}
 
 	public static function jobs(): WP_REST_Response {
-		// Kept for now: the runner's cron hooks are not registered yet, so the sweep still needs this call.
-		OPEX_Jobs::sweep();
 		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
 		usort( $jobs, static function ( $a, $b ) {
 			return $b['created'] <=> $a['created'];
@@ -224,7 +222,8 @@ class OPEX_Rest {
 
 	public static function create_job( WP_REST_Request $request ) {
 		$body   = (array) $request->get_json_params();
-		$config = OPEX_Exporter::sanitize_config( $body );
+		$notes  = array();
+		$config = OPEX_Exporter::sanitize_config( $body, $notes );
 		if ( is_wp_error( $config ) ) {
 			return $config;
 		}
@@ -232,8 +231,25 @@ class OPEX_Rest {
 		$label = sanitize_text_field( (string) ( $body['label'] ?? '' ) );
 		$label = $label ? $label : $config['source'];
 
-		$result = OPEX_Exporter::create( $config, $label );
-		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+		// Without a mode the Background setting decides. The screen sends "browser" and paces the run itself.
+		$mode = isset( $body['mode'] ) && is_string( $body['mode'] ) ? $body['mode'] : ( OPEX_Settings::get( 'background' ) ? 'background' : 'browser' );
+		if ( ! in_array( $mode, array( 'browser', 'background' ), true ) ) {
+			return new WP_Error( 'opex_bad_mode', __( 'The mode must be browser or background.', 'open-export' ), array( 'status' => 400 ) );
+		}
+
+		$extra = array( 'mode' => $mode, 'origin' => 'manual', 'notes' => $notes );
+		if ( isset( $body['delivery'] ) && is_array( $body['delivery'] ) ) {
+			$extra['delivery'] = $body['delivery'];
+		}
+
+		$result = OPEX_Exporter::create( $config, $label, $extra );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		if ( 'background' === $mode && 'running' === $result['status'] ) {
+			OPEX_Runner::dispatch( (string) $result['id'] );
+		}
+		return rest_ensure_response( $result );
 	}
 
 	public static function run_job( WP_REST_Request $request ) {
@@ -281,30 +297,8 @@ class OPEX_Rest {
 			return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
 		}
 
-		$types = array( 'csv' => 'text/csv; charset=utf-8', 'json' => 'application/json; charset=utf-8', 'xml' => 'application/xml; charset=utf-8' );
-		$type  = $types[ $job['config']['format'] ] ?? 'application/octet-stream';
-
-		nocache_headers();
-		header( 'Content-Type: ' . $type );
-		header( 'Content-Disposition: attachment; filename="' . rawurlencode( $job['filename'] ) . '"' );
-		header( 'Content-Length: ' . (string) filesize( $path ) );
-		header( 'X-Content-Type-Options: nosniff' );
-
-		// phpcs:disable WordPress.WP.AlternativeFunctions -- chunked streaming of a potentially multi-gigabyte export file.
-		$handle = fopen( $path, 'rb' );
-		if ( $handle ) {
-			while ( ! feof( $handle ) ) {
-				$chunk = fread( $handle, 1024 * 1024 );
-				if ( false === $chunk ) {
-					break;
-				}
-				echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- binary-safe file passthrough of our own generated export.
-				flush();
-			}
-			fclose( $handle );
-		}
-		// phpcs:enable
-		exit;
+		OPEX_Download::stream( $job, OPEX_Download::file_name( $job ) );
+		return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
 	}
 
 	public static function templates(): WP_REST_Response {

@@ -20,6 +20,7 @@ class OPEX_Custom_Columns {
 	const MAX_COLUMNS = 50;
 	const MAX_LABEL   = 100;
 	const MAX_TEMPLATE = 500;
+	const ID_PATTERN   = '/^custom:[a-z0-9-]+$/';
 
 	/**
 	 * Matches a placeholder. Custom ids are matched too so they can be reported.
@@ -60,11 +61,17 @@ class OPEX_Custom_Columns {
 				continue;
 			}
 
-			$slug = sanitize_title( $label );
-			$slug = '' === $slug ? 'column' : $slug;
-			$id   = 'custom:' . $slug;
-			for ( $n = 2; isset( $used[ $id ] ); $n++ ) {
-				$id = 'custom:' . $slug . '-' . $n;
+			// An incoming id stays put, so a column keeps its place in `fields` and
+			// its transforms when it is renamed. A new id comes from the label.
+			$id = is_string( $item['id'] ?? null ) ? $item['id'] : '';
+			if ( ! preg_match( self::ID_PATTERN, $id ) || isset( $used[ $id ] ) ) {
+				$slug = sanitize_title( $label );
+				$slug = '' === $slug ? 'column' : $slug;
+				$slug = preg_match( '/^[a-z0-9-]+$/', $slug ) ? $slug : 'column';
+				$id   = 'custom:' . $slug;
+				for ( $n = 2; isset( $used[ $id ] ); $n++ ) {
+					$id = 'custom:' . $slug . '-' . $n;
+				}
 			}
 			$used[ $id ] = true;
 
