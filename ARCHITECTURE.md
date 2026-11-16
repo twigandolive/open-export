@@ -38,10 +38,10 @@ Files are `includes/class-opex-<name>.php`. Other code uses only the boundary na
   `source-woo-*`, `source-labels`, `woo`, `woo-format`, `money`, `decimal`. Boundary: `OPEX_Sources`.
 - ACF: `acf` (find, read), `acf-location` (group to source), `acf-spread` (numbered columns, 20 rows max).
   Boundary: `OPEX_Acf`, `OPEX_Acf_Spread`.
-- Catalog, schema, recipes: `catalog`, `core-columns`, `field-types`, `dates`, `schema`, `schema-document`,
-  `recipe`, `recipe-rules`, `presets`. Boundary: `OPEX_Catalog`, `OPEX_Schema`, `OPEX_Recipe`.
-- Query: `query`, `query-filters`, `filter-tree`, `query-dates`, `query-rows`. Boundary: `OPEX_Query`.
-- Engine and jobs: `config`, `exporter`, `jobs`, `lock`, `filename`, `download`. Boundary: `OPEX_Exporter`, `OPEX_Jobs`.
+- Catalog, schema, recipes: `catalog`, `catalog-meta`, `core-columns`, `field-types`, `dates`, `schema`,
+  `schema-sources`, `schema-resolver`, `schema-document`, `recipe`, `recipe-rules`, `presets`. Boundary: `OPEX_Catalog`, `OPEX_Schema`, `OPEX_Recipe`.
+- Query: `query`, `query-fetch`, `query-filters`, `filter-tree`, `query-dates`, `query-rows`. Boundary: `OPEX_Query`.
+- Engine and jobs: `config`, `exporter`, `export-run`, `jobs`, `lock`, `filename`, `download`. Boundary: `OPEX_Exporter`, `OPEX_Jobs`.
 - Multisite: `network` (one config on every site, one file), `access` (what a caller may reach).
   Boundary: `OPEX_Network`, `OPEX_Access`.
 - Writers: `writers` (CSV, JSON, XML), `writer-xlsx`, `writer-xml-template`. Boundary: `OPEX_Writer`.
@@ -129,5 +129,4 @@ Deactivation clears every `opex_*` cron event. `uninstall.php` removes all of th
 - XLSX comes from the in-house `writer-xlsx`, not a library, to keep the zip small.
 - phpseclib (`lib/vendor`, about 3.2 MB) puts the zip far over the usual 200 KB target. SFTP needs it.
 - No build step, so the shipped code is the source a reviewer reads.
-- Trigger keys stay in plain text: the screen must show the trigger URL again (lead's ruling).
-- Over 500 lines, awaiting a structure-only split: `schema`, `catalog`, `query`.
+- Trigger keys stay in plain text, by design: the screen must be able to show the trigger URL again.
