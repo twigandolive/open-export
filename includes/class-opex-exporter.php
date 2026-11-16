@@ -3,14 +3,14 @@
  * Job lifecycle: create() writes the file header and counts rows; each run()
  * processes exactly one batch and returns. The client paces run() calls, so
  * no PHP worker is held longer than one batch.
+ *
+ * The batch run itself lives in OPEX_Export_Run. Other code calls it through
+ * this class.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 class OPEX_Exporter {
-
-	/** Exception code for a worker that lost its lock. */
-	private const LOCK_LOST = 7001;
 
 	/**
 	 * Validate a raw config and reduce it to the saved shape. See OPEX_Config.
@@ -220,8 +220,10 @@ class OPEX_Exporter {
 	 *
 	 * @param array $config Job config.
 	 * @param array $since  Job since term.
+	 *
+	 * @internal Shared with OPEX_Export_Run only.
 	 */
-	private static function query_config( array $config, array $since = array() ): array {
+	public static function query_config( array $config, array $since = array() ): array {
 		if ( is_array( $config['fields'] ?? null ) ) {
 			$config['fields'] = OPEX_Config::fetch_fields( $config );
 		}
@@ -232,170 +234,13 @@ class OPEX_Exporter {
 	}
 
 	/**
-	 * Process one batch of an existing job.
-	 *
-	 * A paused job stays paused unless the caller passes $resume, so a late
-	 * request cannot undo a pause. A failed job is retried from its saved cursor.
+	 * Process one batch of an existing job. See OPEX_Export_Run.
 	 *
 	 * @param string $id     Job id.
 	 * @param bool   $resume True when a person asked to resume a paused job.
 	 */
 	public static function run( string $id, bool $resume = false ) {
-		$job = OPEX_Jobs::get( $id );
-		if ( ! $job ) {
-			return self::missing();
-		}
-		if ( 'done' === $job['status'] ) {
-			return OPEX_Jobs::expose( $job );
-		}
-		if ( 'paused' === $job['status'] && ! $resume ) {
-			return OPEX_Jobs::expose( $job );
-		}
-
-		if ( ! OPEX_Jobs::acquire_lock( $id ) ) {
-			return new WP_Error(
-				'opex_locked',
-				__( 'This export is already running in another window.', 'open-export' ),
-				array( 'status' => 409 )
-			);
-		}
-		try {
-			return OPEX_Access::scope( ! empty( $job['wide'] ), static function () use ( $id, $resume ) {
-				return self::run_locked( $id, $resume );
-			} );
-		} finally {
-			OPEX_Jobs::release_lock( $id );
-		}
-	}
-
-	/** The batch itself. Runs only while this process holds the job's lock. */
-	private static function run_locked( string $id, bool $resume ) {
-		// Read again: the job may have changed while we waited for the lock.
-		$job = OPEX_Jobs::get( $id );
-		if ( ! $job ) {
-			return self::missing();
-		}
-		if ( 'done' === $job['status'] || ( 'paused' === $job['status'] && ! $resume ) ) {
-			return OPEX_Jobs::expose( $job );
-		}
-		if ( 'running' !== $job['status'] ) {
-			$job['status'] = 'running';
-			$job['error']  = '';
-			OPEX_Jobs::save( $job );
-		}
-
-		$config = $job['config'];
-		$query  = self::query_config( $config, (array) $job['since'] );
-		// A worker that lost its lock must stop at once: the new holder owns the job.
-		$guard  = static function () use ( $id ): void {
-			if ( ! OPEX_Jobs::refresh_lock( $id ) ) {
-				throw new RuntimeException( 'The export lock was lost.', self::LOCK_LOST );
-			}
-		};
-
-		try {
-			$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'], self::writer_options( $config ) );
-			// Undo anything a failed or interrupted batch left in the file.
-			if ( $job['checkpoint'] ) {
-				$writer->restore( (array) $job['checkpoint'] );
-			}
-			if ( OPEX_Network::is_network( $config ) ) {
-				// Read from the site the job is on. The rows come back transformed, with the site columns.
-				$batch = OPEX_Network::batch( $job, $query, $guard );
-				$rows  = $batch['items'];
-			} else {
-				$batch = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $guard );
-				$rows  = OPEX_Acf_Spread::output( $batch['items'], $config, $job['headers'] );
-			}
-			$guard();
-			$writer->append( $rows, 0 === (int) $job['processed'] );
-			$guard();
-
-			// Save the cursor and the file checkpoint together, before anything else can fail.
-			// Moving to the next site lands in the same write, so a replay reads the same rows again.
-			$changes = array(
-				'cursor'     => $batch['cursor'],
-				'processed'  => (int) $job['processed'] + count( $rows ),
-				'checkpoint' => $writer->checkpoint(),
-			);
-			if ( ! empty( $batch['next_site'] ) ) {
-				$changes['cursor']     = 0;
-				$changes['site_index'] = (int) $job['site_index'] + 1;
-			}
-			if ( ! empty( $batch['note'] ) && ! in_array( $batch['note'], (array) $job['notes'], true ) ) {
-				$changes['notes'] = array_merge( (array) $job['notes'], array( $batch['note'] ) );
-			}
-			$saved = self::save_progress( $id, $job, $changes );
-			if ( ! $saved ) {
-				return self::missing();
-			}
-
-			if ( $batch['done'] && empty( $batch['next_site'] ) ) {
-				$guard();
-				$writer->finish();
-				$guard();
-				$saved = self::save_progress( $id, $saved, array(
-					'status'     => 'done',
-					'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
-					'filesize'   => self::output_size( $saved ),
-					'finished'   => time(),
-					'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
-				) );
-				if ( ! $saved ) {
-					return self::missing();
-				}
-				do_action( 'opex_job_done', $saved );
-			}
-			return OPEX_Jobs::expose( $saved );
-		} catch ( Throwable $e ) {
-			if ( $e instanceof RuntimeException && self::LOCK_LOST === $e->getCode() ) {
-				// A deleted job also loses its lock. Then its file goes too.
-				if ( ! OPEX_Jobs::get( $id ) ) {
-					OPEX_Jobs::discard_files( $job );
-					return self::missing();
-				}
-				return new WP_Error(
-					'opex_locked',
-					__( 'This export is already running in another window.', 'open-export' ),
-					array( 'status' => 409 )
-				);
-			}
-			self::log_exception( $e );
-			$fresh = OPEX_Jobs::get( $id );
-			if ( ! $fresh ) {
-				OPEX_Jobs::discard_files( $job );
-				return self::missing();
-			}
-			$fresh['status'] = 'error';
-			$fresh['error']  = self::public_error_message( $e );
-			OPEX_Jobs::save( $fresh );
-			return OPEX_Jobs::expose( $fresh );
-		}
-	}
-
-	/**
-	 * Merge changes into the stored job and save it. The job is read again
-	 * first, so a pause that landed during the batch is kept and a job that
-	 * was deleted stays deleted: its file is removed and null comes back.
-	 *
-	 * @param string $id      Job id.
-	 * @param array  $job     The job as this batch saw it.
-	 * @param array  $changes Keys to set.
-	 */
-	private static function save_progress( string $id, array $job, array $changes ): ?array {
-		$fresh = OPEX_Jobs::get( $id );
-		if ( ! $fresh ) {
-			OPEX_Jobs::discard_files( $job );
-			return null;
-		}
-		$fresh = array_merge( $fresh, $changes );
-		OPEX_Jobs::save( $fresh );
-		return $fresh;
-	}
-
-	/** The error for a job that does not exist (or no longer does). */
-	private static function missing(): WP_Error {
-		return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		return OPEX_Export_Run::run( $id, $resume );
 	}
 
 	/** Create a new export job from a previous job's stored config. */
@@ -424,14 +269,22 @@ class OPEX_Exporter {
 		return OPEX_Jobs::expose( $job );
 	}
 
-	/** Size of the finished export file, without PHP warnings if it vanished. */
-	private static function output_size( array $job ): int {
+	/**
+	 * Size of the finished export file, without PHP warnings if it vanished.
+	 *
+	 * @internal Shared with OPEX_Export_Run only.
+	 */
+	public static function output_size( array $job ): int {
 		$path = OPEX_Jobs::file_path( $job );
 		return file_exists( $path ) ? (int) filesize( $path ) : 0;
 	}
 
-	/** User-safe export error text; full detail is logged server-side. */
-	private static function public_error_message( Throwable $e ): string {
+	/**
+	 * User-safe export error text; full detail is logged server-side.
+	 *
+	 * @internal Shared with OPEX_Export_Run only.
+	 */
+	public static function public_error_message( Throwable $e ): string {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			return $e->getMessage();
 		}
@@ -441,8 +294,12 @@ class OPEX_Exporter {
 		return __( 'Export failed. Try resuming or starting a new export.', 'open-export' );
 	}
 
-	/** Write exception detail to the PHP error log when debugging is enabled. */
-	private static function log_exception( Throwable $e ): void {
+	/**
+	 * Write exception detail to the PHP error log when debugging is enabled.
+	 *
+	 * @internal Shared with OPEX_Export_Run only.
+	 */
+	public static function log_exception( Throwable $e ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional server-side logging when debug is on.
 			error_log( 'Open Export: ' . $e->getMessage() );
