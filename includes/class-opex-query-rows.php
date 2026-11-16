@@ -167,6 +167,7 @@ class OPEX_Query_Rows {
 		list( $table, $fk ) = $found;
 
 		$keys = array_values( array_diff( array_unique( $keys ), OPEX_Query::FORBIDDEN, OPEX_Query::CREDENTIAL_META_KEYS ) );
+		$keys = 'users' === ( $src['type'] ?? '' ) ? OPEX_Access::user_meta_keys( $keys ) : $keys;
 		if ( ! $keys ) {
 			return array();
 		}

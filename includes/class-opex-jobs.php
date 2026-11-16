@@ -48,6 +48,7 @@ class OPEX_Jobs {
 		'site_index'    => 0,
 		'notes'         => array(),
 		'checkpoint'    => array(),
+		'wide'          => false,
 	);
 
 	/** Config keys an old record might lack, with their defaults. */

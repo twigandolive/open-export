@@ -116,7 +116,7 @@ class OPEX_Catalog {
 		$content = array_merge( $lead, $content );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- cheap COUNTs for the picker UI.
-		$user_count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
+		$user_count    = OPEX_Access::user_count();
 		$comment_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->comments}" );
 		$term_counts   = $wpdb->get_results( "SELECT taxonomy, COUNT(*) AS n FROM {$wpdb->term_taxonomy} GROUP BY taxonomy", OBJECT_K );
 		// phpcs:enable
@@ -135,7 +135,7 @@ class OPEX_Catalog {
 		}
 
 		$tables = $raw_orders;
-		foreach ( self::table_status() as $table ) {
+		foreach ( OPEX_Access::visible_tables( self::table_status() ) as $table ) {
 			$tables[] = array(
 				'id'    => 'table:' . $table['name'],
 				'label' => $table['name'],
@@ -240,7 +240,7 @@ class OPEX_Catalog {
 				self::$table_names[ $row['name'] ] = true;
 			}
 		}
-		return isset( self::$table_names[ $table ] );
+		return isset( self::$table_names[ $table ] ) && OPEX_Access::table_allowed( $table );
 	}
 
 	/** Column definitions for a validated table name. Read once per request. */
@@ -353,7 +353,7 @@ class OPEX_Catalog {
 			'fields' => array( array( 'id' => 'computed:roles', 'label' => 'roles' ) ),
 		);
 
-		return array_merge( $groups, self::grouped_meta( self::sample_meta_keys( 'users' ), self::acf_keys() ) );
+		return array_merge( $groups, self::grouped_meta( OPEX_Access::user_meta_keys( self::sample_meta_keys( 'users' ) ), self::acf_keys() ) );
 	}
 
 	private static function comment_fields(): array {

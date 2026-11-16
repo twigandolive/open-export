@@ -74,6 +74,7 @@ require_once OPEX_DIR . 'includes/class-opex-schedules.php';
 require_once OPEX_DIR . 'includes/class-opex-runner.php';
 require_once OPEX_DIR . 'includes/class-opex-config.php';
 require_once OPEX_DIR . 'includes/class-opex-network.php';
+require_once OPEX_DIR . 'includes/class-opex-access.php';
 require_once OPEX_DIR . 'includes/class-opex-exporter.php';
 require_once OPEX_DIR . 'includes/class-opex-schema.php';
 require_once OPEX_DIR . 'includes/class-opex-schema-document.php';

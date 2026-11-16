@@ -48,6 +48,25 @@ class OPEX_Exporter {
 	 * @return array|WP_Error The exposed job, or an error.
 	 */
 	public static function create( array $config, string $label, array $extra = array() ) {
+		// On a network, decide once whether this job may reach shared data. See OPEX_Access::job_wide.
+		$extra['wide'] = OPEX_Access::job_wide( (string) ( $config['source'] ?? '' ), $extra );
+		if ( is_wp_error( $extra['wide'] ) ) {
+			return $extra['wide'];
+		}
+		return OPEX_Access::scope( $extra['wide'], static function () use ( $config, $label, $extra ) {
+			return self::start( $config, $label, $extra );
+		} );
+	}
+
+	/**
+	 * The body of create(), run inside the job's access scope.
+	 *
+	 * @param array  $config Sanitized export config.
+	 * @param string $label  Name shown in the job list.
+	 * @param array  $extra  See create().
+	 * @return array|WP_Error The exposed job, or an error.
+	 */
+	private static function start( array $config, string $label, array $extra ) {
 		$config = self::freeze_date_range( $config );
 		$since  = self::clean_since( $extra['since'] ?? array(), $config );
 		if ( is_wp_error( $since ) ) {
@@ -107,6 +126,7 @@ class OPEX_Exporter {
 			'since'         => $since,
 			'sites'         => $plan['sites'],
 			'site_index'    => 0,
+			'wide'          => ! empty( $extra['wide'] ),
 		);
 
 		try {
@@ -240,7 +260,9 @@ class OPEX_Exporter {
 			);
 		}
 		try {
-			return self::run_locked( $id, $resume );
+			return OPEX_Access::scope( ! empty( $job['wide'] ), static function () use ( $id, $resume ) {
+				return self::run_locked( $id, $resume );
+			} );
 		} finally {
 			OPEX_Jobs::release_lock( $id );
 		}

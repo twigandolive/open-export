@@ -125,6 +125,13 @@ class OPEX_Schedules {
 				return $config;
 			}
 			$rec['config'] = $config;
+			// Saved by a super admin with a source that reaches shared data: cron may run it in full.
+			$src = OPEX_Query::parse_source( (string) $config['source'] );
+			if ( $src && OPEX_Access::wide_for( $src ) ) {
+				$rec['wide'] = true;
+			} else {
+				unset( $rec['wide'] );
+			}
 		}
 
 		$freq = (string) ( $raw['frequency'] ?? $base['frequency'] );
@@ -244,7 +251,7 @@ class OPEX_Schedules {
 	public static function expose( array $schedule ): array {
 		$s   = self::fill( $schedule, (string) ( $schedule['id'] ?? '' ) );
 		$key = (string) $s['trigger_key'];
-		unset( $s['trigger_key'] );
+		unset( $s['trigger_key'], $s['wide'] );
 		$s['delivery']['webhook']['has_secret'] = '' !== (string) $s['delivery']['webhook']['secret'];
 		unset( $s['delivery']['webhook']['secret'] );
 		$s['trigger_url'] = add_query_arg( 'key', $key, rest_url( 'open-export/v1/schedules/' . $s['id'] . '/trigger' ) );
@@ -352,6 +359,7 @@ class OPEX_Schedules {
 			'schedule_id'   => (string) $s['id'],
 			'origin'        => in_array( $origin, array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? $origin : 'manual',
 			'delivery'      => $s['delivery'],
+			'wide'          => ! empty( $s['wide'] ),
 			'delivery_name' => OPEX_Filename::render(
 				(string) $s['filename'],
 				array(

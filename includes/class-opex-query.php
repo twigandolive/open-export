@@ -130,7 +130,7 @@ class OPEX_Query {
 			if ( $provider && null === $provider->meta_table() ) {
 				return false;
 			}
-			return 'table' !== $src['type'] && '' !== substr( $field, 5 ) && ! self::is_credential_meta( substr( $field, 5 ) );
+			return 'table' !== $src['type'] && '' !== substr( $field, 5 ) && ! self::is_credential_meta( substr( $field, 5 ) ) && OPEX_Access::meta_allowed( $src, substr( $field, 5 ) );
 		}
 
 		if ( 0 === strpos( $field, 'core:' ) ) {
@@ -339,8 +339,8 @@ class OPEX_Query {
 				break;
 			case 'users':
 				$from = "{$wpdb->users} u";
-				$base = array();
-				$args = array();
+				// On a network, a caller who is not a super admin sees only this site's members.
+				list( $base, $args ) = OPEX_Access::users_scope();
 				$pk   = 'u.ID';
 				break;
 			case 'comments':
