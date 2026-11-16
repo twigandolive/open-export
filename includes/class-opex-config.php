@@ -12,10 +12,10 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Config {
 
-	private const FORMATS        = array( 'csv', 'json', 'xml' );
-	private const CSV_ENCODINGS  = array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' );
-	private const CSV_EOLS       = array( 'lf', 'crlf' );
-	public const XML_PART_MAX    = 20000;
+	private const FORMATS       = array( 'csv', 'json', 'xml' );
+	private const CSV_ENCODINGS = array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' );
+	private const CSV_EOLS      = array( 'lf', 'crlf' );
+	public const XML_PART_MAX   = 20000;
 
 	/**
 	 * Validate a raw config from the client and reduce it to exactly the
@@ -102,7 +102,11 @@ class OPEX_Config {
 		}
 		// A custom column that is not listed goes last, so defining one is enough to export it.
 		$fields = array_values( array_unique( array_merge( $fields, $custom_ids ) ) );
-		$config = array( 'source' => $source, 'fields' => $fields, 'custom_columns' => $custom );
+		$config = array(
+			'source'         => $source,
+			'fields'         => $fields,
+			'custom_columns' => $custom,
+		);
 		if ( ! $fields || ! self::fetch_fields( $config ) ) {
 			return new WP_Error( 'opex_no_fields', __( 'Pick at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
 		}
@@ -281,7 +285,12 @@ class OPEX_Config {
 	 * it was saved.
 	 */
 	private static function sanitize_date_range( array $src, array $raw ): array {
-		$empty = array( 'field' => '', 'preset' => 'all_time', 'from' => '', 'to' => '' );
+		$empty = array(
+			'field'  => '',
+			'preset' => 'all_time',
+			'from'   => '',
+			'to'     => '',
+		);
 
 		$preset = sanitize_key( self::text( $raw['preset'] ?? 'all_time' ) );
 		if ( ! in_array( $preset, OPEX_Dates::PRESETS, true ) ) {
@@ -312,7 +321,12 @@ class OPEX_Config {
 			}
 		}
 
-		return array( 'field' => $field, 'preset' => $preset, 'from' => $from, 'to' => $to );
+		return array(
+			'field'  => $field,
+			'preset' => $preset,
+			'from'   => $from,
+			'to'     => $to,
+		);
 	}
 
 	/**
@@ -321,7 +335,7 @@ class OPEX_Config {
 	 * rows it started with.
 	 */
 	public static function freeze_date_range( array $config ): array {
-		$range = (array) ( $config['date_range'] ?? array() );
+		$range  = (array) ( $config['date_range'] ?? array() );
 		$preset = (string) ( $range['preset'] ?? 'all_time' );
 
 		if ( 'all_time' === $preset || 'custom' === $preset ) {
@@ -330,9 +344,9 @@ class OPEX_Config {
 
 		list( $from, $to ) = OPEX_Dates::preset_range( $preset );
 
-		$range['from']         = $from;
-		$range['to']           = $to;
-		$config['date_range']  = $range;
+		$range['from']        = $from;
+		$range['to']          = $to;
+		$config['date_range'] = $range;
 
 		return $config;
 	}
@@ -354,7 +368,7 @@ class OPEX_Config {
 			$n    = 2;
 			while ( isset( $used[ $label ] ) ) {
 				$label = $base . '_' . $n;
-				$n++;
+				++$n;
 			}
 			$used[ $label ]    = true;
 			$headers[ $field ] = $label;

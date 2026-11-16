@@ -80,21 +80,23 @@ class OPEX_Schema {
 			}
 		}
 
-		return OPEX_Schema_Document::extend( array(
-			'opex_schema'    => self::SCHEMA_VERSION,
-			'plugin'         => 'Open Export',
-			'plugin_version' => OPEX_VERSION,
-			'generated'      => gmdate( 'c' ),
-			'site'           => self::site_info(),
-			'how_to_use'     => self::instructions(),
-			'recipe_format'  => self::recipe_format(),
-			'operators'      => self::operators(),
-			'date_presets'   => self::date_presets(),
-			'formats'        => array( 'csv', 'json', 'xml' ),
-			'csv_delimiters' => array( 'comma', 'semicolon', 'tab' ),
-			'all_sources'    => $index,
-			'sources'        => $detailed,
-		) );
+		return OPEX_Schema_Document::extend(
+			array(
+				'opex_schema'    => self::SCHEMA_VERSION,
+				'plugin'         => 'Open Export',
+				'plugin_version' => OPEX_VERSION,
+				'generated'      => gmdate( 'c' ),
+				'site'           => self::site_info(),
+				'how_to_use'     => self::instructions(),
+				'recipe_format'  => self::recipe_format(),
+				'operators'      => self::operators(),
+				'date_presets'   => self::date_presets(),
+				'formats'        => array( 'csv', 'json', 'xml' ),
+				'csv_delimiters' => array( 'comma', 'semicolon', 'tab' ),
+				'all_sources'    => $index,
+				'sources'        => $detailed,
+			)
+		);
 	}
 
 	private static function site_info(): array {
@@ -195,7 +197,10 @@ class OPEX_Schema {
 	private static function date_presets(): array {
 		$out = array();
 		foreach ( OPEX_Dates::PRESETS as $preset ) {
-			$out[] = array( 'id' => $preset, 'label' => OPEX_Dates::preset_label( $preset ) );
+			$out[] = array(
+				'id'    => $preset,
+				'label' => OPEX_Dates::preset_label( $preset ),
+			);
 		}
 		return $out;
 	}

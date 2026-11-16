@@ -26,7 +26,11 @@ class OPEX_Recipe_Rules {
 	 */
 	public static function group( array $group, int $depth, array $src, array $known ): array {
 		$relation = OPEX_Query::normalize_relation( self::text( $group['relation'] ?? 'AND' ) );
-		$row      = array( 'group' => true, 'relation' => $relation, 'rules' => array() );
+		$row      = array(
+			'group'    => true,
+			'relation' => $relation,
+			'rules'    => array(),
+		);
 		if ( $depth > OPEX_Filter_Tree::MAX_DEPTH ) {
 			$row['status'] = 'dropped';
 			$row['reason'] = __( 'Filter groups can be nested three levels deep. This one is deeper.', 'open-export' );
@@ -59,7 +63,13 @@ class OPEX_Recipe_Rules {
 			return array( $row, null );
 		}
 		$row['status'] = 'matched';
-		return array( $row, array( 'relation' => $relation, 'rules' => $kept ) );
+		return array(
+			$row,
+			array(
+				'relation' => $relation,
+				'rules'    => $kept,
+			),
+		);
 	}
 
 	/**
@@ -73,7 +83,10 @@ class OPEX_Recipe_Rules {
 	private static function rule( array $rule, array $src, array $known ): array {
 		$field = sanitize_text_field( self::text( $rule['field'] ?? '' ) );
 		$op    = sanitize_key( self::text( $rule['op'] ?? 'eq' ) );
-		$row   = array( 'field' => $field, 'op' => $op );
+		$row   = array(
+			'field' => $field,
+			'op'    => $op,
+		);
 
 		if ( '' === $field ) {
 			$row['status'] = 'dropped';
@@ -93,7 +106,14 @@ class OPEX_Recipe_Rules {
 			return array( $row, null );
 		}
 		$row['status'] = 'matched';
-		return array( $row, array( 'field' => $field, 'op' => $op, 'value' => self::text( $rule['value'] ?? '' ) ) );
+		return array(
+			$row,
+			array(
+				'field' => $field,
+				'op'    => $op,
+				'value' => self::text( $rule['value'] ?? '' ),
+			),
+		);
 	}
 
 	/**
@@ -104,7 +124,10 @@ class OPEX_Recipe_Rules {
 	 * @return array{matched:int, dropped:int}
 	 */
 	public static function count_leaves( array $rows ): array {
-		$count = array( 'matched' => 0, 'dropped' => 0 );
+		$count = array(
+			'matched' => 0,
+			'dropped' => 0,
+		);
 		foreach ( $rows as $row ) {
 			if ( ! empty( $row['group'] ) ) {
 				$inner             = self::count_leaves( (array) ( $row['rules'] ?? array() ) );
@@ -113,7 +136,7 @@ class OPEX_Recipe_Rules {
 				continue;
 			}
 			$key = 'matched' === ( $row['status'] ?? '' ) ? 'matched' : 'dropped';
-			$count[ $key ]++;
+			++$count[ $key ];
 		}
 		return $count;
 	}

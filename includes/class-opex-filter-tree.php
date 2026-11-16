@@ -108,7 +108,7 @@ class OPEX_Filter_Tree {
 			}
 			if ( $leaf ) {
 				$group['rules'][] = $leaf;
-				$count++;
+				++$count;
 			}
 		}
 		return $group;

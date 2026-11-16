@@ -57,9 +57,12 @@ class OPEX_Templates {
 		$templates[ $id ] = $template;
 
 		if ( count( $templates ) > self::MAX ) {
-			uasort( $templates, static function ( $a, $b ) {
-				return $a['updated'] <=> $b['updated'];
-			} );
+			uasort(
+				$templates,
+				static function ( $a, $b ) {
+					return $a['updated'] <=> $b['updated'];
+				}
+			);
 			while ( count( $templates ) > self::MAX ) {
 				unset( $templates[ array_key_first( $templates ) ] );
 			}

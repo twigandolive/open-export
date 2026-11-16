@@ -24,9 +24,21 @@ class OPEX_Dates {
 
 	/** Presets offered in the UI, in display order. */
 	public const PRESETS = array(
-		'all_time', 'today', 'yesterday', 'last_7_days', 'last_30_days', 'last_90_days',
-		'this_week', 'last_week', 'this_month', 'last_month',
-		'this_quarter', 'last_quarter', 'this_year', 'last_year', 'custom',
+		'all_time',
+		'today',
+		'yesterday',
+		'last_7_days',
+		'last_30_days',
+		'last_90_days',
+		'this_week',
+		'last_week',
+		'this_month',
+		'last_month',
+		'this_quarter',
+		'last_quarter',
+		'this_year',
+		'last_year',
+		'custom',
 	);
 
 	/** The site's timezone as configured in Settings, General, DST-aware. */

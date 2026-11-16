@@ -85,22 +85,24 @@ class OPEX_Rest_Delivery {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'permission_callback' => $can,
 					'callback'            => array( __CLASS__, 'save_settings' ),
-					'args'                => self::with_schema( array(
-						'retention_days' => array(
-							'type'    => 'integer',
-							'minimum' => 1,
-							'maximum' => 365,
-						),
-						'link_days'      => array(
-							'type'    => 'integer',
-							'minimum' => 1,
-							'maximum' => 30,
-						),
-						'background'     => array(
-							'type'              => 'boolean',
-							'sanitize_callback' => 'rest_sanitize_boolean',
-						),
-					) ),
+					'args'                => self::with_schema(
+						array(
+							'retention_days' => array(
+								'type'    => 'integer',
+								'minimum' => 1,
+								'maximum' => 365,
+							),
+							'link_days'      => array(
+								'type'    => 'integer',
+								'minimum' => 1,
+								'maximum' => 30,
+							),
+							'background'     => array(
+								'type'              => 'boolean',
+								'sanitize_callback' => 'rest_sanitize_boolean',
+							),
+						)
+					),
 				),
 			)
 		);
@@ -135,59 +137,61 @@ class OPEX_Rest_Delivery {
 		$text = static function ( $v ): bool {
 			return is_string( $v ) && strlen( $v ) <= 500;
 		};
-		return self::with_schema( array(
-			'name'     => array(
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
-				'validate_callback' => $text,
-			),
-			'type'     => array(
-				'type' => 'string',
-				'enum' => array( 'ftp', 'ftps', 'sftp' ),
-			),
-			'host'     => array(
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
-				'validate_callback' => $text,
-			),
-			'port'     => array(
-				'type'              => array( 'integer', 'string' ),
-				'validate_callback' => static function ( $v ): bool {
-					return '' === $v || ( is_numeric( $v ) && (int) $v >= 1 && (int) $v <= 65535 );
-				},
-			),
-			'username' => array(
-				'type'              => 'string',
-				'validate_callback' => static function ( $v ): bool {
-					return is_string( $v ) && strlen( $v ) <= 128;
-				},
-			),
-			'auth'     => array(
-				'type' => 'string',
-				'enum' => array( 'password', 'key' ),
-			),
-			'secret'   => array(
-				'type'              => 'string',
-				'sanitize_callback' => static function ( $v ): string {
-					return is_string( $v ) ? $v : '';
-				},
-				'validate_callback' => static function ( $v ): bool {
-					return is_string( $v ) && strlen( $v ) <= 20000;
-				},
-			),
-			'path'     => array(
-				'type'              => 'string',
-				'validate_callback' => $text,
-			),
-			'passive'  => array(
-				'type'              => 'boolean',
-				'sanitize_callback' => 'rest_sanitize_boolean',
-			),
-			'reset_host_key' => array(
-				'type'              => 'boolean',
-				'sanitize_callback' => 'rest_sanitize_boolean',
-			),
-		) );
+		return self::with_schema(
+			array(
+				'name'           => array(
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => $text,
+				),
+				'type'           => array(
+					'type' => 'string',
+					'enum' => array( 'ftp', 'ftps', 'sftp' ),
+				),
+				'host'           => array(
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => $text,
+				),
+				'port'           => array(
+					'type'              => array( 'integer', 'string' ),
+					'validate_callback' => static function ( $v ): bool {
+						return '' === $v || ( is_numeric( $v ) && (int) $v >= 1 && (int) $v <= 65535 );
+					},
+				),
+				'username'       => array(
+					'type'              => 'string',
+					'validate_callback' => static function ( $v ): bool {
+						return is_string( $v ) && strlen( $v ) <= 128;
+					},
+				),
+				'auth'           => array(
+					'type' => 'string',
+					'enum' => array( 'password', 'key' ),
+				),
+				'secret'         => array(
+					'type'              => 'string',
+					'sanitize_callback' => static function ( $v ): string {
+						return is_string( $v ) ? $v : '';
+					},
+					'validate_callback' => static function ( $v ): bool {
+						return is_string( $v ) && strlen( $v ) <= 20000;
+					},
+				),
+				'path'           => array(
+					'type'              => 'string',
+					'validate_callback' => $text,
+				),
+				'passive'        => array(
+					'type'              => 'boolean',
+					'sanitize_callback' => 'rest_sanitize_boolean',
+				),
+				'reset_host_key' => array(
+					'type'              => 'boolean',
+					'sanitize_callback' => 'rest_sanitize_boolean',
+				),
+			)
+		);
 	}
 
 	/**
@@ -320,7 +324,12 @@ class OPEX_Rest_Delivery {
 		$ok      = ! is_wp_error( $result );
 		$message = $ok ? __( 'The connection works.', 'open-export' ) : $result->get_error_message();
 		OPEX_Destinations::record_test( $id, $ok, $message );
-		return rest_ensure_response( array( 'ok' => $ok, 'message' => $message ) );
+		return rest_ensure_response(
+			array(
+				'ok'      => $ok,
+				'message' => $message,
+			)
+		);
 	}
 
 	/**
@@ -358,67 +367,75 @@ class OPEX_Rest_Delivery {
 		global $wp_locale;
 		$weekdays = array();
 		for ( $i = 0; $i < 7; $i++ ) {
-			$weekdays[] = array( 'value' => $i, 'label' => $wp_locale->get_weekday( $i ) );
+			$weekdays[] = array(
+				'value' => $i,
+				'label' => $wp_locale->get_weekday( $i ),
+			);
 		}
 		$list = static function ( array $labels ): array {
 			$out = array();
 			foreach ( $labels as $id => $label ) {
-				$out[] = array( 'id' => (string) $id, 'label' => $label );
+				$out[] = array(
+					'id'    => (string) $id,
+					'label' => $label,
+				);
 			}
 			return $out;
 		};
 		return rest_ensure_response(
-			OPEX_Rest_Screen::extend_options( array(
-				'formats'          => OPEX_Writer::formats(),
-				'transforms'       => OPEX_Transforms::types(),
-				'csv_encodings'    => $list(
-					array(
-						'utf8_bom' => __( 'UTF-8 with BOM (best for Excel)', 'open-export' ),
-						'utf8'     => __( 'UTF-8', 'open-export' ),
-						'win1252'  => __( 'Windows-1252', 'open-export' ),
-						'utf16le'  => __( 'UTF-16 LE', 'open-export' ),
-					)
-				),
-				'csv_eols'         => $list(
-					array(
-						'lf'   => __( 'Unix (LF)', 'open-export' ),
-						'crlf' => __( 'Windows (CRLF)', 'open-export' ),
-					)
-				),
-				'frequencies'      => $list(
-					array(
-						'manual'  => __( 'Manual only', 'open-export' ),
-						'hourly'  => __( 'Hourly', 'open-export' ),
-						'daily'   => __( 'Daily', 'open-export' ),
-						'weekly'  => __( 'Weekly', 'open-export' ),
-						'monthly' => __( 'Monthly', 'open-export' ),
-					)
-				),
-				'destination_types' => $list(
-					array(
-						'ftp'  => __( 'FTP', 'open-export' ),
-						'ftps' => __( 'FTP over TLS', 'open-export' ),
-						'sftp' => __( 'SFTP', 'open-export' ),
-					)
-				),
-				'weekdays'         => $weekdays,
-				'timezone'         => wp_timezone_string(),
-				'features'         => array(
-					'multisite'     => is_multisite(),
-					'woocommerce'   => class_exists( 'WooCommerce' ),
-					'ftp'           => extension_loaded( 'ftp' ),
-					'sodium'        => function_exists( 'sodium_crypto_secretbox' ),
-					'zip'           => class_exists( 'ZipArchive' ),
-					'cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
-					'background'    => (bool) OPEX_Settings::get( 'background' ),
-				),
-				'limits'           => array(
-					'filter_depth'    => OPEX_Filter_Tree::MAX_DEPTH,
-					'filter_rules'    => OPEX_Filter_Tree::MAX_RULES,
-					'transform_steps' => OPEX_Transforms::MAX_STEPS,
-					'custom_columns'  => OPEX_Custom_Columns::MAX_COLUMNS,
-				),
-			) )
+			OPEX_Rest_Screen::extend_options(
+				array(
+					'formats'           => OPEX_Writer::formats(),
+					'transforms'        => OPEX_Transforms::types(),
+					'csv_encodings'     => $list(
+						array(
+							'utf8_bom' => __( 'UTF-8 with BOM (best for Excel)', 'open-export' ),
+							'utf8'     => __( 'UTF-8', 'open-export' ),
+							'win1252'  => __( 'Windows-1252', 'open-export' ),
+							'utf16le'  => __( 'UTF-16 LE', 'open-export' ),
+						)
+					),
+					'csv_eols'          => $list(
+						array(
+							'lf'   => __( 'Unix (LF)', 'open-export' ),
+							'crlf' => __( 'Windows (CRLF)', 'open-export' ),
+						)
+					),
+					'frequencies'       => $list(
+						array(
+							'manual'  => __( 'Manual only', 'open-export' ),
+							'hourly'  => __( 'Hourly', 'open-export' ),
+							'daily'   => __( 'Daily', 'open-export' ),
+							'weekly'  => __( 'Weekly', 'open-export' ),
+							'monthly' => __( 'Monthly', 'open-export' ),
+						)
+					),
+					'destination_types' => $list(
+						array(
+							'ftp'  => __( 'FTP', 'open-export' ),
+							'ftps' => __( 'FTP over TLS', 'open-export' ),
+							'sftp' => __( 'SFTP', 'open-export' ),
+						)
+					),
+					'weekdays'          => $weekdays,
+					'timezone'          => wp_timezone_string(),
+					'features'          => array(
+						'multisite'     => is_multisite(),
+						'woocommerce'   => class_exists( 'WooCommerce' ),
+						'ftp'           => extension_loaded( 'ftp' ),
+						'sodium'        => function_exists( 'sodium_crypto_secretbox' ),
+						'zip'           => class_exists( 'ZipArchive' ),
+						'cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
+						'background'    => (bool) OPEX_Settings::get( 'background' ),
+					),
+					'limits'            => array(
+						'filter_depth'    => OPEX_Filter_Tree::MAX_DEPTH,
+						'filter_rules'    => OPEX_Filter_Tree::MAX_RULES,
+						'transform_steps' => OPEX_Transforms::MAX_STEPS,
+						'custom_columns'  => OPEX_Custom_Columns::MAX_COLUMNS,
+					),
+				)
+			)
 		);
 	}
 }

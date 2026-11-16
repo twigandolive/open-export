@@ -36,11 +36,11 @@ class OPEX_Sources {
 	private static function resolvers(): array {
 		if ( null === self::$resolvers ) {
 			self::$resolvers = array(
-				OPEX_Woo::SOURCE                     => array( 'OPEX_Source_Woo_Orders', 'resolve' ),
-				OPEX_Source_Woo_Order_Items::SOURCE  => array( 'OPEX_Source_Woo_Order_Items', 'resolve' ),
-				OPEX_Source_Woo_Customers::SOURCE    => array( 'OPEX_Source_Woo_Customers', 'resolve' ),
-				OPEX_Source_Woo_Products::SOURCE     => array( 'OPEX_Source_Woo_Products', 'resolve' ),
-				OPEX_Source_Woo_Coupons::SOURCE      => array( 'OPEX_Source_Woo_Coupons', 'resolve' ),
+				OPEX_Woo::SOURCE                    => array( 'OPEX_Source_Woo_Orders', 'resolve' ),
+				OPEX_Source_Woo_Order_Items::SOURCE => array( 'OPEX_Source_Woo_Order_Items', 'resolve' ),
+				OPEX_Source_Woo_Customers::SOURCE   => array( 'OPEX_Source_Woo_Customers', 'resolve' ),
+				OPEX_Source_Woo_Products::SOURCE    => array( 'OPEX_Source_Woo_Products', 'resolve' ),
+				OPEX_Source_Woo_Coupons::SOURCE     => array( 'OPEX_Source_Woo_Coupons', 'resolve' ),
 			);
 		}
 		return self::$resolvers;

@@ -66,11 +66,11 @@ class OPEX_Money {
 	 * @param int    $decimals Places.
 	 */
 	private static function round_string( string $value, int $decimals ): string {
-		$parts = explode( '.', $value, 2 );
-		$int   = $parts[0];
-		$frac  = $parts[1] ?? '';
-		$next  = isset( $frac[ $decimals ] ) ? (int) $frac[ $decimals ] : 0;
-		$frac  = str_pad( substr( $frac, 0, $decimals ), $decimals, '0' );
+		$parts  = explode( '.', $value, 2 );
+		$int    = $parts[0];
+		$frac   = $parts[1] ?? '';
+		$next   = isset( $frac[ $decimals ] ) ? (int) $frac[ $decimals ] : 0;
+		$frac   = str_pad( substr( $frac, 0, $decimals ), $decimals, '0' );
 		$digits = $int . $frac;
 		if ( $next >= 5 ) {
 			$digits = self::increment( $digits );

@@ -52,7 +52,11 @@ class OPEX_Query_Fetch {
 
 		$src = OPEX_Query::parse_source( $config['source'] );
 		if ( ! $src ) {
-			return array( 'items' => array(), 'cursor' => $cursor, 'done' => true );
+			return array(
+				'items'  => array(),
+				'cursor' => $cursor,
+				'done'   => true,
+			);
 		}
 
 		$limit = max( 1, min( 5000, $limit ) );
@@ -62,9 +66,9 @@ class OPEX_Query_Fetch {
 		$select = self::select_list( $src, $config['fields'] );
 
 		if ( $pk ) {
-			$where_full = ( $where ? "({$where}) AND " : '' ) . "{$pk} > %d";
-			$args_full  = array_merge( $args, array( $cursor ) );
-			$sql        = "SELECT {$select} FROM {$from} WHERE {$where_full} ORDER BY {$pk} ASC LIMIT %d";
+			$where_full  = ( $where ? "({$where}) AND " : '' ) . "{$pk} > %d";
+			$args_full   = array_merge( $args, array( $cursor ) );
+			$sql         = "SELECT {$select} FROM {$from} WHERE {$where_full} ORDER BY {$pk} ASC LIMIT %d";
 			$args_full[] = $limit;
 		} else {
 			// No usable single-column integer key: offset paging, ordered by the
@@ -108,7 +112,11 @@ class OPEX_Query_Fetch {
 
 		$items = OPEX_Query_Rows::assemble( $src, $rows, $config['fields'], $tick );
 
-		return array( 'items' => $items, 'cursor' => $new_cursor, 'done' => $done );
+		return array(
+			'items'  => $items,
+			'cursor' => $new_cursor,
+			'done'   => $done,
+		);
 	}
 
 	/**
@@ -124,21 +132,21 @@ class OPEX_Query_Fetch {
 		$type     = $provider ? 'provider' : $src['type'];
 		switch ( $type ) {
 			case 'provider':
-				$from = $provider->from();
+				$from                = $provider->from();
 				list( $base, $args ) = $provider->base_where();
-				$pk   = $provider->primary_key();
+				$pk                  = $provider->primary_key();
 				break;
 			case 'posts':
-				$from  = "{$wpdb->posts} p";
-				$base  = array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" );
-				$args  = array( $src['post_type'] );
-				$pk    = 'p.ID';
+				$from = "{$wpdb->posts} p";
+				$base = array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" );
+				$args = array( $src['post_type'] );
+				$pk   = 'p.ID';
 				break;
 			case 'users':
 				$from = "{$wpdb->users} u";
 				// On a network, a caller who is not a super admin sees only this site's members.
 				list( $base, $args ) = OPEX_Access::users_scope();
-				$pk   = 'u.ID';
+				$pk                  = 'u.ID';
 				break;
 			case 'comments':
 				$from = "{$wpdb->comments} c";

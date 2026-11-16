@@ -54,15 +54,41 @@ class OPEX_Site_Health {
 		}
 
 		$fields = array(
-			'version'       => array( 'label' => __( 'Plugin version', 'open-export' ), 'value' => defined( 'OPEX_VERSION' ) ? OPEX_VERSION : '' ),
-			'folder'        => array( 'label' => __( 'Export folder', 'open-export' ), 'value' => $dir, 'private' => true ),
+			'version'       => array(
+				'label' => __( 'Plugin version', 'open-export' ),
+				'value' => defined( 'OPEX_VERSION' ) ? OPEX_VERSION : '',
+			),
+			'folder'        => array(
+				'label'   => __( 'Export folder', 'open-export' ),
+				'value'   => $dir,
+				'private' => true,
+			),
 			'writable'      => self::yes_no( __( 'Export folder is writable', 'open-export' ), $disk['writable'] ),
 			'protected'     => self::yes_no( __( 'Export folder is protected', 'open-export' ), $disk['protected'] ),
-			'files'         => array( 'label' => __( 'Stored export files', 'open-export' ), 'value' => $disk['files'], 'debug' => $disk['files'] ),
-			'size'          => array( 'label' => __( 'Size of stored export files', 'open-export' ), 'value' => size_format( $disk['bytes'] ), 'debug' => $disk['bytes'] ),
-			'retention'     => array( 'label' => __( 'Retention (days)', 'open-export' ), 'value' => (int) OPEX_Settings::get( 'retention_days' ) ),
-			'schedules'     => array( 'label' => __( 'Schedules', 'open-export' ), 'value' => count( $all ), 'debug' => count( $all ) ),
-			'schedules_on'  => array( 'label' => __( 'Enabled schedules', 'open-export' ), 'value' => $on, 'debug' => $on ),
+			'files'         => array(
+				'label' => __( 'Stored export files', 'open-export' ),
+				'value' => $disk['files'],
+				'debug' => $disk['files'],
+			),
+			'size'          => array(
+				'label' => __( 'Size of stored export files', 'open-export' ),
+				'value' => size_format( $disk['bytes'] ),
+				'debug' => $disk['bytes'],
+			),
+			'retention'     => array(
+				'label' => __( 'Retention (days)', 'open-export' ),
+				'value' => (int) OPEX_Settings::get( 'retention_days' ),
+			),
+			'schedules'     => array(
+				'label' => __( 'Schedules', 'open-export' ),
+				'value' => count( $all ),
+				'debug' => count( $all ),
+			),
+			'schedules_on'  => array(
+				'label' => __( 'Enabled schedules', 'open-export' ),
+				'value' => $on,
+				'debug' => $on,
+			),
 			'next_run'      => self::next_run_field( $all ),
 			'cron_disabled' => self::yes_no( __( 'WP-Cron is disabled', 'open-export' ), self::cron_disabled() ),
 		);

@@ -52,7 +52,7 @@ class OPEX_Recipe {
 			},
 			$custom_notes
 		);
-		$custom_ids = wp_list_pluck( $custom, 'id' );
+		$custom_ids   = wp_list_pluck( $custom, 'id' );
 
 		$filters = is_array( $recipe['filters'] ?? null ) ? $recipe['filters'] : array();
 		$top     = array_slice( is_array( $filters['rules'] ?? null ) ? $filters['rules'] : array(), 0, self::MAX_TOP_RULES );
@@ -67,18 +67,26 @@ class OPEX_Recipe {
 		}
 
 		$legacy            = $recipe;
-		$legacy['fields']  = array_values( array_filter( (array) ( $recipe['fields'] ?? array() ), static function ( $f ) use ( $custom_ids ): bool {
-			return ! self::is_custom( $f, $custom_ids );
-		} ) );
-		$legacy['filters'] = array( 'relation' => $filters['relation'] ?? 'AND', 'rules' => $plain );
+		$legacy['fields']  = array_values(
+			array_filter(
+				(array) ( $recipe['fields'] ?? array() ),
+				static function ( $f ) use ( $custom_ids ): bool {
+					return ! self::is_custom( $f, $custom_ids );
+				}
+			)
+		);
+		$legacy['filters'] = array(
+			'relation' => $filters['relation'] ?? 'AND',
+			'rules'    => $plain,
+		);
 		$legacy_notes      = array();
 		$result            = OPEX_Schema::recipe_to_config( $legacy, $legacy_notes );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
-		$report = $result['report'];
-		$known  = array_keys( OPEX_Catalog::field_ids( $source ) );
+		$report                      = $result['report'];
+		$known                       = array_keys( OPEX_Catalog::field_ids( $source ) );
 		list( $field_rows, $fields ) = self::merge_fields( (array) ( $recipe['fields'] ?? array() ), (array) $report['fields'], $custom, $custom_ids );
 		list( $rule_rows, $rules )   = self::merge_rules( $top, (array) $report['filters'], $map, $src, $known );
 
@@ -99,7 +107,13 @@ class OPEX_Recipe {
 		if ( ! $fields ) {
 			$report['ok']     = false;
 			$report['reason'] = (string) ( $result['report']['reason'] ?? __( 'The recipe lists no fields to export.', 'open-export' ) );
-			return array( 'ok' => false, 'report' => $report, 'config' => null, 'name' => '', 'notes' => $notes );
+			return array(
+				'ok'     => false,
+				'report' => $report,
+				'config' => null,
+				'name'   => '',
+				'notes'  => $notes,
+			);
 		}
 
 		$raw = array(
@@ -125,7 +139,13 @@ class OPEX_Recipe {
 		if ( is_wp_error( $config ) ) {
 			$report['ok']     = false;
 			$report['reason'] = $config->get_error_message();
-			return array( 'ok' => false, 'report' => $report, 'config' => null, 'name' => '', 'notes' => $notes );
+			return array(
+				'ok'     => false,
+				'report' => $report,
+				'config' => null,
+				'name'   => '',
+				'notes'  => $notes,
+			);
 		}
 		$report['ok'] = true;
 		return array(
@@ -187,10 +207,19 @@ class OPEX_Recipe {
 			if ( self::is_custom( $entry, $custom_ids ) ) {
 				$id = sanitize_text_field( (string) $entry );
 				if ( in_array( $id, $fields, true ) ) {
-					$out[] = array( 'id' => $id, 'status' => 'dropped', 'reason' => __( 'Listed more than once; the first one is kept.', 'open-export' ) );
+					$out[] = array(
+						'id'     => $id,
+						'status' => 'dropped',
+						'reason' => __( 'Listed more than once; the first one is kept.', 'open-export' ),
+					);
 					continue;
 				}
-				$out[]    = array( 'id' => $id, 'status' => 'matched', 'label' => (string) $labels[ $id ], 'custom' => true );
+				$out[]    = array(
+					'id'     => $id,
+					'status' => 'matched',
+					'label'  => (string) $labels[ $id ],
+					'custom' => true,
+				);
 				$fields[] = $id;
 				continue;
 			}
@@ -208,7 +237,12 @@ class OPEX_Recipe {
 		// A defined custom column that is not listed still exports, last, as sanitize_config does.
 		foreach ( $custom_ids as $id ) {
 			if ( ! in_array( $id, $fields, true ) ) {
-				$out[]    = array( 'id' => $id, 'status' => 'matched', 'label' => (string) $labels[ $id ], 'custom' => true );
+				$out[]    = array(
+					'id'     => $id,
+					'status' => 'matched',
+					'label'  => (string) $labels[ $id ],
+					'custom' => true,
+				);
 				$fields[] = $id;
 			}
 		}
@@ -229,8 +263,8 @@ class OPEX_Recipe {
 	private static function merge_rules( array $top, array $rows, array $map, array $src, array $known ): array {
 		$by_index = array();
 		foreach ( $rows as $row ) {
-			$original           = $map[ (int) $row['index'] ] ?? (int) $row['index'];
-			$row['index']       = $original;
+			$original              = $map[ (int) $row['index'] ] ?? (int) $row['index'];
+			$row['index']          = $original;
 			$by_index[ $original ] = $row;
 		}
 		$out   = array();
@@ -238,7 +272,7 @@ class OPEX_Recipe {
 		foreach ( $top as $i => $entry ) {
 			if ( is_array( $entry ) && OPEX_Filter_Tree::is_group( $entry ) ) {
 				list( $row, $clean ) = OPEX_Recipe_Rules::group( $entry, 2, $src, $known );
-				$out[] = array( 'index' => (int) $i ) + $row;
+				$out[]               = array( 'index' => (int) $i ) + $row;
 				if ( $clean ) {
 					$rules[] = $clean;
 				}
@@ -250,7 +284,11 @@ class OPEX_Recipe {
 			$row   = $by_index[ $i ];
 			$out[] = $row;
 			if ( 'matched' === ( $row['status'] ?? '' ) ) {
-				$rules[] = array( 'field' => (string) $row['field'], 'op' => (string) $row['op'], 'value' => self::text( $entry['value'] ?? '' ) );
+				$rules[] = array(
+					'field' => (string) $row['field'],
+					'op'    => (string) $row['op'],
+					'value' => self::text( $entry['value'] ?? '' ),
+				);
 			}
 		}
 		return array( $out, $rules );

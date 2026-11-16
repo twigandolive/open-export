@@ -46,7 +46,16 @@ class OPEX_Presets {
 				'id'          => 'google-merchant',
 				'label'       => __( 'Google Merchant Center', 'open-export' ),
 				'description' => __( 'An RSS 2.0 product feed in the Google format: id, title, description, link, image link, availability and price, for published simple, external and variation products.', 'open-export' ) . ' ' . $gaps,
-				'config'      => self::xml_feed( array( 'instock' => 'in_stock', 'outofstock' => 'out_of_stock', 'onbackorder' => 'backorder' ), 150, 5000, $brand ),
+				'config'      => self::xml_feed(
+					array(
+						'instock'     => 'in_stock',
+						'outofstock'  => 'out_of_stock',
+						'onbackorder' => 'backorder',
+					),
+					150,
+					5000,
+					$brand
+				),
 			),
 			array(
 				'id'          => 'meta-catalog',
@@ -58,7 +67,16 @@ class OPEX_Presets {
 				'id'          => 'pinterest-catalog',
 				'label'       => __( 'Pinterest catalog', 'open-export' ),
 				'description' => __( 'An RSS 2.0 feed in the Google shape, which Pinterest reads: id, title, description, link, image link, availability and price. Pinterest has no backorder value, so backordered products are listed as preorder.', 'open-export' ) . ' ' . $gaps,
-				'config'      => self::xml_feed( array( 'instock' => 'in stock', 'outofstock' => 'out of stock', 'onbackorder' => 'preorder' ), 500, 10000, $brand ),
+				'config'      => self::xml_feed(
+					array(
+						'instock'     => 'in stock',
+						'outofstock'  => 'out of stock',
+						'onbackorder' => 'preorder',
+					),
+					500,
+					10000,
+					$brand
+				),
 			),
 		);
 	}
@@ -88,9 +106,21 @@ class OPEX_Presets {
 		return array(
 			'relation' => 'AND',
 			'rules'    => array(
-				array( 'field' => 'woo:status', 'op' => 'eq', 'value' => 'publish' ),
-				array( 'field' => 'woo:type', 'op' => 'in', 'value' => 'simple,external,variation' ),
-				array( 'field' => 'woo:catalog_visibility', 'op' => 'neq', 'value' => 'hidden' ),
+				array(
+					'field' => 'woo:status',
+					'op'    => 'eq',
+					'value' => 'publish',
+				),
+				array(
+					'field' => 'woo:type',
+					'op'    => 'in',
+					'value' => 'simple,external,variation',
+				),
+				array(
+					'field' => 'woo:catalog_visibility',
+					'op'    => 'neq',
+					'value' => 'hidden',
+				),
 			),
 		);
 	}
@@ -107,12 +137,35 @@ class OPEX_Presets {
 	private static function transforms( array $availability, int $title_max, int $text_max ): array {
 		$currency = function_exists( 'get_woocommerce_currency' ) ? (string) get_woocommerce_currency() : '';
 		$out      = array(
-			'woo:name'         => array( array( 'type' => 'strip_html' ), array( 'type' => 'truncate', 'length' => $title_max ) ),
-			'woo:description'  => array( array( 'type' => 'strip_html' ), array( 'type' => 'trim' ), array( 'type' => 'truncate', 'length' => $text_max ) ),
-			'woo:stock_status' => array( array( 'type' => 'map', 'pairs' => $availability ) ),
+			'woo:name'         => array(
+				array( 'type' => 'strip_html' ),
+				array(
+					'type'   => 'truncate',
+					'length' => $title_max,
+				),
+			),
+			'woo:description'  => array(
+				array( 'type' => 'strip_html' ),
+				array( 'type' => 'trim' ),
+				array(
+					'type'   => 'truncate',
+					'length' => $text_max,
+				),
+			),
+			'woo:stock_status' => array(
+				array(
+					'type'  => 'map',
+					'pairs' => $availability,
+				),
+			),
 		);
 		if ( '' !== $currency ) {
-			$out['woo:price'] = array( array( 'type' => 'suffix', 'text' => ' ' . $currency ) );
+			$out['woo:price'] = array(
+				array(
+					'type' => 'suffix',
+					'text' => ' ' . $currency,
+				),
+			);
 		}
 		return $out;
 	}
@@ -149,7 +202,7 @@ class OPEX_Presets {
 	 * @return array
 	 */
 	private static function xml_feed( array $availability, int $title_max, int $text_max, bool $brand ): array {
-		$row = "<item>\n"
+		$row                    = "<item>\n"
 			. "<g:id>{woo:id}</g:id>\n"
 			. "<g:title>{woo:name}</g:title>\n"
 			. "<g:description>{woo:description}</g:description>\n"
@@ -159,7 +212,7 @@ class OPEX_Presets {
 			. "<g:price>{woo:price}</g:price>\n"
 			. ( $brand ? "<g:brand>{tax:product_brand}</g:brand>\n" : '' )
 			. '</item>';
-		$config = self::base( 'xml', $brand );
+		$config                 = self::base( 'xml', $brand );
 		$config['xml_template'] = array(
 			'header' => '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
 				. '<rss xmlns:g="' . self::GOOGLE_NS . '" version="2.0">' . "\n"
@@ -170,7 +223,7 @@ class OPEX_Presets {
 			'row'    => $row,
 			'footer' => "</channel>\n</rss>",
 		);
-		$config['transforms'] = self::transforms( $availability, $title_max, $text_max );
+		$config['transforms']   = self::transforms( $availability, $title_max, $text_max );
 		return $config;
 	}
 
@@ -184,7 +237,15 @@ class OPEX_Presets {
 	private static function meta_feed( bool $brand ): array {
 		$config                 = self::base( 'csv', $brand );
 		$config['csv_encoding'] = 'utf8';
-		$config['transforms']   = self::transforms( array( 'instock' => 'in stock', 'outofstock' => 'out of stock', 'onbackorder' => 'available for order' ), 200, 9999 );
+		$config['transforms']   = self::transforms(
+			array(
+				'instock'     => 'in stock',
+				'outofstock'  => 'out of stock',
+				'onbackorder' => 'available for order',
+			),
+			200,
+			9999
+		);
 		return $config;
 	}
 
@@ -200,7 +261,12 @@ class OPEX_Presets {
 			'source'        => 'woo:products',
 			'fields'        => self::fields( $brand ),
 			'filters'       => self::filters(),
-			'date_range'    => array( 'field' => '', 'preset' => 'all_time', 'from' => '', 'to' => '' ),
+			'date_range'    => array(
+				'field'  => '',
+				'preset' => 'all_time',
+				'from'   => '',
+				'to'     => '',
+			),
 			'format'        => $format,
 			'batch_size'    => 500,
 			'csv_delimiter' => 'comma',

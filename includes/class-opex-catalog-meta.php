@@ -16,50 +16,99 @@ class OPEX_Catalog_Meta {
 	 * Meta-key prefixes mapped to a human group label. Longest match wins.
 	 */
 	private const PREFIX_GROUPS = array(
-		'_yoast_'      => 'Yoast SEO',
-		'rank_math_'   => 'Rank Math',
-		'_aioseo_'     => 'All in One SEO',
-		'_seopress_'   => 'SEOPress',
-		'_elementor_'  => 'Elementor',
-		'_et_'         => 'Divi',
-		'_wpb_'        => 'WPBakery',
-		'vc_'          => 'WPBakery',
-		'_jetpack_'    => 'Jetpack',
-		'_wpml_'       => 'WPML',
-		'wpml_'        => 'WPML',
-		'pll_'         => 'Polylang',
-		'_wc_'         => 'WooCommerce',
-		'_billing_'    => 'WooCommerce',
-		'_shipping_'   => 'WooCommerce',
-		'billing_'     => 'WooCommerce',
-		'shipping_'    => 'WooCommerce',
-		'_menu_item_'  => 'WordPress Core',
-		'_wp_'         => 'WordPress Core',
-		'_edit_'       => 'WordPress Core',
-		'_oembed_'     => 'WordPress Core',
+		'_yoast_'     => 'Yoast SEO',
+		'rank_math_'  => 'Rank Math',
+		'_aioseo_'    => 'All in One SEO',
+		'_seopress_'  => 'SEOPress',
+		'_elementor_' => 'Elementor',
+		'_et_'        => 'Divi',
+		'_wpb_'       => 'WPBakery',
+		'vc_'         => 'WPBakery',
+		'_jetpack_'   => 'Jetpack',
+		'_wpml_'      => 'WPML',
+		'wpml_'       => 'WPML',
+		'pll_'        => 'Polylang',
+		'_wc_'        => 'WooCommerce',
+		'_billing_'   => 'WooCommerce',
+		'_shipping_'  => 'WooCommerce',
+		'billing_'    => 'WooCommerce',
+		'shipping_'   => 'WooCommerce',
+		'_menu_item_' => 'WordPress Core',
+		'_wp_'        => 'WordPress Core',
+		'_edit_'      => 'WordPress Core',
+		'_oembed_'    => 'WordPress Core',
 	);
 
 	/**
 	 * Exact WooCommerce product/order meta keys that carry no _wc_ prefix.
 	 */
 	private const WOO_KEYS = array(
-		'_sku', '_price', '_regular_price', '_sale_price', '_sale_price_dates_from',
-		'_sale_price_dates_to', '_stock', '_stock_status', '_manage_stock', '_backorders',
-		'_low_stock_amount', '_sold_individually', '_weight', '_length', '_width', '_height',
-		'_tax_status', '_tax_class', '_virtual', '_downloadable', '_download_limit',
-		'_download_expiry', '_downloadable_files', '_purchase_note', '_product_attributes',
-		'_default_attributes', '_product_version', '_product_url', '_button_text',
-		'total_sales', '_product_image_gallery', '_children', '_upsell_ids', '_crosssell_ids',
-		'_variation_description', '_order_total', '_order_tax', '_order_currency',
-		'_payment_method', '_payment_method_title', '_customer_user', '_order_key',
+		'_sku',
+		'_price',
+		'_regular_price',
+		'_sale_price',
+		'_sale_price_dates_from',
+		'_sale_price_dates_to',
+		'_stock',
+		'_stock_status',
+		'_manage_stock',
+		'_backorders',
+		'_low_stock_amount',
+		'_sold_individually',
+		'_weight',
+		'_length',
+		'_width',
+		'_height',
+		'_tax_status',
+		'_tax_class',
+		'_virtual',
+		'_downloadable',
+		'_download_limit',
+		'_download_expiry',
+		'_downloadable_files',
+		'_purchase_note',
+		'_product_attributes',
+		'_default_attributes',
+		'_product_version',
+		'_product_url',
+		'_button_text',
+		'total_sales',
+		'_product_image_gallery',
+		'_children',
+		'_upsell_ids',
+		'_crosssell_ids',
+		'_variation_description',
+		'_order_total',
+		'_order_tax',
+		'_order_currency',
+		'_payment_method',
+		'_payment_method_title',
+		'_customer_user',
+		'_order_key',
 	);
 
 	private const CORE_KEYS = array(
-		'_thumbnail_id', '_pingme', '_encloseme', '_customize_changeset_uuid',
-		'wp_capabilities', 'wp_user_level', 'nickname', 'first_name',
-		'last_name', 'description', 'rich_editing', 'syntax_highlighting', 'comment_shortcuts',
-		'admin_color', 'use_ssl', 'show_admin_bar_front', 'locale', 'dismissed_wp_pointers',
-		'show_welcome_panel', 'last_update', 'community-events-location',
+		'_thumbnail_id',
+		'_pingme',
+		'_encloseme',
+		'_customize_changeset_uuid',
+		'wp_capabilities',
+		'wp_user_level',
+		'nickname',
+		'first_name',
+		'last_name',
+		'description',
+		'rich_editing',
+		'syntax_highlighting',
+		'comment_shortcuts',
+		'admin_color',
+		'use_ssl',
+		'show_admin_bar_front',
+		'locale',
+		'dismissed_wp_pointers',
+		'show_welcome_panel',
+		'last_update',
+		'community-events-location',
 	);
 
 	/**
@@ -78,10 +127,12 @@ class OPEX_Catalog_Meta {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- key sampling, cached in a transient below.
 		switch ( $type ) {
 			case 'posts':
-				$keys = $wpdb->get_col( $wpdb->prepare(
-					"SELECT DISTINCT pm.meta_key FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = %s LIMIT 800",
-					$scope
-				) );
+				$keys = $wpdb->get_col(
+					$wpdb->prepare(
+						"SELECT DISTINCT pm.meta_key FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = %s LIMIT 800",
+						$scope
+					)
+				);
 				break;
 			case 'users':
 				$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->usermeta} LIMIT 800" );
@@ -90,10 +141,12 @@ class OPEX_Catalog_Meta {
 				$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->commentmeta} LIMIT 400" );
 				break;
 			case 'terms':
-				$keys = $wpdb->get_col( $wpdb->prepare(
-					"SELECT DISTINCT tm.meta_key FROM {$wpdb->termmeta} tm INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id WHERE tt.taxonomy = %s LIMIT 400",
-					$scope
-				) );
+				$keys = $wpdb->get_col(
+					$wpdb->prepare(
+						"SELECT DISTINCT tm.meta_key FROM {$wpdb->termmeta} tm INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id WHERE tt.taxonomy = %s LIMIT 400",
+						$scope
+					)
+				);
 				break;
 			default:
 				$keys = array();
@@ -143,8 +196,11 @@ class OPEX_Catalog_Meta {
 		$buckets = array();
 
 		foreach ( $keys as $key ) {
-			$group = self::classify_key( $key, $acf_keys );
-			$buckets[ $group ][] = array( 'id' => 'meta:' . $key, 'label' => $key );
+			$group               = self::classify_key( $key, $acf_keys );
+			$buckets[ $group ][] = array(
+				'id'    => 'meta:' . $key,
+				'label' => $key,
+			);
 		}
 
 		$order  = array( 'WooCommerce', 'ACF', 'Yoast SEO', 'Rank Math', 'All in One SEO', 'SEOPress', 'Elementor', 'Divi', 'WPBakery', 'Jetpack', 'WPML', 'Polylang', 'WordPress Core' );
@@ -152,23 +208,35 @@ class OPEX_Catalog_Meta {
 
 		foreach ( $order as $label ) {
 			if ( ! empty( $buckets[ $label ] ) ) {
-				$groups[] = array( 'label' => $label, 'fields' => $buckets[ $label ] );
+				$groups[] = array(
+					'label'  => $label,
+					'fields' => $buckets[ $label ],
+				);
 				unset( $buckets[ $label ] );
 			}
 		}
 
 		if ( ! empty( $buckets['Custom Fields'] ) ) {
-			$groups[] = array( 'label' => __( 'Custom Fields', 'open-export' ), 'fields' => $buckets['Custom Fields'] );
+			$groups[] = array(
+				'label'  => __( 'Custom Fields', 'open-export' ),
+				'fields' => $buckets['Custom Fields'],
+			);
 			unset( $buckets['Custom Fields'] );
 		}
 		if ( ! empty( $buckets['Technical'] ) ) {
-			$groups[] = array( 'label' => __( 'Technical / Hidden', 'open-export' ), 'fields' => $buckets['Technical'] );
+			$groups[] = array(
+				'label'  => __( 'Technical / Hidden', 'open-export' ),
+				'fields' => $buckets['Technical'],
+			);
 			unset( $buckets['Technical'] );
 		}
 
 		// Anything classify_key invented that we did not order explicitly.
 		foreach ( $buckets as $label => $fields ) {
-			$groups[] = array( 'label' => $label, 'fields' => $fields );
+			$groups[] = array(
+				'label'  => $label,
+				'fields' => $fields,
+			);
 		}
 
 		return $groups;

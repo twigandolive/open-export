@@ -53,9 +53,12 @@ class OPEX_Exporter {
 		if ( is_wp_error( $extra['wide'] ) ) {
 			return $extra['wide'];
 		}
-		return OPEX_Access::scope( $extra['wide'], static function () use ( $config, $label, $extra ) {
-			return self::start( $config, $label, $extra );
-		} );
+		return OPEX_Access::scope(
+			$extra['wide'],
+			static function () use ( $config, $label, $extra ) {
+				return self::start( $config, $label, $extra );
+			}
+		);
 	}
 
 	/**
@@ -78,7 +81,11 @@ class OPEX_Exporter {
 		if ( $refused ) {
 			return $refused;
 		}
-		$plan = array( 'sites' => array(), 'total' => 0, 'notes' => array() );
+		$plan = array(
+			'sites' => array(),
+			'total' => 0,
+			'notes' => array(),
+		);
 		try {
 			if ( $network ) {
 				$plan = OPEX_Network::plan( self::query_config( $config, $since ) );
@@ -210,7 +217,10 @@ class OPEX_Exporter {
 		if ( ! $ok ) {
 			return new WP_Error( 'opex_bad_since', __( 'The incremental date field is not a date field of this source.', 'open-export' ), array( 'status' => 400 ) );
 		}
-		return array( 'field' => $field, 'after' => $after );
+		return array(
+			'field' => $field,
+			'after' => $after,
+		);
 	}
 
 	/**

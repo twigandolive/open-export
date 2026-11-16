@@ -30,9 +30,15 @@ class OPEX_Transforms {
 	 * @return array<string,array> Type => array( label, args ).
 	 */
 	public static function types(): array {
-		$text = array( 'type' => 'text', 'max' => self::MAX_STRING );
+		$text = array(
+			'type' => 'text',
+			'max'  => self::MAX_STRING,
+		);
 		return array(
-			'trim'         => array( 'label' => __( 'Trim spaces', 'open-export' ), 'args' => array() ),
+			'trim'         => array(
+				'label' => __( 'Trim spaces', 'open-export' ),
+				'args'  => array(),
+			),
 			'case'         => array(
 				'label' => __( 'Change case', 'open-export' ),
 				'args'  => array(
@@ -47,8 +53,14 @@ class OPEX_Transforms {
 					),
 				),
 			),
-			'prefix'       => array( 'label' => __( 'Add text before', 'open-export' ), 'args' => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ) ),
-			'suffix'       => array( 'label' => __( 'Add text after', 'open-export' ), 'args' => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ) ),
+			'prefix'       => array(
+				'label' => __( 'Add text before', 'open-export' ),
+				'args'  => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ),
+			),
+			'suffix'       => array(
+				'label' => __( 'Add text after', 'open-export' ),
+				'args'  => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ),
+			),
 			'find_replace' => array(
 				'label' => __( 'Find and replace', 'open-export' ),
 				'args'  => array(
@@ -58,12 +70,23 @@ class OPEX_Transforms {
 			),
 			'date_format'  => array(
 				'label' => __( 'Format a date', 'open-export' ),
-				'args'  => array( 'format' => array( 'type' => 'text', 'max' => self::MAX_DATE_FMT, 'label' => __( 'PHP date format', 'open-export' ) ) ),
+				'args'  => array(
+					'format' => array(
+						'type'  => 'text',
+						'max'   => self::MAX_DATE_FMT,
+						'label' => __( 'PHP date format', 'open-export' ),
+					),
+				),
 			),
 			'number'       => array(
 				'label' => __( 'Format a number', 'open-export' ),
 				'args'  => array(
-					'decimals'      => array( 'type' => 'int', 'min' => 0, 'max' => 6, 'label' => __( 'Decimals', 'open-export' ) ),
+					'decimals'      => array(
+						'type'  => 'int',
+						'min'   => 0,
+						'max'   => 6,
+						'label' => __( 'Decimals', 'open-export' ),
+					),
 					'dec_point'     => $text + array( 'label' => __( 'Decimal point', 'open-export' ) ),
 					'thousands_sep' => $text + array( 'label' => __( 'Thousands separator', 'open-export' ) ),
 				),
@@ -71,15 +94,35 @@ class OPEX_Transforms {
 			'map'          => array(
 				'label' => __( 'Map values', 'open-export' ),
 				'args'  => array(
-					'pairs'    => array( 'type' => 'map', 'max' => self::MAX_PAIRS, 'label' => __( 'Value pairs', 'open-export' ) ),
-					'fallback' => $text + array( 'label' => __( 'Otherwise use', 'open-export' ), 'optional' => true ),
+					'pairs'    => array(
+						'type'  => 'map',
+						'max'   => self::MAX_PAIRS,
+						'label' => __( 'Value pairs', 'open-export' ),
+					),
+					'fallback' => $text + array(
+						'label'    => __( 'Otherwise use', 'open-export' ),
+						'optional' => true,
+					),
 				),
 			),
-			'default'      => array( 'label' => __( 'Fill in when empty', 'open-export' ), 'args' => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ) ),
-			'strip_html'   => array( 'label' => __( 'Remove HTML', 'open-export' ), 'args' => array() ),
+			'default'      => array(
+				'label' => __( 'Fill in when empty', 'open-export' ),
+				'args'  => array( 'text' => $text + array( 'label' => __( 'Text', 'open-export' ) ) ),
+			),
+			'strip_html'   => array(
+				'label' => __( 'Remove HTML', 'open-export' ),
+				'args'  => array(),
+			),
 			'truncate'     => array(
 				'label' => __( 'Shorten', 'open-export' ),
-				'args'  => array( 'length' => array( 'type' => 'int', 'min' => 1, 'max' => 10000, 'label' => __( 'Characters', 'open-export' ) ) ),
+				'args'  => array(
+					'length' => array(
+						'type'  => 'int',
+						'min'   => 1,
+						'max'   => 10000,
+						'label' => __( 'Characters', 'open-export' ),
+					),
+				),
 			),
 		);
 	}
@@ -325,8 +368,8 @@ class OPEX_Transforms {
 					continue;
 				}
 				if ( 'date_format' === $step['type'] ) {
-					$tz           = $tz ? $tz : wp_timezone();
-					$step['tz']   = $tz;
+					$tz         = $tz ? $tz : wp_timezone();
+					$step['tz'] = $tz;
 				}
 				$plans[ $field ][] = $step;
 			}

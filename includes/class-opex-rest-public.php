@@ -132,9 +132,15 @@ class OPEX_Rest_Public {
 	private static function failures( string $id ): array {
 		$saved = get_transient( self::FAIL_KEY . $id );
 		if ( is_array( $saved ) && (int) ( $saved['until'] ?? 0 ) > time() ) {
-			return array( 'count' => (int) ( $saved['count'] ?? 0 ), 'until' => (int) $saved['until'] );
+			return array(
+				'count' => (int) ( $saved['count'] ?? 0 ),
+				'until' => (int) $saved['until'],
+			);
 		}
-		return array( 'count' => 0, 'until' => 0 );
+		return array(
+			'count' => 0,
+			'until' => 0,
+		);
 	}
 
 	/**
@@ -146,7 +152,14 @@ class OPEX_Rest_Public {
 	 */
 	private static function count_failure( string $id, array $fails ): void {
 		$until = $fails['until'] > 0 ? $fails['until'] : time() + self::FAIL_SPAN;
-		set_transient( self::FAIL_KEY . $id, array( 'count' => $fails['count'] + 1, 'until' => $until ), max( 1, $until - time() ) );
+		set_transient(
+			self::FAIL_KEY . $id,
+			array(
+				'count' => $fails['count'] + 1,
+				'until' => $until,
+			),
+			max( 1, $until - time() )
+		);
 	}
 
 	/**
@@ -169,7 +182,14 @@ class OPEX_Rest_Public {
 			$tkey = self::TRANSIENT . $id;
 			$next = (int) get_transient( $tkey );
 			if ( $next > time() ) {
-				$response = new WP_REST_Response( array( 'status' => 'rate_limited', 'processed' => 0, 'total' => 0 ), 429 );
+				$response = new WP_REST_Response(
+					array(
+						'status'    => 'rate_limited',
+						'processed' => 0,
+						'total'     => 0,
+					),
+					429
+				);
 				$response->header( 'Retry-After', (string) max( 1, $next - time() ) );
 				$response->header( 'Cache-Control', 'no-store' );
 				return $response;

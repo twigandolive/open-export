@@ -12,7 +12,11 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Catalog {
 
 	private const POST_TYPE_SKIP = array(
-		'revision', 'customize_changeset', 'oembed_cache', 'user_request', 'auto-draft',
+		'revision',
+		'customize_changeset',
+		'oembed_cache',
+		'user_request',
+		'auto-draft',
 	);
 
 	/** Everything that can be exported, grouped for the picker UI. */
@@ -109,8 +113,18 @@ class OPEX_Catalog {
 				'tier'  => 'standard',
 				'label' => __( 'People & Discussion', 'open-export' ),
 				'items' => array(
-					array( 'id' => 'users', 'label' => __( 'Users', 'open-export' ), 'icon' => 'dashicons-admin-users', 'count' => $user_count ),
-					array( 'id' => 'comments', 'label' => __( 'Comments', 'open-export' ), 'icon' => 'dashicons-admin-comments', 'count' => $comment_count ),
+					array(
+						'id'    => 'users',
+						'label' => __( 'Users', 'open-export' ),
+						'icon'  => 'dashicons-admin-users',
+						'count' => $user_count,
+					),
+					array(
+						'id'    => 'comments',
+						'label' => __( 'Comments', 'open-export' ),
+						'icon'  => 'dashicons-admin-comments',
+						'count' => $comment_count,
+					),
 				),
 			),
 			array(
@@ -263,13 +277,28 @@ class OPEX_Catalog {
 		);
 
 		$computed = array(
-			array( 'id' => 'computed:permalink', 'label' => 'permalink' ),
-			array( 'id' => 'computed:featured_image_url', 'label' => 'featured_image_url' ),
-			array( 'id' => 'computed:author_display_name', 'label' => 'author_display_name' ),
-			array( 'id' => 'computed:author_email', 'label' => 'author_email' ),
+			array(
+				'id'    => 'computed:permalink',
+				'label' => 'permalink',
+			),
+			array(
+				'id'    => 'computed:featured_image_url',
+				'label' => 'featured_image_url',
+			),
+			array(
+				'id'    => 'computed:author_display_name',
+				'label' => 'author_display_name',
+			),
+			array(
+				'id'    => 'computed:author_email',
+				'label' => 'author_email',
+			),
 		);
 		if ( 'attachment' === $post_type ) {
-			$computed[] = array( 'id' => 'computed:attachment_url', 'label' => 'attachment_url' );
+			$computed[] = array(
+				'id'    => 'computed:attachment_url',
+				'label' => 'attachment_url',
+			);
 		}
 		$groups[] = array(
 			'label'  => __( 'Computed', 'open-export' ),
@@ -303,7 +332,12 @@ class OPEX_Catalog {
 		);
 		$groups[] = array(
 			'label'  => __( 'Computed', 'open-export' ),
-			'fields' => array( array( 'id' => 'computed:roles', 'label' => 'roles' ) ),
+			'fields' => array(
+				array(
+					'id'    => 'computed:roles',
+					'label' => 'roles',
+				),
+			),
 		);
 
 		return array_merge( $groups, self::grouped_meta( OPEX_Access::user_meta_keys( self::sample_meta_keys( 'users' ) ), self::acf_keys() ) );
@@ -353,7 +387,10 @@ class OPEX_Catalog {
 	}
 
 	private static function core_field( string $col ): array {
-		return array( 'id' => 'core:' . $col, 'label' => $col );
+		return array(
+			'id'    => 'core:' . $col,
+			'label' => $col,
+		);
 	}
 
 	/**

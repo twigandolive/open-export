@@ -12,10 +12,10 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Schedules {
 
-	private const OPTION     = 'opex_schedules';
-	private const MAX        = 50;
+	private const OPTION      = 'opex_schedules';
+	private const MAX         = 50;
 	private const FREQUENCIES = array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' );
-	private const HOOK       = 'opex_run_schedule';
+	private const HOOK        = 'opex_run_schedule';
 
 	/** Default values for every key of a schedule record. */
 	public static function defaults(): array {
@@ -28,11 +28,19 @@ class OPEX_Schedules {
 			'weekday'     => 1,
 			'monthday'    => 1,
 			'enabled'     => false,
-			'incremental' => array( 'enabled' => false, 'field' => '' ),
+			'incremental' => array(
+				'enabled' => false,
+				'field'   => '',
+			),
 			'delivery'    => self::default_delivery(),
 			'filename'    => '{label}-{date}',
 			'trigger_key' => '',
-			'last_run'    => array( 'time' => 0, 'job_id' => '', 'status' => '', 'rows' => 0 ),
+			'last_run'    => array(
+				'time'   => 0,
+				'job_id' => '',
+				'status' => '',
+				'rows'   => 0,
+			),
 			'watermark'   => '',
 			'next_run'    => 0,
 			'created'     => 0,
@@ -43,9 +51,21 @@ class OPEX_Schedules {
 	/** Delivery block with everything off. */
 	private static function default_delivery(): array {
 		return array(
-			'email'       => array( 'enabled' => false, 'to' => array(), 'mode' => 'link', 'subject' => '' ),
-			'webhook'     => array( 'enabled' => false, 'url' => '', 'secret' => '' ),
-			'destination' => array( 'enabled' => false, 'id' => '' ),
+			'email'       => array(
+				'enabled' => false,
+				'to'      => array(),
+				'mode'    => 'link',
+				'subject' => '',
+			),
+			'webhook'     => array(
+				'enabled' => false,
+				'url'     => '',
+				'secret'  => '',
+			),
+			'destination' => array(
+				'enabled' => false,
+				'id'      => '',
+			),
 		);
 	}
 
@@ -163,7 +183,7 @@ class OPEX_Schedules {
 
 		$rec['enabled'] = isset( $raw['enabled'] ) ? (bool) rest_sanitize_boolean( $raw['enabled'] ) : (bool) $base['enabled'];
 
-		$inc = is_array( $raw['incremental'] ?? null ) ? $raw['incremental'] : $base['incremental'];
+		$inc       = is_array( $raw['incremental'] ?? null ) ? $raw['incremental'] : $base['incremental'];
 		$inc_field = sanitize_text_field( (string) ( $inc['field'] ?? '' ) );
 		if ( '' !== $inc_field && ! preg_match( '/^(core|meta|tax|computed|col|woo):\S/', $inc_field ) ) {
 			return self::invalid( __( 'Unknown date field for incremental exports.', 'open-export' ) );
@@ -173,7 +193,7 @@ class OPEX_Schedules {
 			'field'   => $inc_field,
 		);
 
-		$pattern = sanitize_text_field( (string) ( $raw['filename'] ?? $base['filename'] ) );
+		$pattern         = sanitize_text_field( (string) ( $raw['filename'] ?? $base['filename'] ) );
 		$rec['filename'] = '' === $pattern ? '{label}-{date}' : mb_substr( $pattern, 0, 200 );
 
 		$delivery        = is_array( $raw['delivery'] ?? null ) ? $raw['delivery'] : $base['delivery'];
@@ -332,7 +352,12 @@ class OPEX_Schedules {
 		// opex_job_done, so read the record again before saving the next run.
 		$s = self::get( $id ) ?? $s;
 		if ( 'running' === $job['status'] ) {
-			$s['last_run'] = array( 'time' => time(), 'job_id' => (string) $job['id'], 'status' => (string) $job['status'], 'rows' => (int) $job['processed'] );
+			$s['last_run'] = array(
+				'time'   => time(),
+				'job_id' => (string) $job['id'],
+				'status' => (string) $job['status'],
+				'rows'   => (int) $job['processed'],
+			);
 		}
 		self::refresh( $s );
 
@@ -371,7 +396,10 @@ class OPEX_Schedules {
 		);
 		$field = (string) $s['incremental']['field'];
 		if ( $s['incremental']['enabled'] && '' !== $field && '' !== (string) $s['watermark'] ) {
-			$extra['since'] = array( 'field' => $field, 'after' => (string) $s['watermark'] );
+			$extra['since'] = array(
+				'field' => $field,
+				'after' => (string) $s['watermark'],
+			);
 		}
 		return $extra;
 	}

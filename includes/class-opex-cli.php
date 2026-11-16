@@ -387,5 +387,4 @@ class OPEX_CLI {
 		}
 		return $clean;
 	}
-
 }

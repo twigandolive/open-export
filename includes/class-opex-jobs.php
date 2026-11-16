@@ -53,17 +53,29 @@ class OPEX_Jobs {
 
 	/** Config keys an old record might lack, with their defaults. */
 	public const CONFIG_DEFAULTS = array(
-		'source'        => '',
-		'fields'        => array(),
-		'filters'       => array( 'relation' => 'AND', 'rules' => array() ),
-		'date_range'    => array( 'field' => '', 'preset' => 'all_time', 'from' => '', 'to' => '' ),
-		'format'        => 'csv',
-		'batch_size'    => 500,
-		'csv_delimiter' => 'comma',
-		'column_labels' => array(),
+		'source'         => '',
+		'fields'         => array(),
+		'filters'        => array(
+			'relation' => 'AND',
+			'rules'    => array(),
+		),
+		'date_range'     => array(
+			'field'  => '',
+			'preset' => 'all_time',
+			'from'   => '',
+			'to'     => '',
+		),
+		'format'         => 'csv',
+		'batch_size'     => 500,
+		'csv_delimiter'  => 'comma',
+		'column_labels'  => array(),
 		'csv_encoding'   => 'utf8_bom',
 		'csv_eol'        => 'lf',
-		'xml_template'   => array( 'header' => '', 'row' => '', 'footer' => '' ),
+		'xml_template'   => array(
+			'header' => '',
+			'row'    => '',
+			'footer' => '',
+		),
 		'transforms'     => array(),
 		'custom_columns' => array(),
 		'network'        => false,
@@ -110,9 +122,12 @@ class OPEX_Jobs {
 
 		// Trim history oldest-first, removing files with their jobs.
 		if ( count( $jobs ) > self::MAX_HISTORY ) {
-			uasort( $jobs, static function ( $a, $b ) {
-				return $a['created'] <=> $b['created'];
-			} );
+			uasort(
+				$jobs,
+				static function ( $a, $b ) {
+					return $a['created'] <=> $b['created'];
+				}
+			);
 			while ( count( $jobs ) > self::MAX_HISTORY ) {
 				$oldest = array_key_first( $jobs );
 				self::remove_file( $jobs[ $oldest ] );
@@ -160,16 +175,16 @@ class OPEX_Jobs {
 	/** Public job shape for the UI; excludes server paths. */
 	public static function expose( array $job ): array {
 		return array(
-			'id'        => $job['id'],
-			'label'     => $job['label'],
-			'format'    => $job['config']['format'],
-			'status'    => $job['status'],
-			'total'     => (int) $job['total'],
-			'processed' => (int) $job['processed'],
-			'created'   => (int) $job['created'],
-			'filename'  => $job['filename'],
-			'filesize'  => (int) ( $job['filesize'] ?? 0 ),
-			'error'     => (string) ( $job['error'] ?? '' ),
+			'id'            => $job['id'],
+			'label'         => $job['label'],
+			'format'        => $job['config']['format'],
+			'status'        => $job['status'],
+			'total'         => (int) $job['total'],
+			'processed'     => (int) $job['processed'],
+			'created'       => (int) $job['created'],
+			'filename'      => $job['filename'],
+			'filesize'      => (int) ( $job['filesize'] ?? 0 ),
+			'error'         => (string) ( $job['error'] ?? '' ),
 			'mode'          => (string) ( $job['mode'] ?? 'browser' ),
 			'origin'        => (string) ( $job['origin'] ?? 'manual' ),
 			'schedule_id'   => (string) ( $job['schedule_id'] ?? '' ),

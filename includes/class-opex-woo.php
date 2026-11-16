@@ -120,57 +120,57 @@ class OPEX_Woo {
 
 		$def = array(
 			// --- Order ------------------------------------------------------
-			'order_id'          => array( 'o.id', 'core:ID', $order ),
-			'order_number'      => array( 'o.id', 'core:ID', $order ),
-			'status'            => array( 'o.status', 'core:post_status', $order ),
-			'date_created'      => array( 'o.date_created_gmt', 'core:post_date', $order ),
-			'date_modified'     => array( 'o.date_updated_gmt', 'core:post_modified', $order ),
-			'currency'          => array( 'o.currency', 'meta:_order_currency', $order ),
-			'customer_note'     => array( 'o.customer_note', 'core:post_excerpt', $order ),
-			'order_key'         => array( 'od.order_key', 'meta:_order_key', $order ),
-			'parent_order_id'   => array( 'o.parent_order_id', 'core:post_parent', $order ),
+			'order_id'             => array( 'o.id', 'core:ID', $order ),
+			'order_number'         => array( 'o.id', 'core:ID', $order ),
+			'status'               => array( 'o.status', 'core:post_status', $order ),
+			'date_created'         => array( 'o.date_created_gmt', 'core:post_date', $order ),
+			'date_modified'        => array( 'o.date_updated_gmt', 'core:post_modified', $order ),
+			'currency'             => array( 'o.currency', 'meta:_order_currency', $order ),
+			'customer_note'        => array( 'o.customer_note', 'core:post_excerpt', $order ),
+			'order_key'            => array( 'od.order_key', 'meta:_order_key', $order ),
+			'parent_order_id'      => array( 'o.parent_order_id', 'core:post_parent', $order ),
 
 			// --- Customer ---------------------------------------------------
-			'customer_id'       => array( 'o.customer_id', 'meta:_customer_user', $cust ),
-			'customer_email'    => array( 'o.billing_email', 'meta:_billing_email', $cust ),
-			'customer_ip'       => array( 'o.ip_address', 'meta:_customer_ip_address', $cust ),
-			'customer_agent'    => array( 'o.user_agent', 'meta:_customer_user_agent', $cust ),
-			'is_guest'          => array( 'o.customer_id', 'meta:_customer_user', $cust ),
+			'customer_id'          => array( 'o.customer_id', 'meta:_customer_user', $cust ),
+			'customer_email'       => array( 'o.billing_email', 'meta:_billing_email', $cust ),
+			'customer_ip'          => array( 'o.ip_address', 'meta:_customer_ip_address', $cust ),
+			'customer_agent'       => array( 'o.user_agent', 'meta:_customer_user_agent', $cust ),
+			'is_guest'             => array( 'o.customer_id', 'meta:_customer_user', $cust ),
 
 			// --- Billing ----------------------------------------------------
-			'billing_first_name' => array( 'ba.first_name', 'meta:_billing_first_name', $bill ),
-			'billing_last_name'  => array( 'ba.last_name', 'meta:_billing_last_name', $bill ),
-			'billing_company'    => array( 'ba.company', 'meta:_billing_company', $bill ),
-			'billing_address_1'  => array( 'ba.address_1', 'meta:_billing_address_1', $bill ),
-			'billing_address_2'  => array( 'ba.address_2', 'meta:_billing_address_2', $bill ),
-			'billing_city'       => array( 'ba.city', 'meta:_billing_city', $bill ),
-			'billing_state'      => array( 'ba.state', 'meta:_billing_state', $bill ),
-			'billing_postcode'   => array( 'ba.postcode', 'meta:_billing_postcode', $bill ),
-			'billing_country'    => array( 'ba.country', 'meta:_billing_country', $bill ),
-			'billing_email'      => array( 'ba.email', 'meta:_billing_email', $bill ),
-			'billing_phone'      => array( 'ba.phone', 'meta:_billing_phone', $bill ),
+			'billing_first_name'   => array( 'ba.first_name', 'meta:_billing_first_name', $bill ),
+			'billing_last_name'    => array( 'ba.last_name', 'meta:_billing_last_name', $bill ),
+			'billing_company'      => array( 'ba.company', 'meta:_billing_company', $bill ),
+			'billing_address_1'    => array( 'ba.address_1', 'meta:_billing_address_1', $bill ),
+			'billing_address_2'    => array( 'ba.address_2', 'meta:_billing_address_2', $bill ),
+			'billing_city'         => array( 'ba.city', 'meta:_billing_city', $bill ),
+			'billing_state'        => array( 'ba.state', 'meta:_billing_state', $bill ),
+			'billing_postcode'     => array( 'ba.postcode', 'meta:_billing_postcode', $bill ),
+			'billing_country'      => array( 'ba.country', 'meta:_billing_country', $bill ),
+			'billing_email'        => array( 'ba.email', 'meta:_billing_email', $bill ),
+			'billing_phone'        => array( 'ba.phone', 'meta:_billing_phone', $bill ),
 
 			// --- Shipping ---------------------------------------------------
-			'shipping_first_name' => array( 'sa.first_name', 'meta:_shipping_first_name', $ship ),
-			'shipping_last_name'  => array( 'sa.last_name', 'meta:_shipping_last_name', $ship ),
-			'shipping_company'    => array( 'sa.company', 'meta:_shipping_company', $ship ),
-			'shipping_address_1'  => array( 'sa.address_1', 'meta:_shipping_address_1', $ship ),
-			'shipping_address_2'  => array( 'sa.address_2', 'meta:_shipping_address_2', $ship ),
-			'shipping_city'       => array( 'sa.city', 'meta:_shipping_city', $ship ),
-			'shipping_state'      => array( 'sa.state', 'meta:_shipping_state', $ship ),
-			'shipping_postcode'   => array( 'sa.postcode', 'meta:_shipping_postcode', $ship ),
-			'shipping_country'    => array( 'sa.country', 'meta:_shipping_country', $ship ),
-			'shipping_phone'      => array( 'sa.phone', 'meta:_shipping_phone', $ship ),
-			'shipping_email'      => array( 'sa.email', 'meta:_shipping_email', $ship ),
+			'shipping_first_name'  => array( 'sa.first_name', 'meta:_shipping_first_name', $ship ),
+			'shipping_last_name'   => array( 'sa.last_name', 'meta:_shipping_last_name', $ship ),
+			'shipping_company'     => array( 'sa.company', 'meta:_shipping_company', $ship ),
+			'shipping_address_1'   => array( 'sa.address_1', 'meta:_shipping_address_1', $ship ),
+			'shipping_address_2'   => array( 'sa.address_2', 'meta:_shipping_address_2', $ship ),
+			'shipping_city'        => array( 'sa.city', 'meta:_shipping_city', $ship ),
+			'shipping_state'       => array( 'sa.state', 'meta:_shipping_state', $ship ),
+			'shipping_postcode'    => array( 'sa.postcode', 'meta:_shipping_postcode', $ship ),
+			'shipping_country'     => array( 'sa.country', 'meta:_shipping_country', $ship ),
+			'shipping_phone'       => array( 'sa.phone', 'meta:_shipping_phone', $ship ),
+			'shipping_email'       => array( 'sa.email', 'meta:_shipping_email', $ship ),
 
 			// --- Totals -----------------------------------------------------
-			'total'             => array( 'o.total_amount', 'meta:_order_total', $money ),
-			'tax_total'         => array( 'o.tax_amount', 'meta:_order_tax', $money ),
-			'shipping_total'    => array( 'od.shipping_total_amount', 'meta:_order_shipping', $money ),
-			'shipping_tax'      => array( 'od.shipping_tax_amount', 'meta:_order_shipping_tax', $money ),
-			'discount_total'    => array( 'od.discount_total_amount', 'meta:_cart_discount', $money ),
-			'discount_tax'      => array( 'od.discount_tax_amount', 'meta:_cart_discount_tax', $money ),
-			'prices_include_tax' => array( 'od.prices_include_tax', 'meta:_prices_include_tax', $money ),
+			'total'                => array( 'o.total_amount', 'meta:_order_total', $money ),
+			'tax_total'            => array( 'o.tax_amount', 'meta:_order_tax', $money ),
+			'shipping_total'       => array( 'od.shipping_total_amount', 'meta:_order_shipping', $money ),
+			'shipping_tax'         => array( 'od.shipping_tax_amount', 'meta:_order_shipping_tax', $money ),
+			'discount_total'       => array( 'od.discount_total_amount', 'meta:_cart_discount', $money ),
+			'discount_tax'         => array( 'od.discount_tax_amount', 'meta:_cart_discount_tax', $money ),
+			'prices_include_tax'   => array( 'od.prices_include_tax', 'meta:_prices_include_tax', $money ),
 
 			// --- Payment ----------------------------------------------------
 			'payment_method'       => array( 'o.payment_method', 'meta:_payment_method', $pay ),
@@ -179,11 +179,11 @@ class OPEX_Woo {
 			'date_paid'            => array( 'od.date_paid_gmt', 'meta:_date_paid', $pay ),
 
 			// --- Fulfilment -------------------------------------------------
-			'date_completed'   => array( 'od.date_completed_gmt', 'meta:_date_completed', $admin ),
-			'created_via'      => array( 'od.created_via', 'meta:_created_via', $admin ),
-			'cart_hash'        => array( 'od.cart_hash', 'meta:_cart_hash', $admin ),
-			'stock_reduced'    => array( 'od.order_stock_reduced', 'meta:_order_stock_reduced', $admin ),
-			'woo_version'      => array( 'od.woocommerce_version', 'meta:_order_version', $admin ),
+			'date_completed'       => array( 'od.date_completed_gmt', 'meta:_date_completed', $admin ),
+			'created_via'          => array( 'od.created_via', 'meta:_created_via', $admin ),
+			'cart_hash'            => array( 'od.cart_hash', 'meta:_cart_hash', $admin ),
+			'stock_reduced'        => array( 'od.order_stock_reduced', 'meta:_order_stock_reduced', $admin ),
+			'woo_version'          => array( 'od.woocommerce_version', 'meta:_order_version', $admin ),
 		);
 
 		$map = array();
@@ -385,12 +385,18 @@ class OPEX_Woo {
 		$groups = array();
 		foreach ( $order_of_groups as $label ) {
 			if ( ! empty( $buckets[ $label ] ) ) {
-				$groups[] = array( 'label' => $label, 'fields' => $buckets[ $label ] );
+				$groups[] = array(
+					'label'  => $label,
+					'fields' => $buckets[ $label ],
+				);
 				unset( $buckets[ $label ] );
 			}
 		}
 		foreach ( $buckets as $label => $fields ) {
-			$groups[] = array( 'label' => $label, 'fields' => $fields );
+			$groups[] = array(
+				'label'  => $label,
+				'fields' => $fields,
+			);
 		}
 
 		// Anything the store or its extensions wrote as order meta.
@@ -437,11 +443,17 @@ class OPEX_Woo {
 
 		$fields = array();
 		foreach ( $keys as $key ) {
-			$fields[] = array( 'id' => 'meta:' . $key, 'label' => $key );
+			$fields[] = array(
+				'id'    => 'meta:' . $key,
+				'label' => $key,
+			);
 		}
 
 		return array(
-			array( 'label' => __( 'Order meta', 'open-export' ), 'fields' => $fields ),
+			array(
+				'label'  => __( 'Order meta', 'open-export' ),
+				'fields' => $fields,
+			),
 		);
 	}
 
@@ -460,10 +472,12 @@ class OPEX_Woo {
 			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN (" . self::DRAFT_STATUS_SQL . ')', 'shop_order' ) );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one cheap COUNT for the picker.
-			$count = (int) $wpdb->get_var( $wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN (" . self::DRAFT_STATUS_SQL . ')',
-				self::LEGACY_POST_TYPE
-			) );
+			$count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN (" . self::DRAFT_STATUS_SQL . ')',
+					self::LEGACY_POST_TYPE
+				)
+			);
 		}
 
 		return array(

@@ -294,7 +294,12 @@ class OPEX_Query_Filters {
 			case 'gte':
 			case 'lt':
 			case 'lte':
-				$sym = array( 'gt' => '>', 'gte' => '>=', 'lt' => '<', 'lte' => '<=' )[ $op ];
+				$sym = array(
+					'gt'  => '>',
+					'gte' => '>=',
+					'lt'  => '<',
+					'lte' => '<=',
+				)[ $op ];
 				if ( ! $textual && is_numeric( $value ) ) {
 					$args[] = (float) $value;
 					return "CAST({$lhs} AS DECIMAL(24,6)) {$sym} %f";
@@ -328,7 +333,7 @@ class OPEX_Query_Filters {
 	private static function meta_clause( array $src, string $key, string $op, string $value, array &$args ): string {
 		global $wpdb;
 
-		$map = array(
+		$map      = array(
 			'posts'    => array( $wpdb->postmeta, 'post_id', 'p.ID' ),
 			'users'    => array( $wpdb->usermeta, 'user_id', 'u.ID' ),
 			'comments' => array( $wpdb->commentmeta, 'comment_id', 'c.comment_ID' ),
@@ -348,7 +353,11 @@ class OPEX_Query_Filters {
 			$op = 'not_empty';
 		}
 
-		$negatives = array( 'neq' => 'eq', 'not_contains' => 'contains', 'not_in' => 'in' );
+		$negatives = array(
+			'neq'          => 'eq',
+			'not_contains' => 'contains',
+			'not_in'       => 'in',
+		);
 		$negate    = isset( $negatives[ $op ] );
 		$inner_op  = $negate ? $negatives[ $op ] : $op;
 

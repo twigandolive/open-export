@@ -49,7 +49,7 @@ class OPEX_Filename {
 		$name = trim( $name, " -_\t\n\r" );
 
 		if ( mb_strlen( $name ) > self::MAX_LENGTH ) {
-			$name = trim( mb_substr( $name, 0, self::MAX_LENGTH ), " -_" );
+			$name = trim( mb_substr( $name, 0, self::MAX_LENGTH ), ' -_' );
 		}
 		return '' === $name ? self::FALLBACK : $name;
 	}

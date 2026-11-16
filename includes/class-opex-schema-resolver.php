@@ -110,7 +110,11 @@ class OPEX_Schema_Resolver {
 			}
 			$rf  = sanitize_text_field( self::scalar_text( $rule['field'] ?? '' ) );
 			$op  = sanitize_key( self::scalar_text( $rule['op'] ?? 'eq' ) );
-			$row = array( 'index' => (int) $i, 'field' => $rf, 'op' => $op );
+			$row = array(
+				'index' => (int) $i,
+				'field' => $rf,
+				'op'    => $op,
+			);
 
 			if ( '' === $rf ) {
 				$row['status'] = 'dropped';
@@ -125,7 +129,11 @@ class OPEX_Schema_Resolver {
 				$row['suggestion'] = self::suggest( $rf, $known );
 			} else {
 				$row['status'] = 'matched';
-				$rules[]       = array( 'field' => $rf, 'op' => $op, 'value' => self::scalar_text( $rule['value'] ?? '' ) );
+				$rules[]       = array(
+					'field' => $rf,
+					'op'    => $op,
+					'value' => self::scalar_text( $rule['value'] ?? '' ),
+				);
 			}
 
 			$report['filters'][] = $row;
@@ -136,19 +144,22 @@ class OPEX_Schema_Resolver {
 		$preset   = sanitize_key( self::scalar_text( $date_raw['preset'] ?? 'all_time' ) );
 		if ( $date_raw && 'all_time' !== $preset ) {
 			$df  = sanitize_text_field( self::scalar_text( $date_raw['field'] ?? '' ) );
-			$row = array( 'field' => $df, 'preset' => $preset );
+			$row = array(
+				'field'  => $df,
+				'preset' => $preset,
+			);
 
 			if ( ! $date_known ) {
 				$row['status'] = 'dropped';
 				$row['reason'] = __( 'This source has no date column to filter on.', 'open-export' );
 				$date_raw      = array();
 			} elseif ( ! in_array( $df, $date_known, true ) ) {
-				$fallback              = OPEX_Query::date_field_or_default( $src, $df );
-				$row['status']         = 'substituted';
-				$row['reason']         = __( 'That is not a date column on this source.', 'open-export' );
-				$row['suggestion']     = self::suggest( $df, $date_known );
-				$row['used_instead']   = $fallback;
-				$date_raw['field']     = $fallback;
+				$fallback            = OPEX_Query::date_field_or_default( $src, $df );
+				$row['status']       = 'substituted';
+				$row['reason']       = __( 'That is not a date column on this source.', 'open-export' );
+				$row['suggestion']   = self::suggest( $df, $date_known );
+				$row['used_instead'] = $fallback;
+				$date_raw['field']   = $fallback;
 			} else {
 				$row['status'] = 'matched';
 			}
@@ -156,7 +167,7 @@ class OPEX_Schema_Resolver {
 			$report['date_range'] = $row;
 		}
 
-		$matched = count( $fields );
+		$matched           = count( $fields );
 		$report['summary'] = array(
 			'fields_requested' => count( $report['fields'] ),
 			'fields_matched'   => $matched,
@@ -173,7 +184,13 @@ class OPEX_Schema_Resolver {
 				? __( 'None of the fields in this recipe exist on this source, so there is nothing to export. Give the assistant the capability document for this site and ask it to use only the field ids listed there.', 'open-export' )
 				: __( 'The recipe lists no fields to export.', 'open-export' );
 
-			return array( 'ok' => false, 'report' => $report, 'config' => null, 'name' => '', 'notes' => $notes );
+			return array(
+				'ok'     => false,
+				'report' => $report,
+				'config' => null,
+				'name'   => '',
+				'notes'  => $notes,
+			);
 		}
 
 		$raw = array(
@@ -195,7 +212,13 @@ class OPEX_Schema_Resolver {
 		$config = OPEX_Exporter::sanitize_config( $raw, $notes );
 		if ( is_wp_error( $config ) ) {
 			$report['reason'] = $config->get_error_message();
-			return array( 'ok' => false, 'report' => $report, 'config' => null, 'name' => '', 'notes' => $notes );
+			return array(
+				'ok'     => false,
+				'report' => $report,
+				'config' => null,
+				'name'   => '',
+				'notes'  => $notes,
+			);
 		}
 
 		$report['ok'] = true;

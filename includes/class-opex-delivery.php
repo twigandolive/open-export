@@ -16,7 +16,10 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Delivery {
 
 	public const MAX_ATTEMPTS = 3;
-	private const RETRY_WAITS = array( 1 => 300, 2 => 1800 );
+	private const RETRY_WAITS = array(
+		1 => 300,
+		2 => 1800,
+	);
 	private const CHANNELS    = array( 'email', 'webhook', 'destination' );
 
 	/**
@@ -33,9 +36,9 @@ class OPEX_Delivery {
 	public static function sanitize( $raw, array &$notes, array $previous = array() ): array {
 		$raw = is_array( $raw ) ? $raw : array();
 
-		$email   = is_array( $raw['email'] ?? null ) ? $raw['email'] : array();
-		$to      = array();
-		$source  = isset( $email['to'] ) ? ( is_array( $email['to'] ) ? $email['to'] : preg_split( '/[\s,;]+/', (string) $email['to'] ) ) : array();
+		$email  = is_array( $raw['email'] ?? null ) ? $raw['email'] : array();
+		$to     = array();
+		$source = isset( $email['to'] ) ? ( is_array( $email['to'] ) ? $email['to'] : preg_split( '/[\s,;]+/', (string) $email['to'] ) ) : array();
 		foreach ( $source as $address ) {
 			$address = is_string( $address ) ? trim( $address ) : '';
 			if ( '' === $address ) {
@@ -55,9 +58,9 @@ class OPEX_Delivery {
 		}
 		$mode = ( $email['mode'] ?? 'link' );
 
-		$hook   = is_array( $raw['webhook'] ?? null ) ? $raw['webhook'] : array();
-		$url    = esc_url_raw( trim( (string) ( $hook['url'] ?? '' ) ), array( 'http', 'https' ) );
-		$hon    = ! empty( $hook['enabled'] );
+		$hook = is_array( $raw['webhook'] ?? null ) ? $raw['webhook'] : array();
+		$url  = esc_url_raw( trim( (string) ( $hook['url'] ?? '' ) ), array( 'http', 'https' ) );
+		$hon  = ! empty( $hook['enabled'] );
 		if ( '' !== $url && false === wp_http_validate_url( $url ) && $hon ) {
 			$hon     = false;
 			$notes[] = __( 'Webhook delivery was turned off because its URL is not allowed.', 'open-export' );
@@ -74,7 +77,7 @@ class OPEX_Delivery {
 			$secret = OPEX_Secrets::encrypt( mb_substr( $secret, 0, 256 ) );
 		}
 		if ( '' === $secret ) {
-			$kept   = (string) ( $previous['webhook']['secret'] ?? '' );
+			$kept = (string) ( $previous['webhook']['secret'] ?? '' );
 			if ( '' !== $kept && ! OPEX_Secrets::is_encrypted( $kept ) ) {
 				$kept = OPEX_Secrets::encrypt( mb_substr( $kept, 0, 256 ) ); // A plain value saved by an older build.
 			}

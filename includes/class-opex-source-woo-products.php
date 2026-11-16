@@ -76,12 +76,34 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	/** @inheritDoc */
 	public function date_fields(): array {
 		global $wpdb;
-		$epoch = array( 'tz' => OPEX_Dates::TZ_LOCAL, 'kind' => 'meta_epoch', 'table' => $wpdb->postmeta, 'fk' => 'post_id', 'outer' => 'p.ID' );
+		$epoch = array(
+			'tz'    => OPEX_Dates::TZ_LOCAL,
+			'kind'  => 'meta_epoch',
+			'table' => $wpdb->postmeta,
+			'fk'    => 'post_id',
+			'outer' => 'p.ID',
+		);
 		return array(
-			'woo:date_created'      => array( 'label' => __( 'Date created', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'kind' => 'column', 'sql' => 'p.post_date' ),
-			'woo:date_modified'     => array( 'label' => __( 'Last modified', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'kind' => 'column', 'sql' => 'p.post_modified' ),
-			'woo:date_on_sale_from' => array( 'label' => __( 'Sale starts', 'open-export' ), 'key' => '_sale_price_dates_from' ) + $epoch,
-			'woo:date_on_sale_to'   => array( 'label' => __( 'Sale ends', 'open-export' ), 'key' => '_sale_price_dates_to' ) + $epoch,
+			'woo:date_created'      => array(
+				'label' => __( 'Date created', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'p.post_date',
+			),
+			'woo:date_modified'     => array(
+				'label' => __( 'Last modified', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'p.post_modified',
+			),
+			'woo:date_on_sale_from' => array(
+				'label' => __( 'Sale starts', 'open-export' ),
+				'key'   => '_sale_price_dates_from',
+			) + $epoch,
+			'woo:date_on_sale_to'   => array(
+				'label' => __( 'Sale ends', 'open-export' ),
+				'key'   => '_sale_price_dates_to',
+			) + $epoch,
 		);
 	}
 
@@ -146,41 +168,195 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		$stock_in = function_exists( 'wc_get_product_stock_status_options' ) ? array_keys( wc_get_product_stock_status_options() ) : array();
 
 		return array(
-			'woo:id'                 => array( 'group' => $product, 'type' => 'id', 'read' => 'core:ID' ),
-			'woo:type'               => array( 'group' => $product, 'type' => 'enum', 'sql' => $this->type_sql(), 'values' => array( 'simple', 'variable', 'variation', 'grouped', 'external' ) ),
-			'woo:parent_id'          => array( 'group' => $product, 'type' => 'id', 'read' => 'core:post_parent' ),
-			'woo:parent_sku'         => array( 'group' => $product, 'type' => 'text', 'sql' => $this->meta_sql( '_sku', 'p.post_parent' ) ),
-			'woo:name'               => array( 'group' => $product, 'type' => 'text', 'read' => 'core:post_title' ),
-			'woo:slug'               => array( 'group' => $product, 'type' => 'text', 'read' => 'core:post_name' ),
-			'woo:status'             => array( 'group' => $product, 'type' => 'enum', 'read' => 'core:post_status', 'values' => $stati ),
-			'woo:sku'                => array( 'group' => $product, 'type' => 'text', 'read' => 'meta:_sku' ),
-			'woo:featured'           => array( 'group' => $product, 'type' => 'boolean', 'sql' => $this->visibility_sql( 'featured' ) ),
-			'woo:catalog_visibility' => array( 'group' => $product, 'type' => 'enum', 'sql' => $this->catalog_visibility_sql(), 'values' => array( 'visible', 'catalog', 'search', 'hidden' ) ),
-			'woo:total_sales'        => array( 'group' => $product, 'type' => 'number', 'read' => 'meta:total_sales' ),
-			'woo:regular_price'      => array( 'group' => $price, 'type' => 'number', 'read' => 'meta:_regular_price', 'format' => 'money' ),
-			'woo:sale_price'         => array( 'group' => $price, 'type' => 'number', 'read' => 'meta:_sale_price', 'format' => 'money' ),
-			'woo:price'              => array( 'group' => $price, 'type' => 'number', 'read' => 'meta:_price', 'format' => 'money' ),
-			'woo:date_on_sale_from'  => array( 'group' => $price, 'type' => 'date', 'read' => 'meta:_sale_price_dates_from', 'format' => 'epoch' ),
-			'woo:date_on_sale_to'    => array( 'group' => $price, 'type' => 'date', 'read' => 'meta:_sale_price_dates_to', 'format' => 'epoch' ),
-			'woo:tax_status'         => array( 'group' => $price, 'type' => 'enum', 'read' => 'meta:_tax_status', 'values' => array( 'taxable', 'shipping', 'none' ) ),
-			'woo:tax_class'          => array( 'group' => $price, 'type' => 'text', 'read' => 'meta:_tax_class' ),
-			'woo:stock_status'       => array( 'group' => $stock, 'type' => 'enum', 'read' => 'meta:_stock_status', 'values' => $stock_in ),
-			'woo:stock_quantity'     => array( 'group' => $stock, 'type' => 'number', 'read' => 'meta:_stock' ),
-			'woo:manage_stock'       => array( 'group' => $stock, 'type' => 'boolean', 'read' => 'meta:_manage_stock' ),
-			'woo:weight'             => array( 'group' => $ship, 'type' => 'number', 'read' => 'meta:_weight' ),
-			'woo:length'             => array( 'group' => $ship, 'type' => 'number', 'read' => 'meta:_length' ),
-			'woo:width'              => array( 'group' => $ship, 'type' => 'number', 'read' => 'meta:_width' ),
-			'woo:height'             => array( 'group' => $ship, 'type' => 'number', 'read' => 'meta:_height' ),
-			'woo:short_description'  => array( 'group' => $content, 'type' => 'text', 'read' => 'core:post_excerpt' ),
-			'woo:description'        => array( 'group' => $content, 'type' => 'text', 'sql' => $this->description_sql() ),
-			'woo:attributes'         => array( 'group' => $terms, 'type' => 'json', 'php' => true ),
-			'woo:categories'         => array( 'group' => $terms, 'type' => 'text', 'php' => true, 'terms' => 'product_cat' ),
-			'woo:tags'               => array( 'group' => $terms, 'type' => 'text', 'php' => true, 'terms' => 'product_tag' ),
-			'woo:image_url'          => array( 'group' => $media, 'type' => 'url', 'php' => true ),
-			'woo:gallery_urls'       => array( 'group' => $media, 'type' => 'text', 'php' => true ),
-			'woo:permalink'          => array( 'group' => $media, 'type' => 'url', 'php' => true ),
-			'woo:date_created'       => array( 'group' => $dates, 'type' => 'date', 'read' => 'core:post_date', 'format' => 'local' ),
-			'woo:date_modified'      => array( 'group' => $dates, 'type' => 'date', 'read' => 'core:post_modified', 'format' => 'local' ),
+			'woo:id'                 => array(
+				'group' => $product,
+				'type'  => 'id',
+				'read'  => 'core:ID',
+			),
+			'woo:type'               => array(
+				'group'  => $product,
+				'type'   => 'enum',
+				'sql'    => $this->type_sql(),
+				'values' => array( 'simple', 'variable', 'variation', 'grouped', 'external' ),
+			),
+			'woo:parent_id'          => array(
+				'group' => $product,
+				'type'  => 'id',
+				'read'  => 'core:post_parent',
+			),
+			'woo:parent_sku'         => array(
+				'group' => $product,
+				'type'  => 'text',
+				'sql'   => $this->meta_sql( '_sku', 'p.post_parent' ),
+			),
+			'woo:name'               => array(
+				'group' => $product,
+				'type'  => 'text',
+				'read'  => 'core:post_title',
+			),
+			'woo:slug'               => array(
+				'group' => $product,
+				'type'  => 'text',
+				'read'  => 'core:post_name',
+			),
+			'woo:status'             => array(
+				'group'  => $product,
+				'type'   => 'enum',
+				'read'   => 'core:post_status',
+				'values' => $stati,
+			),
+			'woo:sku'                => array(
+				'group' => $product,
+				'type'  => 'text',
+				'read'  => 'meta:_sku',
+			),
+			'woo:featured'           => array(
+				'group' => $product,
+				'type'  => 'boolean',
+				'sql'   => $this->visibility_sql( 'featured' ),
+			),
+			'woo:catalog_visibility' => array(
+				'group'  => $product,
+				'type'   => 'enum',
+				'sql'    => $this->catalog_visibility_sql(),
+				'values' => array( 'visible', 'catalog', 'search', 'hidden' ),
+			),
+			'woo:total_sales'        => array(
+				'group' => $product,
+				'type'  => 'number',
+				'read'  => 'meta:total_sales',
+			),
+			'woo:regular_price'      => array(
+				'group'  => $price,
+				'type'   => 'number',
+				'read'   => 'meta:_regular_price',
+				'format' => 'money',
+			),
+			'woo:sale_price'         => array(
+				'group'  => $price,
+				'type'   => 'number',
+				'read'   => 'meta:_sale_price',
+				'format' => 'money',
+			),
+			'woo:price'              => array(
+				'group'  => $price,
+				'type'   => 'number',
+				'read'   => 'meta:_price',
+				'format' => 'money',
+			),
+			'woo:date_on_sale_from'  => array(
+				'group'  => $price,
+				'type'   => 'date',
+				'read'   => 'meta:_sale_price_dates_from',
+				'format' => 'epoch',
+			),
+			'woo:date_on_sale_to'    => array(
+				'group'  => $price,
+				'type'   => 'date',
+				'read'   => 'meta:_sale_price_dates_to',
+				'format' => 'epoch',
+			),
+			'woo:tax_status'         => array(
+				'group'  => $price,
+				'type'   => 'enum',
+				'read'   => 'meta:_tax_status',
+				'values' => array( 'taxable', 'shipping', 'none' ),
+			),
+			'woo:tax_class'          => array(
+				'group' => $price,
+				'type'  => 'text',
+				'read'  => 'meta:_tax_class',
+			),
+			'woo:stock_status'       => array(
+				'group'  => $stock,
+				'type'   => 'enum',
+				'read'   => 'meta:_stock_status',
+				'values' => $stock_in,
+			),
+			'woo:stock_quantity'     => array(
+				'group' => $stock,
+				'type'  => 'number',
+				'read'  => 'meta:_stock',
+			),
+			'woo:manage_stock'       => array(
+				'group' => $stock,
+				'type'  => 'boolean',
+				'read'  => 'meta:_manage_stock',
+			),
+			'woo:weight'             => array(
+				'group' => $ship,
+				'type'  => 'number',
+				'read'  => 'meta:_weight',
+			),
+			'woo:length'             => array(
+				'group' => $ship,
+				'type'  => 'number',
+				'read'  => 'meta:_length',
+			),
+			'woo:width'              => array(
+				'group' => $ship,
+				'type'  => 'number',
+				'read'  => 'meta:_width',
+			),
+			'woo:height'             => array(
+				'group' => $ship,
+				'type'  => 'number',
+				'read'  => 'meta:_height',
+			),
+			'woo:short_description'  => array(
+				'group' => $content,
+				'type'  => 'text',
+				'read'  => 'core:post_excerpt',
+			),
+			'woo:description'        => array(
+				'group' => $content,
+				'type'  => 'text',
+				'sql'   => $this->description_sql(),
+			),
+			'woo:attributes'         => array(
+				'group' => $terms,
+				'type'  => 'json',
+				'php'   => true,
+			),
+			'woo:categories'         => array(
+				'group' => $terms,
+				'type'  => 'text',
+				'php'   => true,
+				'terms' => 'product_cat',
+			),
+			'woo:tags'               => array(
+				'group' => $terms,
+				'type'  => 'text',
+				'php'   => true,
+				'terms' => 'product_tag',
+			),
+			'woo:image_url'          => array(
+				'group' => $media,
+				'type'  => 'url',
+				'php'   => true,
+			),
+			'woo:gallery_urls'       => array(
+				'group' => $media,
+				'type'  => 'text',
+				'php'   => true,
+			),
+			'woo:permalink'          => array(
+				'group' => $media,
+				'type'  => 'url',
+				'php'   => true,
+			),
+			'woo:date_created'       => array(
+				'group'  => $dates,
+				'type'   => 'date',
+				'read'   => 'core:post_date',
+				'format' => 'local',
+			),
+			'woo:date_modified'      => array(
+				'group'  => $dates,
+				'type'   => 'date',
+				'read'   => 'core:post_modified',
+				'format' => 'local',
+			),
 		);
 	}
 

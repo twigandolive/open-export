@@ -231,7 +231,13 @@ class OPEX_Destinations {
 		if ( ! isset( $list[ $id ] ) || ! is_array( $list[ $id ] ) ) {
 			return;
 		}
-		$list[ $id ]['last_test'] = self::clean_test( array( 'time' => time(), 'ok' => $ok, 'message' => $message ) );
+		$list[ $id ]['last_test'] = self::clean_test(
+			array(
+				'time'    => time(),
+				'ok'      => $ok,
+				'message' => $message,
+			)
+		);
 		update_option( self::OPTION, $list, false );
 	}
 

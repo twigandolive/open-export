@@ -16,125 +16,177 @@ class OPEX_Rest {
 			return current_user_can( opex_capability() );
 		};
 
-		register_rest_route( self::NS, '/sources', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'sources' ),
-		) );
-
-		register_rest_route( self::NS, '/fields', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'fields' ),
-			'args'                => array(
-				'source' => array(
-					'required'          => true,
-					'type'              => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-				),
-			),
-		) );
-
-		register_rest_route( self::NS, '/schema', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'schema' ),
-			'args'                => array(
-				'source' => array(
-					'type'              => 'string',
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_text_field',
-				),
-				'scope'  => array(
-					'type'              => 'string',
-					'default'           => 'source',
-					'enum'              => array( 'source', 'all' ),
-					'validate_callback' => 'rest_validate_request_arg',
-					'sanitize_callback' => 'sanitize_key',
-				),
-			),
-		) );
-
-		register_rest_route( self::NS, '/recipe', array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'recipe' ),
-		) );
-
-		register_rest_route( self::NS, '/preview', array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'preview' ),
-		) );
-
-		register_rest_route( self::NS, '/jobs', array(
+		register_rest_route(
+			self::NS,
+			'/sources',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'jobs' ),
-			),
+				'callback'            => array( __CLASS__, 'sources' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/fields',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'fields' ),
+				'args'                => array(
+					'source' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/schema',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'schema' ),
+				'args'                => array(
+					'source' => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'scope'  => array(
+						'type'              => 'string',
+						'default'           => 'source',
+						'enum'              => array( 'source', 'all' ),
+						'validate_callback' => 'rest_validate_request_arg',
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/recipe',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'create_job' ),
-			),
-		) );
+				'callback'            => array( __CLASS__, 'recipe' ),
+			)
+		);
 
-		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})', array(
+		register_rest_route(
+			self::NS,
+			'/preview',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'preview' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'jobs' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'create_job' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>j[a-f0-9]{12})',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'get_job' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'delete_job' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>j[a-f0-9]{12})/rerun',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'rerun_job' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>j[a-f0-9]{12})/run',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'run_job' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>j[a-f0-9]{12})/pause',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => $can,
+				'callback'            => array( __CLASS__, 'pause_job' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>j[a-f0-9]{12})/download',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'get_job' ),
-			),
+				'callback'            => array( __CLASS__, 'download' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/templates',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'templates' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'permission_callback' => $can,
+					'callback'            => array( __CLASS__, 'save_template' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/templates/(?P<id>t[a-f0-9]{12})',
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'delete_job' ),
-			),
-		) );
-
-		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/rerun', array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'rerun_job' ),
-		) );
-
-		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/run', array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'run_job' ),
-		) );
-
-		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/pause', array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'pause_job' ),
-		) );
-
-		register_rest_route( self::NS, '/jobs/(?P<id>j[a-f0-9]{12})/download', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'download' ),
-		) );
-
-		register_rest_route( self::NS, '/templates', array(
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'templates' ),
-			),
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'permission_callback' => $can,
-				'callback'            => array( __CLASS__, 'save_template' ),
-			),
-		) );
-
-		register_rest_route( self::NS, '/templates/(?P<id>t[a-f0-9]{12})', array(
-			'methods'             => WP_REST_Server::DELETABLE,
-			'permission_callback' => $can,
-			'callback'            => array( __CLASS__, 'delete_template' ),
-		) );
+				'callback'            => array( __CLASS__, 'delete_template' ),
+			)
+		);
 
 		OPEX_Rest_Screen::register_routes();
 	}
@@ -155,21 +207,29 @@ class OPEX_Rest {
 		$date_fields = array();
 		if ( $src ) {
 			foreach ( OPEX_Query::date_fields( $src ) as $id => $def ) {
-				$date_fields[] = array( 'id' => $id, 'label' => $def['label'] );
+				$date_fields[] = array(
+					'id'    => $id,
+					'label' => $def['label'],
+				);
 			}
 		}
 
 		$presets = array();
 		foreach ( OPEX_Dates::PRESETS as $preset ) {
-			$presets[] = array( 'id' => $preset, 'label' => OPEX_Dates::preset_label( $preset ) );
+			$presets[] = array(
+				'id'    => $preset,
+				'label' => OPEX_Dates::preset_label( $preset ),
+			);
 		}
 
-		return rest_ensure_response( array(
-			'groups'      => OPEX_Field_Types::decorate( $source, OPEX_Catalog::fields( $source ) ),
-			'date_fields' => $date_fields,
-			'presets'     => $presets,
-			'timezone'    => wp_timezone_string(),
-		) );
+		return rest_ensure_response(
+			array(
+				'groups'      => OPEX_Field_Types::decorate( $source, OPEX_Catalog::fields( $source ) ),
+				'date_fields' => $date_fields,
+				'presets'     => $presets,
+				'timezone'    => wp_timezone_string(),
+			)
+		);
 	}
 
 	/**
@@ -222,9 +282,12 @@ class OPEX_Rest {
 
 	public static function jobs(): WP_REST_Response {
 		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
-		usort( $jobs, static function ( $a, $b ) {
-			return $b['created'] <=> $a['created'];
-		} );
+		usort(
+			$jobs,
+			static function ( $a, $b ) {
+				return $b['created'] <=> $a['created'];
+			}
+		);
 		return rest_ensure_response( $jobs );
 	}
 
@@ -245,7 +308,11 @@ class OPEX_Rest {
 			return new WP_Error( 'opex_bad_mode', __( 'The mode must be browser or background.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
-		$extra = array( 'mode' => $mode, 'origin' => 'manual', 'notes' => $notes );
+		$extra = array(
+			'mode'   => $mode,
+			'origin' => 'manual',
+			'notes'  => $notes,
+		);
 		if ( isset( $body['delivery'] ) && is_array( $body['delivery'] ) ) {
 			$extra['delivery'] = $body['delivery'];
 		}
@@ -321,9 +388,12 @@ class OPEX_Rest {
 
 	public static function templates(): WP_REST_Response {
 		$list = array_map( array( 'OPEX_Templates', 'expose' ), array_values( OPEX_Templates::all() ) );
-		usort( $list, static function ( $a, $b ) {
-			return $b['updated'] <=> $a['updated'];
-		} );
+		usort(
+			$list,
+			static function ( $a, $b ) {
+				return $b['updated'] <=> $a['updated'];
+			}
+		);
 		return rest_ensure_response( $list );
 	}
 

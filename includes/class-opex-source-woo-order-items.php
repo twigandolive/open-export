@@ -162,28 +162,99 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		$product   = $this->item_meta( '_product_id' );
 		// The product's SKU today. A variation without its own SKU shows its
 		// parent's, as WooCommerce does.
-		$sku = "COALESCE(NULLIF((SELECT sv.meta_value FROM {$wpdb->postmeta} sv WHERE sv.post_id = {$variation} AND sv.meta_key = '_sku' ORDER BY sv.meta_id LIMIT 1), ''), " .
+		$sku   = "COALESCE(NULLIF((SELECT sv.meta_value FROM {$wpdb->postmeta} sv WHERE sv.post_id = {$variation} AND sv.meta_key = '_sku' ORDER BY sv.meta_id LIMIT 1), ''), " .
 			"(SELECT sp.meta_value FROM {$wpdb->postmeta} sp WHERE sp.post_id = {$product} AND sp.meta_key = '_sku' ORDER BY sp.meta_id LIMIT 1))";
 		$email = $hpos ? 'o.billing_email' : "(SELECT be.meta_value FROM {$wpdb->postmeta} be WHERE be.post_id = op.ID AND be.meta_key = '_billing_email' ORDER BY be.meta_id LIMIT 1)";
 		$stati = function_exists( 'wc_get_order_statuses' ) ? array_keys( wc_get_order_statuses() ) : array();
 
 		return array(
-			'woo:item_id'            => array( 'group' => $item, 'type' => 'id', 'sql' => 'oi.order_item_id' ),
-			'woo:order_id'           => array( 'group' => $item, 'type' => 'id', 'sql' => 'oi.order_id' ),
-			'woo:item_type'          => array( 'group' => $item, 'type' => 'enum', 'sql' => 'oi.order_item_type', 'values' => array( 'line_item', 'shipping', 'fee', 'coupon', 'tax' ) ),
-			'woo:item_name'          => array( 'group' => $item, 'type' => 'text', 'sql' => 'oi.order_item_name' ),
-			'woo:product_id'         => array( 'group' => $item, 'type' => 'id', 'sql' => $product ),
-			'woo:variation_id'       => array( 'group' => $item, 'type' => 'id', 'sql' => $variation ),
-			'woo:sku'                => array( 'group' => $item, 'type' => 'text', 'sql' => $sku ),
-			'woo:quantity'           => array( 'group' => $item, 'type' => 'number', 'sql' => $this->item_meta( '_qty' ) ),
-			'woo:line_subtotal'      => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::SUBTOTAL_KEYS ), 'format' => 'money' ),
-			'woo:line_subtotal_tax'  => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::SUBTOTAL_TAX_KEYS ), 'format' => 'money' ),
-			'woo:line_total'         => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::TOTAL_KEYS ), 'format' => 'money' ),
-			'woo:line_tax'           => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::TAX_KEYS ), 'format' => 'money' ),
-			'woo:order_number'       => array( 'group' => $order, 'type' => 'id', 'sql' => $hpos ? 'o.id' : 'op.ID' ),
-			'woo:order_date_created' => array( 'group' => $order, 'type' => 'date', 'sql' => $hpos ? 'o.date_created_gmt' : 'op.post_date', 'format' => $hpos ? 'utc' : 'local' ),
-			'woo:order_status'       => array( 'group' => $order, 'type' => 'enum', 'sql' => $hpos ? 'o.status' : 'op.post_status', 'values' => $stati ),
-			'woo:billing_email'      => array( 'group' => $order, 'type' => 'email', 'sql' => $email ),
+			'woo:item_id'            => array(
+				'group' => $item,
+				'type'  => 'id',
+				'sql'   => 'oi.order_item_id',
+			),
+			'woo:order_id'           => array(
+				'group' => $item,
+				'type'  => 'id',
+				'sql'   => 'oi.order_id',
+			),
+			'woo:item_type'          => array(
+				'group'  => $item,
+				'type'   => 'enum',
+				'sql'    => 'oi.order_item_type',
+				'values' => array( 'line_item', 'shipping', 'fee', 'coupon', 'tax' ),
+			),
+			'woo:item_name'          => array(
+				'group' => $item,
+				'type'  => 'text',
+				'sql'   => 'oi.order_item_name',
+			),
+			'woo:product_id'         => array(
+				'group' => $item,
+				'type'  => 'id',
+				'sql'   => $product,
+			),
+			'woo:variation_id'       => array(
+				'group' => $item,
+				'type'  => 'id',
+				'sql'   => $variation,
+			),
+			'woo:sku'                => array(
+				'group' => $item,
+				'type'  => 'text',
+				'sql'   => $sku,
+			),
+			'woo:quantity'           => array(
+				'group' => $item,
+				'type'  => 'number',
+				'sql'   => $this->item_meta( '_qty' ),
+			),
+			'woo:line_subtotal'      => array(
+				'group'  => $money,
+				'type'   => 'number',
+				'sql'    => $this->by_type( self::SUBTOTAL_KEYS ),
+				'format' => 'money',
+			),
+			'woo:line_subtotal_tax'  => array(
+				'group'  => $money,
+				'type'   => 'number',
+				'sql'    => $this->by_type( self::SUBTOTAL_TAX_KEYS ),
+				'format' => 'money',
+			),
+			'woo:line_total'         => array(
+				'group'  => $money,
+				'type'   => 'number',
+				'sql'    => $this->by_type( self::TOTAL_KEYS ),
+				'format' => 'money',
+			),
+			'woo:line_tax'           => array(
+				'group'  => $money,
+				'type'   => 'number',
+				'sql'    => $this->by_type( self::TAX_KEYS ),
+				'format' => 'money',
+			),
+			'woo:order_number'       => array(
+				'group' => $order,
+				'type'  => 'id',
+				'sql'   => $hpos ? 'o.id' : 'op.ID',
+			),
+			'woo:order_date_created' => array(
+				'group'  => $order,
+				'type'   => 'date',
+				'sql'    => $hpos ? 'o.date_created_gmt' : 'op.post_date',
+				'format' => $hpos ? 'utc' : 'local',
+			),
+			'woo:order_status'       => array(
+				'group'  => $order,
+				'type'   => 'enum',
+				'sql'    => $hpos ? 'o.status' : 'op.post_status',
+				'values' => $stati,
+			),
+			'woo:billing_email'      => array(
+				'group' => $order,
+				'type'  => 'email',
+				'sql'   => $email,
+			),
 		);
 	}
 

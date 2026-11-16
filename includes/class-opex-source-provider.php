@@ -195,7 +195,7 @@ abstract class OPEX_Source_Provider {
 	protected function count_rows(): int {
 		global $wpdb;
 		list( $where, $args ) = $this->base_where();
-		$sql = 'SELECT COUNT(*) FROM ' . $this->from() . ( $where ? ' WHERE ' . implode( ' AND ', $where ) : '' );
+		$sql                  = 'SELECT COUNT(*) FROM ' . $this->from() . ( $where ? ' WHERE ' . implode( ' AND ', $where ) : '' );
 		if ( $args ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- the clause holds only provider constants and placeholders.
 			$sql = $wpdb->prepare( $sql, $args );

@@ -45,21 +45,39 @@ class OPEX_CLI_Runner {
 		}
 		$tpl = OPEX_Templates::get( $key );
 		if ( $tpl ) {
-			return array( 'kind' => 'template', 'id' => $tpl['id'], 'name' => $tpl['name'], 'config' => $tpl['config'] );
+			return array(
+				'kind'   => 'template',
+				'id'     => $tpl['id'],
+				'name'   => $tpl['name'],
+				'config' => $tpl['config'],
+			);
 		}
 		$sched = OPEX_Schedules::get( $key );
 		if ( $sched ) {
-			return array( 'kind' => 'schedule', 'id' => $sched['id'], 'name' => $sched['name'] );
+			return array(
+				'kind' => 'schedule',
+				'id'   => $sched['id'],
+				'name' => $sched['name'],
+			);
 		}
 		$found = array();
 		foreach ( OPEX_Templates::all() as $t ) {
 			if ( (string) $t['name'] === $key ) {
-				$found[] = array( 'kind' => 'template', 'id' => $t['id'], 'name' => $t['name'], 'config' => $t['config'] );
+				$found[] = array(
+					'kind'   => 'template',
+					'id'     => $t['id'],
+					'name'   => $t['name'],
+					'config' => $t['config'],
+				);
 			}
 		}
 		foreach ( OPEX_Schedules::all() as $s ) {
 			if ( (string) $s['name'] === $key ) {
-				$found[] = array( 'kind' => 'schedule', 'id' => $s['id'], 'name' => $s['name'] );
+				$found[] = array(
+					'kind' => 'schedule',
+					'id'   => $s['id'],
+					'name' => $s['name'],
+				);
 			}
 		}
 		if ( 1 === count( $found ) ) {
@@ -92,7 +110,10 @@ class OPEX_CLI_Runner {
 		if ( '' === $field ) {
 			WP_CLI::error( 'This source has no date field, so --since cannot be used.' );
 		}
-		return array( 'field' => $field, 'after' => $date->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ) );
+		return array(
+			'field' => $field,
+			'after' => $date->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ),
+		);
 	}
 
 	/** Check --output before any work starts. Returns the full path or ''. */
@@ -137,8 +158,8 @@ class OPEX_CLI_Runner {
 			if ( $moved > 0 && $bar ) {
 				$bar->tick( $moved );
 			}
-			$last  = (int) $job['processed'];
-			$idle  = $moved > 0 ? 0 : $idle + 1;
+			$last = (int) $job['processed'];
+			$idle = $moved > 0 ? 0 : $idle + 1;
 			if ( 'running' === $job['status'] && $idle > 2 ) {
 				sleep( 1 ); // Another worker holds the lock. Wait instead of spinning.
 			}

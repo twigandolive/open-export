@@ -70,6 +70,11 @@ abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 
 	/** @inheritDoc */
 	public function date_fields(): array {
-		return OPEX_Query_Dates::date_fields( array( 'type' => 'posts', 'post_type' => $this->post_type() ) );
+		return OPEX_Query_Dates::date_fields(
+			array(
+				'type'      => 'posts',
+				'post_type' => $this->post_type(),
+			)
+		);
 	}
 }

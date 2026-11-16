@@ -48,11 +48,13 @@ class OPEX_Lock {
 		$value = ( $now + $ttl ) . ':' . $token;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- an atomic lock cannot go through the options API.
-		$taken = $wpdb->query( $wpdb->prepare(
-			"INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'no' )",
-			$key,
-			$value
-		) );
+		$taken = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'no' )",
+				$key,
+				$value
+			)
+		);
 		if ( 1 === (int) $taken ) {
 			return $token;
 		}
@@ -65,12 +67,14 @@ class OPEX_Lock {
 
 		// The holder is gone. Swap only if nobody else already took over.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- compare-and-swap on the lock row.
-		$swapped = $wpdb->query( $wpdb->prepare(
-			"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
-			$value,
-			$key,
-			(string) $held
-		) );
+		$swapped = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
+				$value,
+				$key,
+				(string) $held
+			)
+		);
 		return 1 === (int) $swapped ? $token : false;
 	}
 
@@ -91,12 +95,14 @@ class OPEX_Lock {
 		$key = self::option_name( $name );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- touching the lock row.
-		$changed = $wpdb->query( $wpdb->prepare(
-			"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value LIKE %s",
-			( time() + $ttl ) . ':' . $token,
-			$key,
-			'%:' . $wpdb->esc_like( $token )
-		) );
+		$changed = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value LIKE %s",
+				( time() + $ttl ) . ':' . $token,
+				$key,
+				'%:' . $wpdb->esc_like( $token )
+			)
+		);
 		if ( (int) $changed > 0 ) {
 			return true;
 		}
@@ -117,11 +123,13 @@ class OPEX_Lock {
 			return;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- removing the lock row.
-		$wpdb->query( $wpdb->prepare(
-			"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value LIKE %s",
-			self::option_name( $name ),
-			'%:' . $wpdb->esc_like( $token )
-		) );
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value LIKE %s",
+				self::option_name( $name ),
+				'%:' . $wpdb->esc_like( $token )
+			)
+		);
 	}
 
 	/**

@@ -211,7 +211,10 @@ trait OPEX_Source_Mapped {
 		}
 		$groups = array();
 		foreach ( $buckets as $label => $fields ) {
-			$groups[] = array( 'label' => $label, 'fields' => $fields );
+			$groups[] = array(
+				'label'  => $label,
+				'fields' => $fields,
+			);
 		}
 		return array_merge( $groups, $this->extra_groups() );
 	}

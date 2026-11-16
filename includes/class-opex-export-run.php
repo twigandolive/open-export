@@ -44,9 +44,12 @@ class OPEX_Export_Run {
 			);
 		}
 		try {
-			return OPEX_Access::scope( ! empty( $job['wide'] ), static function () use ( $id, $resume ) {
-				return self::run_locked( $id, $resume );
-			} );
+			return OPEX_Access::scope(
+				! empty( $job['wide'] ),
+				static function () use ( $id, $resume ) {
+					return self::run_locked( $id, $resume );
+				}
+			);
 		} finally {
 			OPEX_Jobs::release_lock( $id );
 		}
@@ -71,7 +74,7 @@ class OPEX_Export_Run {
 		$config = $job['config'];
 		$query  = OPEX_Exporter::query_config( $config, (array) $job['since'] );
 		// A worker that lost its lock must stop at once: the new holder owns the job.
-		$guard  = static function () use ( $id ): void {
+		$guard = static function () use ( $id ): void {
 			if ( ! OPEX_Jobs::refresh_lock( $id ) ) {
 				throw new RuntimeException( 'The export lock was lost.', self::LOCK_LOST );
 			}
@@ -118,13 +121,17 @@ class OPEX_Export_Run {
 				$guard();
 				$writer->finish();
 				$guard();
-				$saved = self::save_progress( $id, $saved, array(
-					'status'     => 'done',
-					'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
-					'filesize'   => OPEX_Exporter::output_size( $saved ),
-					'finished'   => time(),
-					'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
-				) );
+				$saved = self::save_progress(
+					$id,
+					$saved,
+					array(
+						'status'     => 'done',
+						'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
+						'filesize'   => OPEX_Exporter::output_size( $saved ),
+						'finished'   => time(),
+						'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
+					)
+				);
 				if ( ! $saved ) {
 					return self::missing();
 				}

@@ -201,12 +201,14 @@ class OPEX_Schema_Sources {
 		}
 
 		if ( 0 === strpos( $field, 'tax:' ) && 'posts' === $src['type'] ) {
-			$terms = get_terms( array(
-				'taxonomy'   => substr( $field, 4 ),
-				'fields'     => 'slugs',
-				'hide_empty' => false,
-				'number'     => self::MAX_VALUES,
-			) );
+			$terms = get_terms(
+				array(
+					'taxonomy'   => substr( $field, 4 ),
+					'fields'     => 'slugs',
+					'hide_empty' => false,
+					'number'     => self::MAX_VALUES,
+				)
+			);
 			return is_wp_error( $terms ) ? array() : array_values( (array) $terms );
 		}
 

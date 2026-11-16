@@ -29,9 +29,14 @@ class OPEX_Schema_Document {
 	public static function extend( array $doc ): array {
 		$formats = OPEX_Writer::formats();
 
-		$doc['formats']       = array_keys( array_filter( $formats, static function ( $f ): bool {
-			return ! empty( $f['available'] );
-		} ) );
+		$doc['formats']       = array_keys(
+			array_filter(
+				$formats,
+				static function ( $f ): bool {
+					return ! empty( $f['available'] );
+				}
+			)
+		);
 		$doc['how_to_use']    = (string) ( $doc['how_to_use'] ?? '' ) . ' ' . self::instructions();
 		$doc['recipe_format'] = array_merge( (array) ( $doc['recipe_format'] ?? array() ), self::recipe_keys() );
 

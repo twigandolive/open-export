@@ -40,12 +40,12 @@ class OPEX_Field_Types {
 			if ( ! is_array( $group ) ) {
 				continue;
 			}
-			$id = self::group_id( (string) ( $group['label'] ?? '' ) );
-			$n  = 2;
+			$id   = self::group_id( (string) ( $group['label'] ?? '' ) );
+			$n    = 2;
 			$base = $id;
 			while ( isset( $used[ $id ] ) ) {
 				$id = $base . '-' . $n;
-				$n++;
+				++$n;
 			}
 			$used[ $id ] = true;
 
@@ -111,35 +111,35 @@ class OPEX_Field_Types {
 	 */
 	public static function known_labels(): array {
 		return array(
-			'core'                    => __( 'Core Fields', 'open-export' ),
-			'computed'                => __( 'Computed', 'open-export' ),
-			'taxonomies'              => __( 'Taxonomies', 'open-export' ),
-			'columns'                 => __( 'Columns', 'open-export' ),
-			'custom-fields'           => __( 'Custom Fields', 'open-export' ),
-			'technical'               => __( 'Technical / Hidden', 'open-export' ),
-			'order'                   => __( 'Order', 'open-export' ),
-			'customer'                => __( 'Customer', 'open-export' ),
-			'totals'                  => __( 'Totals', 'open-export' ),
-			'payment'                 => __( 'Payment', 'open-export' ),
-			'billing-address'         => __( 'Billing address', 'open-export' ),
-			'shipping-address'        => __( 'Shipping address', 'open-export' ),
-			'fulfilment'              => __( 'Fulfilment', 'open-export' ),
-			'order-meta'              => __( 'Order meta', 'open-export' ),
-			'item'                    => __( 'Item', 'open-export' ),
-			'coupon'                  => __( 'Coupon', 'open-export' ),
-			'usage-limits'            => __( 'Usage limits', 'open-export' ),
-			'restrictions'            => __( 'Restrictions', 'open-export' ),
-			'location'                => __( 'Location', 'open-export' ),
-			'orders'                  => __( 'Orders', 'open-export' ),
-			'dates'                   => __( 'Dates', 'open-export' ),
-			'product'                 => __( 'Product', 'open-export' ),
-			'price'                   => __( 'Price', 'open-export' ),
-			'inventory'               => __( 'Inventory', 'open-export' ),
-			'shipping'                => __( 'Shipping', 'open-export' ),
-			'description'             => __( 'Description', 'open-export' ),
-			'categories-attributes'   => __( 'Categories and attributes', 'open-export' ),
-			'images-links'            => __( 'Images and links', 'open-export' ),
-			'acf-repeaters'           => __( 'ACF repeaters and flexible content', 'open-export' ),
+			'core'                  => __( 'Core Fields', 'open-export' ),
+			'computed'              => __( 'Computed', 'open-export' ),
+			'taxonomies'            => __( 'Taxonomies', 'open-export' ),
+			'columns'               => __( 'Columns', 'open-export' ),
+			'custom-fields'         => __( 'Custom Fields', 'open-export' ),
+			'technical'             => __( 'Technical / Hidden', 'open-export' ),
+			'order'                 => __( 'Order', 'open-export' ),
+			'customer'              => __( 'Customer', 'open-export' ),
+			'totals'                => __( 'Totals', 'open-export' ),
+			'payment'               => __( 'Payment', 'open-export' ),
+			'billing-address'       => __( 'Billing address', 'open-export' ),
+			'shipping-address'      => __( 'Shipping address', 'open-export' ),
+			'fulfilment'            => __( 'Fulfilment', 'open-export' ),
+			'order-meta'            => __( 'Order meta', 'open-export' ),
+			'item'                  => __( 'Item', 'open-export' ),
+			'coupon'                => __( 'Coupon', 'open-export' ),
+			'usage-limits'          => __( 'Usage limits', 'open-export' ),
+			'restrictions'          => __( 'Restrictions', 'open-export' ),
+			'location'              => __( 'Location', 'open-export' ),
+			'orders'                => __( 'Orders', 'open-export' ),
+			'dates'                 => __( 'Dates', 'open-export' ),
+			'product'               => __( 'Product', 'open-export' ),
+			'price'                 => __( 'Price', 'open-export' ),
+			'inventory'             => __( 'Inventory', 'open-export' ),
+			'shipping'              => __( 'Shipping', 'open-export' ),
+			'description'           => __( 'Description', 'open-export' ),
+			'categories-attributes' => __( 'Categories and attributes', 'open-export' ),
+			'images-links'          => __( 'Images and links', 'open-export' ),
+			'acf-repeaters'         => __( 'ACF repeaters and flexible content', 'open-export' ),
 		);
 	}
 }

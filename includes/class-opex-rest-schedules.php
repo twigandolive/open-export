@@ -105,58 +105,60 @@ class OPEX_Rest_Schedules {
 	 * @return array
 	 */
 	private static function args( bool $creating ): array {
-		return self::with_schema( array(
-			'name'        => array(
-				'type'              => 'string',
-				'required'          => $creating,
-				'sanitize_callback' => 'sanitize_text_field',
-				'validate_callback' => static function ( $v ): bool {
-					return is_string( $v ) && '' !== trim( $v ) && mb_strlen( $v ) <= 100;
-				},
-			),
-			'config'      => array(
-				'type'     => 'object',
-				'required' => false,
-			),
-			'frequency'   => array(
-				'type'              => 'string',
-				'enum'              => array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' ),
-				'sanitize_callback' => 'sanitize_key',
-			),
-			'time'        => array(
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
-				'validate_callback' => static function ( $v ): bool {
-					return is_string( $v ) && 1 === preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $v );
-				},
-			),
-			'weekday'     => array(
-				'type'              => 'integer',
-				'minimum'           => 0,
-				'maximum'           => 6,
-				'sanitize_callback' => 'absint',
-			),
-			'monthday'    => array(
-				'type'              => array( 'integer', 'string' ),
-				'validate_callback' => static function ( $v ): bool {
-					return 'last' === $v || ( is_numeric( $v ) && (int) $v >= 1 && (int) $v <= 28 );
-				},
-			),
-			'enabled'     => array(
-				'type'              => 'boolean',
-				'sanitize_callback' => 'rest_sanitize_boolean',
-			),
-			'incremental' => array(
-				'type' => 'object',
-			),
-			'delivery'    => array(
-				'type' => 'object',
-			),
-			'filename'    => array(
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
-			),
-		) );
+		return self::with_schema(
+			array(
+				'name'        => array(
+					'type'              => 'string',
+					'required'          => $creating,
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => static function ( $v ): bool {
+						return is_string( $v ) && '' !== trim( $v ) && mb_strlen( $v ) <= 100;
+					},
+				),
+				'config'      => array(
+					'type'     => 'object',
+					'required' => false,
+				),
+				'frequency'   => array(
+					'type'              => 'string',
+					'enum'              => array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' ),
+					'sanitize_callback' => 'sanitize_key',
+				),
+				'time'        => array(
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => static function ( $v ): bool {
+						return is_string( $v ) && 1 === preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $v );
+					},
+				),
+				'weekday'     => array(
+					'type'              => 'integer',
+					'minimum'           => 0,
+					'maximum'           => 6,
+					'sanitize_callback' => 'absint',
+				),
+				'monthday'    => array(
+					'type'              => array( 'integer', 'string' ),
+					'validate_callback' => static function ( $v ): bool {
+						return 'last' === $v || ( is_numeric( $v ) && (int) $v >= 1 && (int) $v <= 28 );
+					},
+				),
+				'enabled'     => array(
+					'type'              => 'boolean',
+					'sanitize_callback' => 'rest_sanitize_boolean',
+				),
+				'incremental' => array(
+					'type' => 'object',
+				),
+				'delivery'    => array(
+					'type' => 'object',
+				),
+				'filename'    => array(
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+			)
+		);
 	}
 
 	/**

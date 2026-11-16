@@ -38,9 +38,9 @@ class OPEX_Decimal {
 		}
 		$shift = isset( $m[4] ) && '' !== $m[4] ? (int) $m[4] : 0;
 		if ( $shift > 0 ) {
-			$frac  = str_pad( $frac, $shift, '0' );
-			$int  .= substr( $frac, 0, $shift );
-			$frac  = substr( $frac, $shift );
+			$frac = str_pad( $frac, $shift, '0' );
+			$int .= substr( $frac, 0, $shift );
+			$frac = substr( $frac, $shift );
 		} elseif ( $shift < 0 ) {
 			$int  = str_pad( $int, -$shift, '0', STR_PAD_LEFT );
 			$frac = substr( $int, $shift ) . $frac;
@@ -113,10 +113,10 @@ class OPEX_Decimal {
 		if ( $use_bc && function_exists( 'bcdiv' ) ) {
 			$cut = bcdiv( $plain, (string) $divisor, $keep );
 		} else {
-			$scale             = max( self::places( $plain ), $keep );
-			list( , $digits )  = self::scaled( $plain, $scale );
-			$quotient          = self::div_digits( $digits, $divisor );
-			$cut               = self::unscale( false, $quotient, $scale );
+			$scale            = max( self::places( $plain ), $keep );
+			list( , $digits ) = self::scaled( $plain, $scale );
+			$quotient         = self::div_digits( $digits, $divisor );
+			$cut              = self::unscale( false, $quotient, $scale );
 		}
 		return OPEX_Money::format( ( $negative ? '-' : '' ) . $cut, $decimals, $use_bc );
 	}

@@ -103,8 +103,18 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		// WooCommerce writes the registered date in site time and the last
 		// active date in UTC.
 		return array(
-			'woo:date_registered'  => array( 'label' => __( 'Date registered', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'kind' => 'column', 'sql' => 'c.date_registered' ),
-			'woo:date_last_active' => array( 'label' => __( 'Date last active', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'kind' => 'column', 'sql' => 'c.date_last_active' ),
+			'woo:date_registered'  => array(
+				'label' => __( 'Date registered', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'c.date_registered',
+			),
+			'woo:date_last_active' => array(
+				'label' => __( 'Date last active', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_UTC,
+				'kind'  => 'column',
+				'sql'   => 'c.date_last_active',
+			),
 		);
 	}
 
@@ -116,9 +126,9 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 			return;
 		}
 		list( $status_sql, $status_args ) = $this->status_condition();
-		$holders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$stats   = self::stats_table();
-		$sql     = $wpdb->prepare(
+		$holders                          = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$stats                            = self::stats_table();
+		$sql                              = $wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names come from $wpdb->prefix; every value is bound.
 			"SELECT s.customer_id, s.total_sales, {$this->countable_sql()} AS countable FROM `{$stats}` s WHERE s.customer_id IN ({$holders}) AND {$status_sql}",
 			array_merge( $ids, $status_args )
@@ -130,7 +140,10 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		foreach ( (array) $rows as $row ) {
 			$id = (int) $row->customer_id;
 			if ( ! isset( $this->totals[ $id ] ) ) {
-				$this->totals[ $id ] = array( 'spend' => '0', 'count' => 0 );
+				$this->totals[ $id ] = array(
+					'spend' => '0',
+					'count' => 0,
+				);
 			}
 			$amount = OPEX_Decimal::normalize( (string) $row->total_sales );
 			if ( null !== $amount ) {
@@ -145,7 +158,10 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		if ( 'woo:total_spend' !== $field && 'woo:avg_order_value' !== $field ) {
 			return null;
 		}
-		$totals = $this->totals[ $id ] ?? array( 'spend' => '0', 'count' => 0 );
+		$totals = $this->totals[ $id ] ?? array(
+			'spend' => '0',
+			'count' => 0,
+		);
 		if ( 'woo:total_spend' === $field ) {
 			return $totals['spend'];
 		}
@@ -160,7 +176,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		$money = __( 'Orders', 'open-export' );
 		$dates = __( 'Dates', 'open-export' );
 
-		$stats = self::stats_table();
+		$stats                            = self::stats_table();
 		list( $status_sql, $status_args ) = $this->status_condition();
 		global $wpdb;
 		// Status values are bound here once, so the expressions hold no raw input.
@@ -171,18 +187,62 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		$count = $this->countable_sql();
 
 		return array(
-			'woo:customer_id'      => array( 'group' => $who, 'type' => 'id', 'sql' => 'c.customer_id' ),
-			'woo:user_id'          => array( 'group' => $who, 'type' => 'id', 'sql' => 'c.user_id' ),
-			'woo:username'         => array( 'group' => $who, 'type' => 'text', 'sql' => 'c.username' ),
-			'woo:first_name'       => array( 'group' => $who, 'type' => 'text', 'sql' => 'c.first_name' ),
-			'woo:last_name'        => array( 'group' => $who, 'type' => 'text', 'sql' => 'c.last_name' ),
-			'woo:email'            => array( 'group' => $who, 'type' => 'email', 'sql' => 'c.email' ),
-			'woo:country'          => array( 'group' => $where, 'type' => 'text', 'sql' => 'c.country' ),
-			'woo:state'            => array( 'group' => $where, 'type' => 'text', 'sql' => 'c.state' ),
-			'woo:city'             => array( 'group' => $where, 'type' => 'text', 'sql' => 'c.city' ),
-			'woo:postcode'         => array( 'group' => $where, 'type' => 'text', 'sql' => 'c.postcode' ),
+			'woo:customer_id'      => array(
+				'group' => $who,
+				'type'  => 'id',
+				'sql'   => 'c.customer_id',
+			),
+			'woo:user_id'          => array(
+				'group' => $who,
+				'type'  => 'id',
+				'sql'   => 'c.user_id',
+			),
+			'woo:username'         => array(
+				'group' => $who,
+				'type'  => 'text',
+				'sql'   => 'c.username',
+			),
+			'woo:first_name'       => array(
+				'group' => $who,
+				'type'  => 'text',
+				'sql'   => 'c.first_name',
+			),
+			'woo:last_name'        => array(
+				'group' => $who,
+				'type'  => 'text',
+				'sql'   => 'c.last_name',
+			),
+			'woo:email'            => array(
+				'group' => $who,
+				'type'  => 'email',
+				'sql'   => 'c.email',
+			),
+			'woo:country'          => array(
+				'group' => $where,
+				'type'  => 'text',
+				'sql'   => 'c.country',
+			),
+			'woo:state'            => array(
+				'group' => $where,
+				'type'  => 'text',
+				'sql'   => 'c.state',
+			),
+			'woo:city'             => array(
+				'group' => $where,
+				'type'  => 'text',
+				'sql'   => 'c.city',
+			),
+			'woo:postcode'         => array(
+				'group' => $where,
+				'type'  => 'text',
+				'sql'   => 'c.postcode',
+			),
 			// Cast to text: SQLite never matches a bare COUNT against the text a rule binds.
-			'woo:order_count'      => array( 'group' => $money, 'type' => 'number', 'sql' => "CAST((SELECT COUNT(*) FROM `{$stats}` s WHERE {$scope} AND {$count} = 1) AS CHAR)" ),
+			'woo:order_count'      => array(
+				'group' => $money,
+				'type'  => 'number',
+				'sql'   => "CAST((SELECT COUNT(*) FROM `{$stats}` s WHERE {$scope} AND {$count} = 1) AS CHAR)",
+			),
 			'woo:total_spend'      => array(
 				'group'  => $money,
 				'type'   => 'number',
@@ -197,8 +257,18 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 				'format' => 'money',
 				'filter' => "(SELECT CASE WHEN SUM({$count}) = 0 THEN NULL ELSE SUM(s.total_sales) / SUM({$count}) END FROM `{$stats}` s WHERE {$scope})",
 			),
-			'woo:date_registered'  => array( 'group' => $dates, 'type' => 'date', 'sql' => 'c.date_registered', 'format' => 'local' ),
-			'woo:date_last_active' => array( 'group' => $dates, 'type' => 'date', 'sql' => 'c.date_last_active', 'format' => 'utc' ),
+			'woo:date_registered'  => array(
+				'group'  => $dates,
+				'type'   => 'date',
+				'sql'    => 'c.date_registered',
+				'format' => 'local',
+			),
+			'woo:date_last_active' => array(
+				'group'  => $dates,
+				'type'   => 'date',
+				'sql'    => 'c.date_last_active',
+				'format' => 'utc',
+			),
 		);
 	}
 

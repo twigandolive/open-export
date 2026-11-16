@@ -17,8 +17,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Custom_Columns {
 
-	const MAX_COLUMNS = 50;
-	const MAX_LABEL   = 100;
+	const MAX_COLUMNS  = 50;
+	const MAX_LABEL    = 100;
 	const MAX_TEMPLATE = 500;
 	const ID_PATTERN   = '/^custom:[a-z0-9-]+$/';
 

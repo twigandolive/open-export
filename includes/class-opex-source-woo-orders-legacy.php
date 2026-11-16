@@ -68,8 +68,16 @@ class OPEX_Source_Woo_Orders_Legacy extends OPEX_Source_Posts {
 		// Orders name their dates by what they mean, plus the raw
 		// post columns for anyone who wants them.
 		return OPEX_Woo::legacy_date_fields() + array(
-			'core:post_date'     => array( 'label' => __( 'Order date (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
-			'core:post_date_gmt' => array( 'label' => __( 'Order date (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
+			'core:post_date'     => array(
+				'label' => __( 'Order date (site time)', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'sql'   => 'p.post_date',
+			),
+			'core:post_date_gmt' => array(
+				'label' => __( 'Order date (UTC)', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_UTC,
+				'sql'   => 'p.post_date_gmt',
+			),
 		);
 	}
 

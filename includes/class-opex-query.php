@@ -13,8 +13,20 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Query {
 
 	public const OPS = array(
-		'eq', 'neq', 'contains', 'not_contains', 'starts_with', 'ends_with',
-		'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'empty', 'not_empty',
+		'eq',
+		'neq',
+		'contains',
+		'not_contains',
+		'starts_with',
+		'ends_with',
+		'gt',
+		'gte',
+		'lt',
+		'lte',
+		'in',
+		'not_in',
+		'empty',
+		'not_empty',
 	);
 
 	/** Columns that must never leave the database, no matter what is asked for. */
@@ -206,15 +218,24 @@ class OPEX_Query {
 		}
 		if ( 0 === strpos( $source_id, 'posts:' ) ) {
 			$post_type = substr( $source_id, 6 );
-			return post_type_exists( $post_type ) ? array( 'type' => 'posts', 'post_type' => $post_type ) : null;
+			return post_type_exists( $post_type ) ? array(
+				'type'      => 'posts',
+				'post_type' => $post_type,
+			) : null;
 		}
 		if ( 0 === strpos( $source_id, 'terms:' ) ) {
 			$tax = substr( $source_id, 6 );
-			return taxonomy_exists( $tax ) ? array( 'type' => 'terms', 'taxonomy' => $tax ) : null;
+			return taxonomy_exists( $tax ) ? array(
+				'type'     => 'terms',
+				'taxonomy' => $tax,
+			) : null;
 		}
 		if ( 0 === strpos( $source_id, 'table:' ) ) {
 			$table = substr( $source_id, 6 );
-			return OPEX_Catalog::table_exists( $table ) ? array( 'type' => 'table', 'table' => $table ) : null;
+			return OPEX_Catalog::table_exists( $table ) ? array(
+				'type'  => 'table',
+				'table' => $table,
+			) : null;
 		}
 		return null;
 	}
@@ -234,7 +255,12 @@ class OPEX_Query {
 	 * Internal to the query compartment: other code calls OPEX_Query.
 	 */
 	public static function alias( string $type ): string {
-		return array( 'posts' => 'p', 'users' => 'u', 'comments' => 'c', 'terms' => 't' )[ $type ] ?? 'p';
+		return array(
+			'posts'    => 'p',
+			'users'    => 'u',
+			'comments' => 'c',
+			'terms'    => 't',
+		)[ $type ] ?? 'p';
 	}
 
 	/**

@@ -14,7 +14,7 @@ class OPEX_Runner {
 
 	private const STALL_AFTER  = 600;
 	private const DELIVER_LOCK = 300;
-	private const HOOKS       = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
+	private const HOOKS        = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
 
 	/** Add the cron callbacks and the hourly maintenance event. */
 	public static function register(): void {

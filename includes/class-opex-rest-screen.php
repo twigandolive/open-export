@@ -123,7 +123,7 @@ class OPEX_Rest_Screen {
 			'empty'        => __( 'is empty', 'open-export' ),
 			'not_empty'    => __( 'is not empty', 'open-export' ),
 		);
-		$out = array();
+		$out    = array();
 		foreach ( OPEX_Query::ops() as $op ) {
 			$out[] = array(
 				'id'          => $op,

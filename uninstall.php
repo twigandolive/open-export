@@ -23,7 +23,7 @@ function opex_uninstall_site( string $dir = '' ): void {
 	}
 
 	// Every transient with our prefix (opex_table_status, opex_keys_*, and so on).
-	$like = $wpdb->esc_like( '_transient_opex_' ) . '%';
+	$like         = $wpdb->esc_like( '_transient_opex_' ) . '%';
 	$like_timeout = $wpdb->esc_like( '_transient_timeout_opex_' ) . '%';
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup of our own prefixed transients.
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $like, $like_timeout ) );
@@ -68,7 +68,12 @@ if ( defined( 'OPEX_UNINSTALL_FUNCTIONS_ONLY' ) ) {
 }
 
 if ( is_multisite() ) {
-	foreach ( get_sites( array( 'fields' => 'ids', 'number' => 0 ) ) as $opex_site_id ) {
+	foreach ( get_sites(
+		array(
+			'fields' => 'ids',
+			'number' => 0,
+		)
+	) as $opex_site_id ) {
 		switch_to_blog( (int) $opex_site_id );
 		opex_uninstall_site();
 		restore_current_blog();

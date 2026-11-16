@@ -40,22 +40,50 @@ class OPEX_Query_Dates {
 		switch ( $src['type'] ) {
 			case 'posts':
 				return array(
-					'core:post_date'         => array( 'label' => __( 'Date published (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
-					'core:post_date_gmt'     => array( 'label' => __( 'Date published (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
-					'core:post_modified'     => array( 'label' => __( 'Last modified (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_modified' ),
-					'core:post_modified_gmt' => array( 'label' => __( 'Last modified (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_modified_gmt' ),
+					'core:post_date'         => array(
+						'label' => __( 'Date published (site time)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_LOCAL,
+						'sql'   => 'p.post_date',
+					),
+					'core:post_date_gmt'     => array(
+						'label' => __( 'Date published (UTC)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_UTC,
+						'sql'   => 'p.post_date_gmt',
+					),
+					'core:post_modified'     => array(
+						'label' => __( 'Last modified (site time)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_LOCAL,
+						'sql'   => 'p.post_modified',
+					),
+					'core:post_modified_gmt' => array(
+						'label' => __( 'Last modified (UTC)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_UTC,
+						'sql'   => 'p.post_modified_gmt',
+					),
 				);
 
 			case 'users':
 				// WordPress writes user_registered in UTC.
 				return array(
-					'core:user_registered' => array( 'label' => __( 'Registered', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'u.user_registered' ),
+					'core:user_registered' => array(
+						'label' => __( 'Registered', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_UTC,
+						'sql'   => 'u.user_registered',
+					),
 				);
 
 			case 'comments':
 				return array(
-					'core:comment_date'     => array( 'label' => __( 'Comment date (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'c.comment_date' ),
-					'core:comment_date_gmt' => array( 'label' => __( 'Comment date (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'c.comment_date_gmt' ),
+					'core:comment_date'     => array(
+						'label' => __( 'Comment date (site time)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_LOCAL,
+						'sql'   => 'c.comment_date',
+					),
+					'core:comment_date_gmt' => array(
+						'label' => __( 'Comment date (UTC)', 'open-export' ),
+						'tz'    => OPEX_Dates::TZ_UTC,
+						'sql'   => 'c.comment_date_gmt',
+					),
 				);
 
 			case 'table':
@@ -70,7 +98,7 @@ class OPEX_Query_Dates {
 					// A bare table tells us nothing about its timezone, so go by
 					// the naming convention every WordPress and WooCommerce table
 					// follows and treat the rest as site-local.
-					$utc = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
+					$utc                          = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
 					$out[ 'col:' . $col['name'] ] = array(
 						'label' => $col['name'] . ( $utc ? ' (UTC)' : '' ),
 						'tz'    => $utc ? OPEX_Dates::TZ_UTC : OPEX_Dates::TZ_LOCAL,
@@ -248,11 +276,18 @@ class OPEX_Query_Dates {
 		}
 
 		list( $stamp, $whole_day ) = $parsed;
-		$col = $def['sql'];
+		$col                       = $def['sql'];
 
 		if ( ! $whole_day ) {
 			// An explicit time compares literally, with no day rounding.
-			$sym    = array( 'eq' => '=', 'neq' => '<>', 'gt' => '>', 'gte' => '>=', 'lt' => '<', 'lte' => '<=' )[ $op ];
+			$sym    = array(
+				'eq'  => '=',
+				'neq' => '<>',
+				'gt'  => '>',
+				'gte' => '>=',
+				'lt'  => '<',
+				'lte' => '<=',
+			)[ $op ];
 			$args[] = $stamp;
 			return "{$col} {$sym} %s";
 		}
@@ -327,8 +362,8 @@ class OPEX_Query_Dates {
 			return null;
 		}
 
-		$col   = 'CAST(m.meta_value AS UNSIGNED)';
-		$tests = array(
+		$col                   = 'CAST(m.meta_value AS UNSIGNED)';
+		$tests                 = array(
 			'eq'  => array( "{$col} >= %d AND {$col} < %d", array( $start, $next ) ),
 			'neq' => array( "({$col} < %d OR {$col} >= %d)", array( $start, $next ) ),
 			'gt'  => array( "{$col} >= %d", array( $next ) ),

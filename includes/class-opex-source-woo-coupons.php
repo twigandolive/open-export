@@ -62,7 +62,12 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 	public function date_fields(): array {
 		global $wpdb;
 		return array(
-			'woo:date_created' => array( 'label' => __( 'Date created', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'kind' => 'column', 'sql' => 'p.post_date' ),
+			'woo:date_created' => array(
+				'label' => __( 'Date created', 'open-export' ),
+				'tz'    => OPEX_Dates::TZ_LOCAL,
+				'kind'  => 'column',
+				'sql'   => 'p.post_date',
+			),
 			'woo:date_expires' => array(
 				'label' => __( 'Expiry date', 'open-export' ),
 				'tz'    => OPEX_Dates::TZ_LOCAL,
@@ -88,24 +93,106 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		$types  = function_exists( 'wc_get_coupon_types' ) ? array_keys( wc_get_coupon_types() ) : array();
 
 		return array(
-			'woo:id'                   => array( 'group' => $coupon, 'type' => 'id', 'read' => 'core:ID' ),
-			'woo:code'                 => array( 'group' => $coupon, 'type' => 'text', 'read' => 'core:post_title' ),
-			'woo:description'          => array( 'group' => $coupon, 'type' => 'text', 'read' => 'core:post_excerpt' ),
-			'woo:discount_type'        => array( 'group' => $coupon, 'type' => 'enum', 'read' => 'meta:discount_type', 'values' => $types ),
-			'woo:amount'               => array( 'group' => $coupon, 'type' => 'number', 'read' => 'meta:coupon_amount', 'format' => 'money' ),
-			'woo:date_expires'         => array( 'group' => $coupon, 'type' => 'date', 'read' => 'meta:date_expires', 'format' => 'epoch' ),
-			'woo:status'               => array( 'group' => $coupon, 'type' => 'enum', 'read' => 'core:post_status', 'values' => array( 'publish', 'future', 'draft', 'pending', 'private', 'trash' ) ),
-			'woo:date_created'         => array( 'group' => $coupon, 'type' => 'date', 'read' => 'core:post_date', 'format' => 'local' ),
-			'woo:usage_count'          => array( 'group' => $limits, 'type' => 'number', 'read' => 'meta:usage_count' ),
-			'woo:usage_limit'          => array( 'group' => $limits, 'type' => 'number', 'read' => 'meta:usage_limit' ),
-			'woo:usage_limit_per_user' => array( 'group' => $limits, 'type' => 'number', 'read' => 'meta:usage_limit_per_user' ),
-			'woo:individual_use'       => array( 'group' => $rules, 'type' => 'boolean', 'read' => 'meta:individual_use' ),
-			'woo:free_shipping'        => array( 'group' => $rules, 'type' => 'boolean', 'read' => 'meta:free_shipping' ),
-			'woo:minimum_amount'       => array( 'group' => $rules, 'type' => 'number', 'read' => 'meta:minimum_amount', 'format' => 'money' ),
-			'woo:maximum_amount'       => array( 'group' => $rules, 'type' => 'number', 'read' => 'meta:maximum_amount', 'format' => 'money' ),
-			'woo:product_ids'          => array( 'group' => $rules, 'type' => 'text', 'read' => 'meta:product_ids', 'format' => 'list' ),
-			'woo:excluded_product_ids' => array( 'group' => $rules, 'type' => 'text', 'read' => 'meta:exclude_product_ids', 'format' => 'list' ),
-			'woo:email_restrictions'   => array( 'group' => $rules, 'type' => 'text', 'read' => 'meta:customer_email', 'format' => 'list' ),
+			'woo:id'                   => array(
+				'group' => $coupon,
+				'type'  => 'id',
+				'read'  => 'core:ID',
+			),
+			'woo:code'                 => array(
+				'group' => $coupon,
+				'type'  => 'text',
+				'read'  => 'core:post_title',
+			),
+			'woo:description'          => array(
+				'group' => $coupon,
+				'type'  => 'text',
+				'read'  => 'core:post_excerpt',
+			),
+			'woo:discount_type'        => array(
+				'group'  => $coupon,
+				'type'   => 'enum',
+				'read'   => 'meta:discount_type',
+				'values' => $types,
+			),
+			'woo:amount'               => array(
+				'group'  => $coupon,
+				'type'   => 'number',
+				'read'   => 'meta:coupon_amount',
+				'format' => 'money',
+			),
+			'woo:date_expires'         => array(
+				'group'  => $coupon,
+				'type'   => 'date',
+				'read'   => 'meta:date_expires',
+				'format' => 'epoch',
+			),
+			'woo:status'               => array(
+				'group'  => $coupon,
+				'type'   => 'enum',
+				'read'   => 'core:post_status',
+				'values' => array( 'publish', 'future', 'draft', 'pending', 'private', 'trash' ),
+			),
+			'woo:date_created'         => array(
+				'group'  => $coupon,
+				'type'   => 'date',
+				'read'   => 'core:post_date',
+				'format' => 'local',
+			),
+			'woo:usage_count'          => array(
+				'group' => $limits,
+				'type'  => 'number',
+				'read'  => 'meta:usage_count',
+			),
+			'woo:usage_limit'          => array(
+				'group' => $limits,
+				'type'  => 'number',
+				'read'  => 'meta:usage_limit',
+			),
+			'woo:usage_limit_per_user' => array(
+				'group' => $limits,
+				'type'  => 'number',
+				'read'  => 'meta:usage_limit_per_user',
+			),
+			'woo:individual_use'       => array(
+				'group' => $rules,
+				'type'  => 'boolean',
+				'read'  => 'meta:individual_use',
+			),
+			'woo:free_shipping'        => array(
+				'group' => $rules,
+				'type'  => 'boolean',
+				'read'  => 'meta:free_shipping',
+			),
+			'woo:minimum_amount'       => array(
+				'group'  => $rules,
+				'type'   => 'number',
+				'read'   => 'meta:minimum_amount',
+				'format' => 'money',
+			),
+			'woo:maximum_amount'       => array(
+				'group'  => $rules,
+				'type'   => 'number',
+				'read'   => 'meta:maximum_amount',
+				'format' => 'money',
+			),
+			'woo:product_ids'          => array(
+				'group'  => $rules,
+				'type'   => 'text',
+				'read'   => 'meta:product_ids',
+				'format' => 'list',
+			),
+			'woo:excluded_product_ids' => array(
+				'group'  => $rules,
+				'type'   => 'text',
+				'read'   => 'meta:exclude_product_ids',
+				'format' => 'list',
+			),
+			'woo:email_restrictions'   => array(
+				'group'  => $rules,
+				'type'   => 'text',
+				'read'   => 'meta:customer_email',
+				'format' => 'list',
+			),
 		);
 	}
 }

@@ -23,8 +23,13 @@ class OPEX_Query_Rows {
 		}
 
 		$provider = OPEX_Sources::for_src( $src );
-		$id_prop  = $provider ? $provider->id_prop() : ( array( 'posts' => 'ID', 'users' => 'ID', 'comments' => 'comment_ID', 'terms' => 'term_id' )[ $src['type'] ] ?? '' );
-		$ids     = array();
+		$id_prop  = $provider ? $provider->id_prop() : ( array(
+			'posts'    => 'ID',
+			'users'    => 'ID',
+			'comments' => 'comment_ID',
+			'terms'    => 'term_id',
+		)[ $src['type'] ] ?? '' );
+		$ids      = array();
 		if ( $id_prop ) {
 			foreach ( $rows as $row ) {
 				$ids[] = (int) $row->{$id_prop};
@@ -49,7 +54,7 @@ class OPEX_Query_Rows {
 		$meta = $meta_keys && $ids ? self::prefetch_meta( $src, $ids, $meta_keys ) : array();
 		// ACF repeaters and flexible content come assembled, one JSON value per record.
 		$acf = $ids ? OPEX_Acf::prefetch( $src, $ids, $fields ) : array();
-		$tax  = array();
+		$tax = array();
 		foreach ( $tax_names as $tax_name ) {
 			$tax[ $tax_name ] = self::prefetch_terms( $ids, $tax_name );
 		}
@@ -104,7 +109,8 @@ class OPEX_Query_Rows {
 	}
 
 	/** One cell read by its storage id (core, col, meta, tax or computed). */
-	private static function resolved_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {		if ( 0 === strpos( $field, 'core:' ) ) {
+	private static function resolved_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
+		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			return OPEX_Query::is_forbidden_column( $col ) ? '' : self::flatten( $row->{$col} ?? '' );
 		}
@@ -153,7 +159,7 @@ class OPEX_Query_Rows {
 	private static function prefetch_meta( array $src, array $ids, array $keys ): array {
 		global $wpdb;
 
-		$map = array(
+		$map      = array(
 			'posts'    => array( $wpdb->postmeta, 'post_id' ),
 			'users'    => array( $wpdb->usermeta, 'user_id' ),
 			'comments' => array( $wpdb->commentmeta, 'comment_id' ),
