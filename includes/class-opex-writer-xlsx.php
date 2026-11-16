@@ -24,12 +24,30 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	const MAX_COLS = 16384;
 
 	/**
+	 * Every work file the writer keeps next to an Excel file: the row XML,
+	 * the next row number, the sheet and the zip being built. Each ends in
+	 * the on-disk ending when the Excel file does (see OPEX_Jobs::beside), so
+	 * no web server serves one as a static file.
+	 *
+	 * @param string $path Excel file path.
+	 * @return string[] Rows, row number, sheet and zip paths, in that order.
+	 */
+	public static function work_files( string $path ): array {
+		return array(
+			OPEX_Jobs::beside( $path, '.rows' ),
+			OPEX_Jobs::beside( $path, '.rows.n' ),
+			OPEX_Jobs::beside( $path, '.sheet' ),
+			OPEX_Jobs::beside( $path, '.zip.tmp' ),
+		);
+	}
+
+	/**
 	 * Path of the sidecar that holds the row XML.
 	 *
 	 * @return string The sidecar path.
 	 */
 	private function rows_path(): string {
-		return $this->path . '.rows';
+		return self::work_files( $this->path )[0];
 	}
 
 	/**
@@ -38,7 +56,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 * @return string The counter file path.
 	 */
 	private function counter_path(): string {
-		return $this->path . '.rows.n';
+		return self::work_files( $this->path )[1];
 	}
 
 	/**
@@ -119,8 +137,8 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 		if ( ! is_file( $rows ) ) {
 			return;
 		}
-		$sheet = $this->path . '.sheet';
-		$tmp   = $this->path . '.zip.tmp';
+		$sheet = self::work_files( $this->path )[2];
+		$tmp   = self::work_files( $this->path )[3];
 		$this->build_sheet( $rows, $sheet );
 
 		$zip = new ZipArchive();

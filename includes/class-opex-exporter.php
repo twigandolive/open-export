@@ -150,10 +150,11 @@ class OPEX_Exporter {
 			return new WP_Error( 'opex_db', self::public_error_message( $e ), array( 'status' => 500 ) );
 		}
 
+		// The file is saved with the on-disk ending, so no web server serves it itself.
 		$slug     = sanitize_file_name( sanitize_title( $label ) );
 		$slug     = $slug ? $slug : 'export';
 		$id       = 'j' . substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 12 );
-		$filename = $slug . '-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 12, false ) . '.' . $config['format'];
+		$filename = OPEX_Jobs::disk_name( $slug . '-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 12, false ) . '.' . $config['format'] );
 
 		$mode     = 'background' === ( $extra['mode'] ?? '' ) ? 'background' : 'browser';
 		$notes    = array_merge( OPEX_Query::export_notes( $config ), array_map( 'strval', array_values( (array) ( $extra['notes'] ?? array() ) ) ), $plan['notes'] );

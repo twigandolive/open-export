@@ -3,7 +3,7 @@
  * Plugin Name:       Open Export
  * Plugin URI:        https://twigandolive.com/shop/
  * Description:       Export posts, users, orders, products or any table to CSV, Excel, JSON, XML or HTML. Schedule and send the file. Every feature included, no add-ons.
- * Version:           2.0.0
+ * Version:           2.0.1
  * Requires at least: 7.0
  * Requires PHP:      7.4
  * Author:            Twig & Olive
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'OPEX_VERSION', '2.0.0' );
+define( 'OPEX_VERSION', '2.0.1' );
 define( 'OPEX_FILE', __FILE__ );
 define( 'OPEX_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPEX_URL', plugin_dir_url( __FILE__ ) );

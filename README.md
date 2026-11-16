@@ -4,7 +4,7 @@ Export anything from your WordPress database: every feature included, no add-ons
 
 Open Export is a free WordPress plugin. Choose a source, choose fields, filter, and export to CSV, Excel, JSON, XML or an HTML table. Save the setup, run it on a schedule, and have the file sent by email, webhook, FTP, FTPS or SFTP.
 
-- **Version:** 2.0.0
+- **Version:** 2.0.1
 - **Requires:** WordPress 7.0+, PHP 7.4+
 - **License:** [GPLv2 or later](LICENSE)
 - **Plugin page:** [Open Export in the Twig & Olive shop](https://twigandolive.com/shop/)
@@ -91,10 +91,12 @@ The site schema (`GET /schema`, or `wp opex schema`) is a JSON description of wh
 - An hourly cleanup removes finished exports 1 to 365 days (30 by default) after they finish.
 - History keeps the latest 200 exports. When History is full, Open Export removes the oldest finished or failed export and its file, sooner than the retention setting. It never removes running or paused exports to make room.
 - Export files live in `wp-content/uploads/open-export/` (`uploads/sites/<id>/open-export/` on a multisite sub-site). Each file name carries 12 random characters.
+  - Open Export saves every file in the folder with an `.opex` ending, such as `orders-20261116-093000-a1b2c3d4e5f6.csv.opex`. Downloads, attachments, uploads and `wp opex --output` still use the real name and extension. Files saved by 2.0.0 keep their names until the usual cleanup removes them.
   - The folder holds an `index.php`, an `.htaccess` file that blocks direct access on Apache (2.2 and 2.4 rules) and LiteSpeed, and a `web.config` file that blocks it on IIS.
   - Open Export gives a folder made by 1.3.1 the new `.htaccess`, unless someone edited the old one by hand.
-  - nginx reads neither file, so add a deny rule for the folder. The [readme.txt](readme.txt) answer "Where do export files go?" has an example.
-  - In Site Health, "Export folder protection" names the deny files in place and says nginx needs its own rule.
+  - Many hosts put nginx in front of Apache. There nginx serves known file types such as `.html` and `.zip` itself, but it passes `.opex` files to Apache, which blocks them.
+  - nginx on its own reads neither file, so add a deny rule for the folder. The [readme.txt](readme.txt) answer "Where do export files go?" has an example.
+  - In Site Health, "Export folder protection" names the deny files in place, explains the `.opex` ending, and says nginx without Apache needs its own rule.
 - You can save up to 100 templates. The templates menu shows each one as "Template name (Source name)".
 - Uninstalling removes everything the plugin saved, on every site of a network. A site that turned on "Keep my templates, schedules, export history and files" keeps its options and files. Uninstalling clears scheduled events either way.
 - Site Health gets an Open Export section under **Site Health > Info**, and two tests. One warns when schedules are on and WP-Cron is off. The other warns when a background export has not moved for over an hour.
@@ -114,7 +116,7 @@ The site schema (`GET /schema`, or `wp opex schema`) is a JSON description of wh
 2. Activate it.
 3. Open **Tools > Open Export**.
 
-On nginx, block the export folder before you export anything. The [readme.txt](readme.txt) answer "Where do export files go?" has an example rule.
+On nginx without Apache behind it, block the export folder before you export anything. The [readme.txt](readme.txt) answer "Where do export files go?" has an example rule.
 
 ## A short tour of the screen
 

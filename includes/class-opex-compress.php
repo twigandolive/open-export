@@ -3,11 +3,15 @@
  * Optional zip compression of a finished export file.
  *
  * The export is written as a plain file first, as always. When the job is
- * done, the plain file is packed into "<file>.zip" next to it, under the name
- * people see, and the job's file name moves to the zip in the same save as
- * the done status. Only then is the plain file removed. So a crash at any
- * point leaves either a running job whose plain file can be finished again,
- * or a done job whose zip is complete.
+ * done, the plain file is packed into a zip next to it ("orders.csv.zip.opex"
+ * for "orders.csv.opex"), under the name people see, and the job's file name
+ * moves to the zip in the same save as the done status. Only then is the
+ * plain file removed. So a crash at any point leaves either a running job
+ * whose plain file can be finished again, or a done job whose zip is complete.
+ *
+ * The zip always gets the on-disk ending, even for a plain file that 2.0.0
+ * started without it: the zip is a new file, and a .zip ending is one that
+ * some web servers serve straight from disk.
  *
  * @package Open_Export
  */
@@ -23,10 +27,10 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Compress {
 
-	/** What a compressed file name ends with. */
+	/** What a compressed file name ends with, before the on-disk ending. */
 	const SUFFIX = '.zip';
 
-	/** What a zip being built ends with, until it is complete. */
+	/** What a zip being built ends with, before the on-disk ending, until it is complete. */
 	const PART = '.zip.part';
 
 	/**
@@ -64,7 +68,7 @@ class OPEX_Compress {
 	 * @return bool
 	 */
 	public static function is_compressed( array $job ): bool {
-		$name = (string) ( $job['filename'] ?? '' );
+		$name = OPEX_Jobs::real_name( (string) ( $job['filename'] ?? '' ) );
 		return self::wanted( (array) ( $job['config'] ?? array() ) ) && self::ends_with_suffix( $name );
 	}
 
@@ -91,7 +95,7 @@ class OPEX_Compress {
 		if ( ! is_file( $plain ) ) {
 			throw new RuntimeException( 'Open Export could not compress the export file because the file is missing.' );
 		}
-		$part = $plain . self::PART;
+		$part = self::part_of( $plain );
 		if ( file_exists( $part ) ) {
 			wp_delete_file( $part );
 		}
@@ -99,14 +103,35 @@ class OPEX_Compress {
 		$ok  = true === $zip->open( $part, ZipArchive::CREATE | ZipArchive::OVERWRITE );
 		// ZipArchive reads the plain file and writes the zip at close(), so close() reports both.
 		$ok = $ok && $zip->addFile( $plain, OPEX_Download::plain_name( $job ) ) && self::close( $zip );
-		$ok = $ok && self::complete( $part ) && rename( $part, $plain . self::SUFFIX );
+		$ok = $ok && self::complete( $part ) && rename( $part, self::zip_of( $plain ) );
 		if ( ! $ok ) {
 			if ( file_exists( $part ) ) {
 				wp_delete_file( $part );
 			}
 			throw new OPEX_User_Error( esc_html__( 'Open Export could not compress the export file. The disk may be full.', 'open-export' ) );
 		}
-		return (string) $job['filename'] . self::SUFFIX;
+		return self::zip_of( (string) $job['filename'] );
+	}
+
+	/**
+	 * The zip of a plain export file: "orders.csv.zip.opex" for
+	 * "orders.csv.opex", and for a 2.0.0 "orders.csv" too.
+	 *
+	 * @param string $plain Plain file path or name.
+	 * @return string Zip path or name.
+	 */
+	private static function zip_of( string $plain ): string {
+		return OPEX_Jobs::disk_name( OPEX_Jobs::real_name( $plain ) . self::SUFFIX );
+	}
+
+	/**
+	 * The zip being built for a plain export file: "orders.csv.zip.part.opex".
+	 *
+	 * @param string $plain Plain file path or name.
+	 * @return string Path or name of the zip being built.
+	 */
+	private static function part_of( string $plain ): string {
+		return OPEX_Jobs::disk_name( OPEX_Jobs::real_name( $plain ) . self::PART );
 	}
 
 	/**
@@ -148,24 +173,40 @@ class OPEX_Compress {
 	 */
 	public static function discard_plain( array $job ): void {
 		$plain = OPEX_Jobs::file_path( $job );
-		if ( '' !== (string) ( $job['filename'] ?? '' ) && is_file( $plain ) && is_file( $plain . self::SUFFIX ) ) {
+		if ( '' !== (string) ( $job['filename'] ?? '' ) && is_file( $plain ) && is_file( self::zip_of( $plain ) ) ) {
 			wp_delete_file( $plain );
 		}
 	}
 
 	/**
 	 * Files that belong with an export file because of compression: the zip
-	 * and a half-built zip next to a plain file, or the plain file next to a zip.
+	 * and a half-built zip next to a plain file, or the plain file and a
+	 * half-built zip next to a zip. A 2.0.0 file also lists the 2.0.0 names,
+	 * and a zip lists the 2.0.0 plain file it may have been made from.
 	 *
 	 * @param string $path The job's file path.
 	 * @return string[]
 	 */
 	public static function related_files( string $path ): array {
-		if ( self::ends_with_suffix( $path ) ) {
-			$plain = substr( $path, 0, -strlen( self::SUFFIX ) );
-			return array( $plain, $plain . self::PART );
+		$real = OPEX_Jobs::real_name( $path );
+		$old  = $real === $path;
+		if ( self::ends_with_suffix( $real ) ) {
+			$plain = substr( $real, 0, -strlen( self::SUFFIX ) );
+			if ( $old ) {
+				return array( $plain, $plain . self::PART );
+			}
+			// The plain file has the on-disk ending, or its 2.0.0 name when 2.0.0 started the job.
+			// A 2.0.0 job that crashed while zipping may also have left its own zip and half-built
+			// zip without the ending, and a web server could serve those, so they go too.
+			return array_values(
+				array_unique(
+					array( OPEX_Jobs::disk_name( $plain ), $plain, self::part_of( $plain ), $plain . self::SUFFIX, $plain . self::PART )
+				)
+			);
 		}
-		return array( $path . self::SUFFIX, $path . self::PART );
+		$files = array( self::zip_of( $path ), self::part_of( $path ) );
+		// 2.0.0 may have left its own zip or half-built zip next to a 2.0.0 plain file.
+		return $old ? array_merge( $files, array( $path . self::SUFFIX, $path . self::PART ) ) : $files;
 	}
 
 	/**

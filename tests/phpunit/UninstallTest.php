@@ -86,6 +86,8 @@ class UninstallTest extends TestCase {
 		wp_schedule_single_event( $in_future, 'other_plugin_hook' );
 
 		$files = array( 'export.csv', 'export.xlsx', 'export.xlsx.rows', 'export.xlsx.rows.n', 'export.zip.tmp', '.htaccess', 'index.php' );
+		// Files saved since 2.0.1 end in .opex.
+		$files = array_merge( $files, array( 'web.config', 'new.html.opex', 'new.csv.zip.opex', 'new.csv.zip.part.opex', 'new.xlsx.rows.opex', 'new.xlsx.rows.n.opex', 'new.csv.lock.opex' ) );
 		foreach ( $files as $file ) {
 			file_put_contents( $this->dir . '/' . $file, 'data' );
 		}

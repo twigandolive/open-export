@@ -20,6 +20,9 @@ class OPEX_Jobs {
 	/** Most jobs the history keeps. Running and paused jobs never count against it. */
 	public const MAX_HISTORY = 200;
 
+	/** What every file in the export folder ends with on disk (see disk_name). 2.0.0 files lack it. */
+	public const DISK_SUFFIX = '.opex';
+
 	/**
 	 * Lock owner tokens held by this process, by job id.
 	 *
@@ -256,7 +259,9 @@ class OPEX_Jobs {
 			'total'         => (int) $job['total'],
 			'processed'     => (int) $job['processed'],
 			'created'       => (int) $job['created'],
-			'filename'      => $job['filename'],
+			// Callers have always read a name with the real extension here, so the
+			// on-disk ".opex" ending stays inside the stored record.
+			'filename'      => self::real_name( (string) $job['filename'] ),
 			'filesize'      => (int) ( $job['filesize'] ?? 0 ),
 			'error'         => (string) ( $job['error'] ?? '' ),
 			'mode'          => (string) ( $job['mode'] ?? 'browser' ),
@@ -375,6 +380,45 @@ class OPEX_Jobs {
 	}
 
 	/**
+	 * The on-disk name of a file Open Export writes into the export folder.
+	 * nginx in front of Apache serves known endings such as .html and .zip
+	 * from disk, so the deny rule never runs. It passes an unknown ending to
+	 * Apache, which applies the deny rule.
+	 *
+	 * @param string $name Name with its real ending, such as "orders-a1b2.csv".
+	 * @return string The name to save on disk, such as "orders-a1b2.csv.opex".
+	 */
+	public static function disk_name( string $name ): string {
+		return $name . self::DISK_SUFFIX;
+	}
+
+	/**
+	 * A name or path without the on-disk ending, so its real ending shows.
+	 * A 2.0.0 name has no such ending and comes back unchanged.
+	 *
+	 * @param string $name On-disk name or path.
+	 * @return string The name or path with its real ending last.
+	 */
+	public static function real_name( string $name ): string {
+		$len = strlen( self::DISK_SUFFIX );
+		return strlen( $name ) > $len && self::DISK_SUFFIX === substr( $name, -$len ) ? substr( $name, 0, -$len ) : $name;
+	}
+
+	/**
+	 * A work file next to an export file, such as the Excel rows or the lock:
+	 * "orders.csv.rows.opex" for "orders.csv.opex". A 2.0.0 file keeps 2.0.0
+	 * work file names, so a job running across the update finds its rows.
+	 *
+	 * @param string $path Export file path (or name).
+	 * @param string $tag  What the work file adds, such as ".rows".
+	 * @return string The work file path (or name).
+	 */
+	public static function beside( string $path, string $tag ): string {
+		$real = self::real_name( $path );
+		return $real === $path ? $path . $tag : self::disk_name( $real . $tag );
+	}
+
+	/**
 	 * Prevent two workers from processing the same job at once. The owner
 	 * token stays in this process, so refresh and release act only on a lock
 	 * this process still owns.
@@ -435,8 +479,8 @@ class OPEX_Jobs {
 		if ( ! $job['filename'] ) {
 			return;
 		}
-		// The Excel writer keeps two sidecar files until it finishes.
-		$files = array( $path, $path . '.rows', $path . '.rows.n' );
+		// The Excel writer keeps its work files until it finishes, and a crash can leave them.
+		$files = array_merge( array( $path ), OPEX_Writer_XLSX::work_files( $path ) );
 		// Zip compression leaves the plain file next to the zip if it stops
 		// before the plain file is removed, and a half-built zip if it stops sooner.
 		$files = array_merge( $files, OPEX_Compress::related_files( $path ) );

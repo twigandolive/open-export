@@ -112,6 +112,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertMatchesRegularExpression( '/^lifecycle-\d{8}-\d{6}-[A-Za-z0-9]{12}\.csv$/', $job['filename'] );
 
 		$record = OPEX_Jobs::get( $job['id'] );
+		$this->assertSame( $job['filename'] . OPEX_Jobs::DISK_SUFFIX, $record['filename'], 'the stored record keeps the on-disk ending' );
 		$shipped = array( 'config', 'created', 'cursor', 'error', 'filename', 'filesize', 'headers', 'id', 'label', 'processed', 'status', 'total' );
 		$this->assertSame( array(), array_diff( $shipped, array_keys( $record ) ), 'the 12 shipped job keys are still there' );
 		$stored = ( (array) get_option( 'opex_jobs' ) )[ $job['id'] ];

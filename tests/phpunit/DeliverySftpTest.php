@@ -101,6 +101,47 @@ class DeliverySftpTest extends TestCase {
 		$this->assertTrue( OPEX_Delivery_Sftp::send( $job, $this->dest(), OPEX_Jobs::file_path( $job ) ) );
 	}
 
+	/**
+	 * A finished job whose file is saved under its 2.0.1 on-disk name.
+	 *
+	 * @param string $format Format id.
+	 * @param bool   $zip    True for a compressed export.
+	 * @return array The job.
+	 */
+	private function opex_job( string $format, bool $zip ): array {
+		$job  = $this->make_job( array( 'config' => array_merge( array( 'format' => $format ), $zip ? array( 'compress' => 'zip' ) : array() ) ) );
+		$old  = OPEX_Jobs::file_path( $job );
+		$name = substr( $job['filename'], 0, -4 ) . '.' . $format . ( $zip ? '.zip' : '' ) . '.opex';
+		rename( $old, trailingslashit( opex_export_dir() ) . $name );
+		$job['filename'] = $name;
+		OPEX_Jobs::save( $job );
+		return $job;
+	}
+
+	public function test_every_format_is_uploaded_under_its_real_extension() {
+		$rec   = $this->dest();
+		$cases = array(
+			'Orders-May.csv'      => array( 'csv', false ),
+			'Orders-May.json'     => array( 'json', false ),
+			'Orders-May.xml'      => array( 'xml', false ),
+			'Orders-May.xlsx'     => array( 'xlsx', false ),
+			'Orders-May.html'     => array( 'html', false ),
+			'Orders-May.csv.zip'  => array( 'csv', true ),
+			'Orders-May.html.zip' => array( 'html', true ),
+		);
+		foreach ( $cases as $want => $case ) {
+			$job = $this->opex_job( $case[0], $case[1] );
+			$this->assertStringEndsWith( '.opex', $job['filename'] );
+			$this->assertTrue( OPEX_Delivery_Sftp::send( $job, $rec, OPEX_Jobs::file_path( $job ) ) );
+			$this->assertSame( "id,name\n1,Ann\n2,Bob\n", file_get_contents( self::$server->dir . '/root/in' . '/' . $want ), $want );
+		}
+		$names = $this->listing();
+		sort( $names );
+		$want = array_keys( $cases );
+		sort( $want );
+		$this->assertSame( $want, $names );
+	}
+
 	public function test_key_login_for_openssh_and_pem_keys() {
 		foreach ( array( 'ed25519', 'rsa' ) as $kind ) {
 			$rec = $this->dest( array( 'auth' => 'key', 'secret' => self::$keys[ $kind ] ) );

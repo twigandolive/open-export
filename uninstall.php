@@ -81,7 +81,7 @@ function opex_uninstall_site( string $dir = '' ): void {
 		return;
 	}
 
-	// Export files, sidecars (*.rows, *.rows.n, *.zip.tmp) and the guard files.
+	// Every file: exports and their work files (*.opex, and the 2.0.0 names without it) and the guard files.
 	foreach ( (array) scandir( $dir ) as $name ) {
 		if ( '.' !== $name && '..' !== $name && is_file( $dir . '/' . $name ) ) {
 			wp_delete_file( $dir . '/' . $name );

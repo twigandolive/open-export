@@ -89,7 +89,7 @@ class CodexEngineRunTest extends TestCase {
 	 * @param array $job Job record.
 	 */
 	private function hold_file_lock( array $job ): void {
-		$handle = fopen( OPEX_Jobs::file_path( $job ) . '.lock', 'c' );
+		$handle = fopen( substr( OPEX_Jobs::file_path( $job ), 0, -5 ) . '.lock.opex', 'c' );
 		$this->assertTrue( flock( $handle, LOCK_EX | LOCK_NB ) );
 		$this->handles[] = $handle;
 	}
@@ -114,7 +114,7 @@ class CodexEngineRunTest extends TestCase {
 
 	public function test_the_lock_file_goes_when_the_job_finishes() {
 		$job  = $this->make_job();
-		$lock = OPEX_Jobs::file_path( $job ) . '.lock';
+		$lock = substr( OPEX_Jobs::file_path( $job ), 0, -5 ) . '.lock.opex';
 		$out  = OPEX_Exporter::run( $job['id'] );
 		$this->assertSame( 'running', $out['status'] );
 		$this->assertFileExists( $lock, 'A running job keeps its lock file between batches.' );
@@ -126,7 +126,7 @@ class CodexEngineRunTest extends TestCase {
 
 	public function test_the_lock_file_goes_with_a_deleted_job() {
 		$job  = $this->make_job();
-		$lock = OPEX_Jobs::file_path( $job ) . '.lock';
+		$lock = substr( OPEX_Jobs::file_path( $job ), 0, -5 ) . '.lock.opex';
 		OPEX_Exporter::run( $job['id'] );
 		$this->assertFileExists( $lock );
 		OPEX_Jobs::delete( $job['id'] );
@@ -138,11 +138,11 @@ class CodexEngineRunTest extends TestCase {
 			$this->markTestSkipped( 'No zip extension.' );
 		}
 		$job  = $this->make_job( array( 'compress' => 'zip' ) );
-		$lock = OPEX_Jobs::file_path( $job ) . '.lock';
+		$lock = substr( OPEX_Jobs::file_path( $job ), 0, -5 ) . '.lock.opex';
 		$done = OPEX_Runner::work( $job['id'], 30 );
 		$this->assertSame( 'done', $done['status'] );
 		$this->assertFileDoesNotExist( $lock );
-		$this->assertStringEndsWith( '.zip', OPEX_Jobs::get( $job['id'] )['filename'] );
+		$this->assertStringEndsWith( '.zip.opex', OPEX_Jobs::get( $job['id'] )['filename'] );
 	}
 
 	public function test_without_file_locks_the_job_runs_and_says_so_once() {

@@ -317,13 +317,16 @@ class OPEX_Delivery {
 	}
 
 	/**
-	 * Safe file name shown to people and used remotely: delivery_name plus extension.
+	 * Safe file name shown to people and used remotely: delivery_name plus
+	 * extension. The on-disk ending never reaches it: the name starts from the
+	 * file's real name, so an email attachment, an upload and the content type
+	 * a mail program reads from the name all see the real extension.
 	 *
 	 * @param array $job Job record.
 	 * @return string
 	 */
 	public static function remote_name( array $job ): string {
-		$disk = (string) ( $job['filename'] ?? 'export' );
+		$disk = OPEX_Jobs::real_name( (string) ( $job['filename'] ?? 'export' ) );
 		// A compressed file keeps the export's own extension before ".zip", as in orders.csv.zip.
 		$zip  = OPEX_Compress::is_compressed( $job );
 		$disk = $zip ? substr( $disk, 0, -strlen( OPEX_Compress::SUFFIX ) ) : $disk;

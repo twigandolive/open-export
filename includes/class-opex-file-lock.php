@@ -4,11 +4,12 @@
  *
  * The job lock in the options table expires when a batch outlasts it. A
  * second worker can then take the job over while the first one still writes.
- * This lock is the operating system's own (flock) on a small file next to the
- * export, "<file>.lock". It lasts exactly as long as the worker holds it, so
- * it never expires during a long append, finish or zip, and it goes away by
- * itself when the process ends. Each batch can be a new PHP process: the
- * lock is taken again at the start of every batch.
+ * This lock is the operating system's own (flock) on a small file next to
+ * the export, "orders.csv.lock.opex" for "orders.csv.opex". It lasts exactly
+ * as long as the worker holds it, so it never expires during a long append,
+ * finish or zip, and it goes away by itself when the process ends. Each
+ * batch can be a new PHP process: the lock is taken again at the start of
+ * every batch.
  *
  * @package Open_Export
  */
@@ -44,13 +45,14 @@ class OPEX_File_Lock {
 	private static $off = false;
 
 	/**
-	 * The lock file of an export file.
+	 * The lock file of an export file. It ends in the on-disk ending when the
+	 * export file does (see OPEX_Jobs::beside), so no web server serves it.
 	 *
 	 * @param string $file Full path of the export file.
 	 * @return string Full path of its lock file.
 	 */
 	public static function path( string $file ): string {
-		return $file . self::SUFFIX;
+		return OPEX_Jobs::beside( $file, self::SUFFIX );
 	}
 
 	/**

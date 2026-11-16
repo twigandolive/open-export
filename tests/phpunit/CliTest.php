@@ -314,6 +314,40 @@ class CliTest extends TestCase {
 		$this->assertSame( $count, $this->csv_rows( $out ) );
 	}
 
+	/** --output gets the export under the name given, while the copy in the export folder ends in .opex. */
+	public function test_output_gets_the_export_for_html_and_zip() {
+		$cases = array(
+			'posts.html'    => array( 'html', 'none', '.html.opex' ),
+			'posts.csv.zip' => array( 'csv', 'zip', '.csv.zip.opex' ),
+		);
+		$made  = array();
+		foreach ( $cases as $file => $case ) {
+			if ( 'zip' === $case[1] && ! OPEX_Compress::available() ) {
+				continue;
+			}
+			$cfg = $this->tmp . '/config.json';
+			file_put_contents( $cfg, wp_json_encode( array( 'source' => 'posts:post', 'fields' => array( 'core:ID', 'core:post_title' ), 'format' => $case[0], 'compress' => $case[1] ) ) );
+			$out = $this->tmp . '/' . $file;
+			$this->bust();
+			$known = array_keys( OPEX_Jobs::all() );
+			$res   = $this->wp( array( 'opex', 'export', '--config=' . $cfg, '--output=' . $out ) );
+			$this->assertSame( 0, $res['code'], $res['err'] );
+			$this->bust();
+			// The one export this run made. Two runs can start in the same second, so no time order.
+			$new = array_values( array_filter( OPEX_Jobs::all(), static fn( $j ) => ! in_array( $j['id'], $known, true ) ) );
+			$this->assertCount( 1, $new );
+			$job = $new[0];
+			$this->assertSame( 'done', $job['status'] );
+			$this->assertStringEndsWith( $case[2], $job['filename'] );
+			$this->assertSame( file_get_contents( OPEX_Jobs::file_path( $job ) ), file_get_contents( $out ), $file );
+			$this->assertStringStartsWith( 'zip' === $case[1] ? 'PK' : '<!DOCTYPE html>', (string) file_get_contents( $out ) );
+			unlink( $cfg );
+			$made[] = $file;
+		}
+		sort( $made );
+		$this->assertSame( $made, array_values( array_diff( scandir( $this->tmp ), array( '.', '..' ) ) ), 'Nothing else is left next to the output.' );
+	}
+
 	public function test_export_recipe_from_stdin() {
 		$recipe = wp_json_encode( array( 'opex_recipe' => 1, 'name' => 'Recipe test', 'source' => 'posts:post', 'fields' => array( 'core:ID', 'core:post_title' ) ) );
 		$out    = $this->tmp . '/recipe.csv';

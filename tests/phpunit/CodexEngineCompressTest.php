@@ -77,19 +77,19 @@ class CodexEngineCompressTest extends TestCase {
 		$this->assertSame( 'Open Export could not compress the export file. The disk may be full.', $stored['error'] );
 		$this->assertSame( $job['filename'], $stored['filename'], 'The job keeps its plain file name.' );
 		$this->assertFileExists( $plain, 'The plain file stays.' );
-		$this->assertFileDoesNotExist( $plain . '.zip' );
-		$this->assertFileDoesNotExist( $plain . '.zip.part' );
+		$this->assertFileDoesNotExist( OPEX_Jobs::real_name( $plain ) . '.zip.opex' );
+		$this->assertFileDoesNotExist( OPEX_Jobs::real_name( $plain ) . '.zip.part.opex' );
 
 		$this->fail_close( false );
 		$again = OPEX_Exporter::run( $job['id'] );
 		$this->assertSame( 'done', $again['status'] );
 		$done = OPEX_Jobs::get( $job['id'] );
-		$this->assertSame( $job['filename'] . '.zip', $done['filename'] );
+		$this->assertSame( OPEX_Jobs::real_name( $job['filename'] ) . '.zip.opex', $done['filename'] );
 		$this->assertFileDoesNotExist( $plain, 'The plain file goes once the zip is saved.' );
 		$this->assertGreaterThan( 0, (int) $done['filesize'] );
 
 		$zip = new ZipArchive();
-		$this->assertTrue( $zip->open( $plain . '.zip', ZipArchive::CHECKCONS ) );
+		$this->assertTrue( $zip->open( OPEX_Jobs::real_name( $plain ) . '.zip.opex', ZipArchive::CHECKCONS ) );
 		$this->assertSame( 1, $zip->count() );
 		$this->assertSame( (int) $stored['processed'], substr_count( (string) $zip->getFromIndex( 0 ), "\n" ) - 1, 'The retried zip holds every row once.' );
 		$zip->close();

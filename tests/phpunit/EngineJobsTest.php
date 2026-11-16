@@ -153,7 +153,8 @@ class EngineJobsTest extends TestCase {
 	/** Normalizes a file so two exports of the same rows compare equal. */
 	private function normalized( string $id ): string {
 		$path = OPEX_Jobs::file_path( OPEX_Jobs::get( $id ) );
-		if ( '.xlsx' !== substr( $path, -5 ) ) {
+		// The file on disk ends in .xlsx.opex: compare the sheet, not the zip bytes, which hold build times.
+		if ( '.xlsx.opex' !== substr( $path, -10 ) ) {
 			return (string) file_get_contents( $path );
 		}
 		$zip = new ZipArchive();
@@ -212,9 +213,10 @@ class EngineJobsTest extends TestCase {
 		$job  = $this->job( array( 'format' => 'xlsx', 'batch_size' => 50 ), 'xlsx finish' );
 		$path = OPEX_Jobs::file_path( OPEX_Jobs::get( $job['id'] ) );
 		$this->assertSame( 'running', OPEX_Exporter::run( $job['id'] )['status'] );
-		mkdir( $path . '.zip.tmp' ); // The zip step cannot use a folder as its work file.
+		$work = OPEX_Jobs::real_name( $path ) . '.zip.tmp.opex';
+		mkdir( $work ); // The zip step cannot use a folder as its work file.
 		$failed = OPEX_Exporter::run( $job['id'] );
-		rmdir( $path . '.zip.tmp' );
+		rmdir( $work );
 		$this->assertSame( 'error', $failed['status'] );
 		$done = $this->finish( $job['id'] );
 		$this->assertSame( 'done', $done['status'] );

@@ -80,7 +80,7 @@ New config and job keys are add-only and saved only when not default. Reads fill
 | `opex_trigger_<id>`, `opex_trig_fail_<id>`, `opex_trig_ip_<hash>`, `opex_retry_<hash>` | transients: start gap, wrong keys (per schedule, per IP), cron retries | no |
 | `opex_run_schedule`, `opex_run_job`, `opex_deliver` | single cron events, one per id | no |
 | `opex_maintenance` | hourly cron event | no |
-| `uploads/open-export/` | export files, sidecars `*.rows`, `*.rows.n`, `*.zip.tmp`, `*.zip.part`, `*.lock` (while written), `index.php`, `.htaccess`, `web.config` | yes |
+| `uploads/open-export/` | exports and work files, all `*.opex` (`OPEX_Jobs::disk_name`, 2.0.0 files lack it), `index.php`, `.htaccess`, `web.config` | yes |
 | system temp `opex-<hex>/` | email attachment copy, removed once sent | no |
 
 New in 2.0.0, add-only: config `network`, `acf_flatten` (`acf:` ids), `csv_enclosure`,

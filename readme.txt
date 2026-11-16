@@ -4,7 +4,7 @@ Tags: export, csv export, xlsx, woocommerce export, scheduled export
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,7 +75,7 @@ WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Exce
 2. Activate the plugin on the Plugins screen.
 3. Go to **Tools > Open Export**.
 
-On nginx, block the export folder first. See "Where do export files go?" below.
+On nginx without Apache behind it, block the export folder first. See "Where do export files go?" below.
 
 == Frequently Asked Questions ==
 
@@ -117,7 +117,7 @@ For the days set in "Keep finished exports" on the Settings tab (30 by default),
 
 = Where do export files go? =
 
-To `wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. The folder's `.htaccess` file blocks direct access on Apache and LiteSpeed, and its `web.config` file blocks it on IIS. nginx ignores both, so add a rule like this above your other regex `location` blocks:
+To `wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. Open Export saves each file with an `.opex` ending, such as `orders-20261116-093000-a1b2c3d4e5f6.csv.opex`. Downloads and deliveries still use the real name, such as `orders.csv`. The folder's `.htaccess` file blocks direct access on Apache and LiteSpeed, and its `web.config` file blocks it on IIS. Many hosts put nginx in front of Apache. There nginx serves known file types itself, but it passes `.opex` files to Apache, which blocks them. nginx on its own ignores both files, so add a rule like this above your other regex `location` blocks:
 
     # Open Export: block the export folder
     location ~ ^/wp-content/uploads/(sites/[0-9]+/)?open-export/ { deny all; }
@@ -170,6 +170,9 @@ SFTP uses the bundled phpseclib library (MIT license).
 
 == Changelog ==
 
+= 2.0.1 =
+* Security: Open Export now saves export files with an `.opex` ending, so nginx in front of Apache (as on Cloudways) can no longer hand out an HTML or zip export directly. Earlier 2.0.0 exports keep their names until the usual cleanup removes them.
+
 = 2.0.0 =
 * Added: a five-tab screen, schedules, "Changes only" runs, trigger URLs, background exports, and delivery by email, webhook, FTP, FTPS and SFTP.
 * Added: Excel, an HTML table, zip compression, CSV options, XML templates, transforms, custom columns and nested filter groups.
@@ -182,6 +185,9 @@ SFTP uses the bundled phpseclib library (MIT license).
 Full history: [CHANGELOG.md on GitHub](https://github.com/twigandolive/open-export).
 
 == Upgrade Notice ==
+
+= 2.0.1 =
+Security: export files now end in .opex on disk, so a host with nginx in front of Apache can no longer serve an HTML or zip export directly. Downloads and deliveries keep their real names.
 
 = 2.0.0 =
 Schedules, delivery, Excel and new WooCommerce sources. Security: on multisite, site admins now reach only their own site's users and tables. Order files change: store price decimals, yes or no flags, site-time dates, no drafts. A filter on an unknown field is now an error.

@@ -23,6 +23,13 @@ class WooProductCsvPresetTest extends WooSourceCase {
 	/** @var array<string, int> Fixture ids. */
 	private $ids = array();
 
+	/**
+	 * A copy of the export under its downloaded .csv name, removed in tearDown.
+	 *
+	 * @var string
+	 */
+	private $import = '';
+
 	/** Makes the fixtures. */
 	protected function setUp(): void {
 		parent::setUp();
@@ -119,6 +126,10 @@ class WooProductCsvPresetTest extends WooSourceCase {
 		wp_delete_term( $this->ids['cat'] ?? 0, 'product_cat' );
 		wp_delete_term( $this->ids['tag'] ?? 0, 'product_tag' );
 		$this->ids = array();
+		if ( '' !== $this->import && file_exists( $this->import ) ) {
+			unlink( $this->import );
+		}
+		$this->import = '';
 		parent::tearDown();
 	}
 
@@ -255,7 +266,11 @@ class WooProductCsvPresetTest extends WooSourceCase {
 	public function test_importer_reads_the_values_back(): void {
 		$this->load_importer();
 		$job    = $this->export( $this->fixture_config( 'woocommerce-product-csv' ) );
-		$file   = OPEX_Jobs::file_path( $job );
+		// A person imports the file they downloaded, which ends in .csv. The
+		// importer refuses the copy on disk, whose name ends in .opex.
+		$this->import = trailingslashit( get_temp_dir() ) . 'opex-import-' . wp_generate_password( 8, false, false ) . '.csv';
+		$this->assertTrue( copy( OPEX_Jobs::file_path( $job ), $this->import ) );
+		$file   = $this->import;
 		$header = $this->csv( $file )[0];
 		$map    = $this->controller( 'auto_map_columns', array( $header, false ) );
 		// What a person picks once on the mapping screen. Brands is skipped here.

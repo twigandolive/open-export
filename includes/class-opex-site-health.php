@@ -265,15 +265,16 @@ class OPEX_Site_Health {
 
 	/**
 	 * Whether a file in the export folder is an export: its name ends in the
-	 * extension of a format, maybe followed by ".zip". A running job's lock
-	 * file, the Excel writer's row files, a half-built zip and the folder's
-	 * own rule files are not exports.
+	 * extension of a format, maybe followed by ".zip", and then by the on-disk
+	 * ending (a 2.0.0 file has none). A running job's lock file, the Excel
+	 * writer's work files, a half-built zip and the folder's own rule files
+	 * are not exports.
 	 *
 	 * @param string $name File name.
 	 * @return bool True for an export file.
 	 */
 	private static function is_export_file( string $name ): bool {
-		$name = strtolower( $name );
+		$name = strtolower( OPEX_Jobs::real_name( $name ) );
 		$zip  = strtolower( OPEX_Compress::SUFFIX );
 		if ( strlen( $name ) > strlen( $zip ) && substr( $name, -strlen( $zip ) ) === $zip ) {
 			$name = substr( $name, 0, -strlen( $zip ) );
@@ -289,7 +290,8 @@ class OPEX_Site_Health {
 
 	/**
 	 * What protects the folder, said plainly. The rule files only work on
-	 * the servers that read them, so this never claims more than that.
+	 * the servers that read them, and the .opex ending only helps where
+	 * Apache answers the request, so this never claims more than that.
 	 *
 	 * @param string[] $rules Rule files found in the folder.
 	 * @return array
@@ -300,7 +302,7 @@ class OPEX_Site_Health {
 		} else {
 			$value = sprintf(
 				/* translators: %s: file names, such as ".htaccess, web.config". */
-				__( 'Deny rules written (%s) for Apache, LiteSpeed and IIS. nginx ignores these files and needs its own rule to block the folder.', 'open-export' ),
+				__( 'Deny rules written (%s) for Apache, LiteSpeed and IIS. Open Export saves export files with an .opex ending, so a server in front of Apache that serves known file types itself, such as nginx on many hosts, passes them to Apache and its deny rule. nginx without Apache ignores these rules and needs its own rule to block the folder.', 'open-export' ),
 				implode( ', ', $rules )
 			);
 		}

@@ -5,6 +5,12 @@ All notable changes to Open Export are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-11-16
+
+### Security
+
+- **Open Export now saves export files on disk with an `.opex` ending,** for example `orders-20261116-093000-a1b2c3d4e5f6.csv.opex`. Some hosts put nginx in front of Apache, as Cloudways does. There nginx serves known file types such as `.html` and `.zip` straight from disk, so the folder's `.htaccess` rule never ran for them. Such a server can no longer hand out an HTML or zip export directly: it passes `.opex` files to Apache, which blocks them. The work files Open Export keeps in the folder while an export runs end in `.opex` too. Downloads, email attachments, FTP, FTPS and SFTP uploads, webhook links and `wp opex --output` still use the real name and extension. Earlier 2.0.0 exports keep their names, and the usual cleanup removes them.
+
 ## [2.0.0] - 2026-11-16
 
 Open Export now runs exports on a schedule, sends the file where you need it, and covers more of a WooCommerce store. It also closes a multisite data gap: see "Security". Read "Changed" before you upgrade. WooCommerce order files look different, and a few loose inputs that 1.3.1 ignored, such as a filter on a field the source does not have, are now errors.

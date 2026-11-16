@@ -121,10 +121,10 @@ class CompressTest extends TestCase {
 		$job  = $this->run_job( $this->config( array( 'compress' => 'zip' ) ) );
 		$path = OPEX_Jobs::file_path( $job );
 		$this->assertSame( 'done', $job['status'] );
-		$this->assertStringEndsWith( '.csv.zip', $job['filename'] );
+		$this->assertStringEndsWith( '.csv.zip.opex', $job['filename'] );
 		$this->assertFileExists( $path );
-		$this->assertFileDoesNotExist( substr( $path, 0, -4 ), 'the plain file is removed' );
-		$this->assertFileDoesNotExist( substr( $path, 0, -4 ) . '.zip.part' );
+		$this->assertFileDoesNotExist( substr( $path, 0, -9 ) . '.opex', 'the plain file is removed' );
+		$this->assertFileDoesNotExist( substr( $path, 0, -9 ) . '.zip.part.opex' );
 		$this->assertSame( filesize( $path ), (int) $job['filesize'] );
 		$this->assertSame( array( 'Zip test.csv' => $bytes ), $this->zip_entries( $path ) );
 		$this->assertGreaterThan( 10, $job['processed'], 'several batches ran' );
@@ -132,7 +132,7 @@ class CompressTest extends TestCase {
 		$this->assertTrue( OPEX_Compress::is_compressed( $job ) );
 		$this->assertSame( 'Zip test.csv.zip', OPEX_Download::file_name( $job ) );
 		$this->assertContains( 'Content-Type: application/zip', OPEX_Download::headers( $job, OPEX_Download::file_name( $job ), 10 ) );
-		$this->assertSame( substr( $job['filename'], 0, -8 ) . '.csv.zip', OPEX_Delivery::remote_name( $job ) );
+		$this->assertSame( substr( $job['filename'], 0, -13 ) . '.csv.zip', OPEX_Delivery::remote_name( $job ) );
 		$job['delivery_name'] = 'Orders May';
 		$this->assertSame( 'Orders-May.csv.zip', OPEX_Delivery::remote_name( $job ) );
 		$this->assertSame( 'Orders May.csv.zip', OPEX_Download::file_name( $job ) );
@@ -158,9 +158,9 @@ class CompressTest extends TestCase {
 		);
 		$job    = $this->run_job( $config );
 		$this->assertSame( 'done', $job['status'] );
-		$this->assertStringEndsWith( '.json.zip', $job['filename'] );
+		$this->assertStringEndsWith( '.json.zip.opex', $job['filename'] );
 		$this->assertSame( array( 'Zip test.json' => "[\n\n]\n" ), $this->zip_entries( OPEX_Jobs::file_path( $job ) ) );
-		$this->assertFileDoesNotExist( substr( OPEX_Jobs::file_path( $job ), 0, -4 ) );
+		$this->assertFileDoesNotExist( substr( OPEX_Jobs::file_path( $job ), 0, -9 ) . '.opex' );
 	}
 
 	/**
@@ -176,17 +176,18 @@ class CompressTest extends TestCase {
 		$this->jobs[] = $job['id'];
 		$disk         = OPEX_Jobs::file_path( OPEX_Jobs::get( $job['id'] ) );
 		// A folder where the half-built zip goes makes the zip step fail.
-		mkdir( $disk . '.zip.part' );
+		$part = substr( $disk, 0, -5 ) . '.zip.part.opex';
+		mkdir( $part );
 		try {
 			for ( $i = 0; $i < 100 && 'running' === $job['status']; $i++ ) {
 				$job = OPEX_Exporter::run( $job['id'] );
 			}
 		} finally {
-			rmdir( $disk . '.zip.part' );
+			rmdir( $part );
 		}
 		$this->assertSame( 'error', $job['status'] );
 		$stored = OPEX_Jobs::get( $job['id'] );
-		$this->assertStringEndsWith( '.json', $stored['filename'], 'the job still points at the plain file' );
+		$this->assertStringEndsWith( '.json.opex', $stored['filename'], 'the job still points at the plain file' );
 		$this->assertFileExists( $disk );
 
 		$job = OPEX_Exporter::run( $job['id'] );
@@ -199,7 +200,7 @@ class CompressTest extends TestCase {
 
 		// Zipping the same plain file twice gives the same entry.
 		$copy             = $stored;
-		$copy['filename'] = substr( $stored['filename'], 0, -4 );
+		$copy['filename'] = substr( $stored['filename'], 0, -9 ) . '.opex';
 		file_put_contents( OPEX_Jobs::file_path( $copy ), 'again' );
 		$this->assertSame( $stored['filename'], OPEX_Compress::apply( $copy ) );
 		$this->assertSame( array( 'Zip test.json' => 'again' ), $this->zip_entries( OPEX_Jobs::file_path( $stored ) ) );
@@ -209,13 +210,14 @@ class CompressTest extends TestCase {
 	public function test_delete_removes_every_file(): void {
 		$job   = $this->run_job( $this->config( array( 'compress' => 'zip' ) ) );
 		$zip   = OPEX_Jobs::file_path( $job );
-		$plain = substr( $zip, 0, -4 );
+		$plain = substr( $zip, 0, -9 ) . '.opex';
+		$part  = substr( $zip, 0, -9 ) . '.zip.part.opex';
 		file_put_contents( $plain, 'left behind' );
-		file_put_contents( $plain . '.zip.part', 'half' );
+		file_put_contents( $part, 'half' );
 		OPEX_Jobs::delete( $job['id'] );
 		$this->assertFileDoesNotExist( $zip );
 		$this->assertFileDoesNotExist( $plain );
-		$this->assertFileDoesNotExist( $plain . '.zip.part' );
+		$this->assertFileDoesNotExist( $part );
 	}
 
 	/** Email in attach mode sends the zip under the delivery name. */

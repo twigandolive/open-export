@@ -221,7 +221,7 @@ class WriterHtmlTest extends TestCase {
 		}
 		$this->assertSame( 'done', $job['status'] );
 		$stored = OPEX_Jobs::get( $job['id'] );
-		$this->assertStringEndsWith( '.html', $stored['filename'] );
+		$this->assertStringEndsWith( '.html.opex', $stored['filename'] );
 		$html = (string) file_get_contents( OPEX_Jobs::file_path( $stored ) );
 		$this->assertStringContainsString( '<title>Menu &lt;list&gt;</title>', $html );
 		$this->assertStringContainsString( '<td>Fish &amp; &lt;Chips&gt;</td>', $html );
