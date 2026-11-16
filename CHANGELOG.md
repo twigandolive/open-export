@@ -137,10 +137,10 @@ additive; `opex_schema` stays at version 1.
 
 ### Fixed
 
-- **The capability document described no fields.** `sources` was populated only when a source was already selected, so the default export carried an empty array — and an assistant told to use only the ids listed there had nothing to work from. Every Common source is now inlined with its full field catalogue and date columns. Advanced raw tables are inlined only on request, and any source whose custom-field list was shortened says so and gives the URL for its complete list.
+- **The capability document described no fields.** `sources` was populated only when a source was already selected, so the default export carried an empty array, and an assistant told to use only the ids listed there had nothing to work from. Every Common source is now inlined with its full field catalogue and date columns. Advanced raw tables are inlined only on request, and any source whose custom-field list was shortened says so and gives the URL for its complete list.
 - **WooCommerce field ids changed with the storage engine.** `woo:` ids resolved only under High-Performance Order Storage; on a store keeping orders in `wp_posts` the catalogue emitted `core:`/`meta:` ids instead, so a recipe written against `woo:billing_state` matched nothing. The `woo:` ids are now canonical on both engines and the query layer translates them to the underlying post column or meta key. Pre-1.3.1 configs using the raw `core:`/`meta:` ids keep working.
 - **A recipe that resolved to nothing was applied as an empty selection.** Import now returns a resolution report naming every field, filter and date-range id as matched, substituted or dropped, each with a reason and a nearest-match suggestion. A recipe where nothing resolves is refused and the report shown, so the empty-selection state is unreachable through import.
-- **Orders appeared twice in Common sources** — once as WooCommerce Orders and once as the raw `shop_order` post type, with identical counts and one of them empty under HPOS. The raw post type moves to Advanced, labelled as such.
+- **Orders appeared twice in Common sources:** once as WooCommerce Orders and once as the raw `shop_order` post type, with identical counts and one of them empty under HPOS. The raw post type moves to Advanced, labelled as such.
 - Legacy `_date_paid` and `_date_completed` are now usable as date-range columns. They hold UNIX timestamps, so they compare against epochs computed in PHP from the site's timezone rather than through `UNIX_TIMESTAMP()`, whose result depends on the database session timezone.
 
 ### Added
@@ -152,9 +152,9 @@ additive; `opex_schema` stays at version 1.
 
 ### Added
 
-- **Schema export for AI assistants.** A new *Work with an AI assistant* panel produces a JSON document describing everything this specific site can export: every source and its row count, every field with its id and group, the filter operators, the date columns and whether each is stored in UTC or site time, and the enumerated legal values for the fields where a wrong guess silently returns nothing — order statuses, post statuses, user roles, and taxonomy terms. Copy it to the clipboard or download it as `open-export-schema.json`.
+- **Schema export for AI assistants.** A new *Work with an AI assistant* panel produces a JSON document describing everything this specific site can export: every source and its row count, every field with its id and group, the filter operators, the date columns and whether each is stored in UTC or site time, and the enumerated legal values for the fields where a wrong guess silently returns nothing: order statuses, post statuses, user roles, and taxonomy terms. Copy it to the clipboard or download it as `open-export-schema.json`.
 - The schema carries its own instructions: a `how_to_use` narrative and a `recipe_format` block stating the exact JSON contract for the reply, so the assistant does not have to infer the return shape.
-- **Recipe import.** Paste the JSON an assistant sends back and the export screen configures itself — source, fields and their order, filter rules, date range, format, and custom column headers. Nothing runs until the user presses Start export.
+- **Recipe import.** Paste the JSON an assistant sends back and the export screen configures itself: source, fields and their order, filter rules, date range, format, and custom column headers. Nothing runs until the user presses Start export.
 - Recipes are validated field by field against what the source actually has. Anything unrecognised is dropped and reported in plain language ("Field \"woo:customer_lifetime_value\" was ignored: this source does not have it") rather than silently producing a blank column or a wrong result.
 - A markdown code fence around the pasted JSON is tolerated, as is a recipe wrapped in an outer `recipe` key.
 - Relative date presets survive the round trip unresolved, so a recipe asking for "last month" still means last month whenever it is re-run.
@@ -163,7 +163,7 @@ additive; `opex_schema` stays at version 1.
 ### Fixed
 
 - A filter rule comparing a date column with `is on or before` truncated a bare date to midnight, excluding that whole day. Date columns now use calendar-day semantics: `<= 2026-03-31` covers through the end of the 31st, and `equals` a date matches that day rather than only its first instant.
-- A date typed in the compact form, such as `20260301`, was treated as a number, casting the column to `DECIMAL(24,6)` — which reduces a datetime to its year — so the filter matched nothing. Compact dates are now understood, and a date column is never cast to a number whatever the value looks like.
+- A date typed in the compact form, such as `20260301`, was treated as a number, casting the column to `DECIMAL(24,6)` (which reduces a datetime to its year), so the filter matched nothing. Compact dates are now understood, and a date column is never cast to a number whatever the value looks like.
 - Choosing a custom field, taxonomy, or computed field on a raw database table source produced silently empty columns; those fields are now rejected with an explanation, since a raw table has only its own columns.
 - Fields that a source does not actually have are rejected instead of exporting as blank columns. Meta keys remain exempt, because the picker samples them under a `LIMIT` and absence from that sample does not mean a key is invalid.
 - `post_modified_gmt` is now offered in the field picker, matching the columns the query layer already accepted.
@@ -185,7 +185,7 @@ additive; `opex_schema` stays at version 1.
 
 ### Security
 
-- The admin app's `esc()` helper round-tripped values through `textContent`/`innerHTML`, which escapes `&`, `<`, and `>` but not quote characters. Every call site interpolates into a double-quoted HTML attribute, and several carry database-derived values — meta keys, post type and taxonomy labels, `menu_icon`, table names — so a value containing a double quote could break out of the attribute and inject markup into the export screen. Quotes are now escaped.
+- The admin app's `esc()` helper round-tripped values through `textContent`/`innerHTML`, which escapes `&`, `<`, and `>` but not quote characters. Every call site interpolates into a double-quoted HTML attribute, and several carry database-derived values (meta keys, post type and taxonomy labels, `menu_icon`, table names), so a value containing a double quote could break out of the attribute and inject markup into the export screen. Quotes are now escaped.
 
 ## [1.1.2] - 2026-07-10
 
