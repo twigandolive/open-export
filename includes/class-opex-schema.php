@@ -129,14 +129,14 @@ class OPEX_Schema {
 			array(
 				'This document describes what a WordPress site can export through the Open Export plugin.',
 				'To request an export, reply with a JSON object matching "recipe_format" below.',
-				'Use only field ids that appear in this document under sources[].fields[].id — a field id that is not listed will be dropped and reported.',
+				'Use only field ids that appear in this document under sources[].fields[].id. A field id that is not listed will be dropped and reported.',
 				'Field ids are prefixed by where the value comes from: "core:" is a column on the main table, "meta:" is a custom field, "tax:" is a taxonomy, "computed:" is derived, "col:" is a raw table column, "woo:" is a WooCommerce field (orders, order items, customers, products or coupons), and "acf:" is an ACF repeater or flexible content field, exported as JSON (it cannot be filtered on).',
 				'Filters are a group of rules joined by one relation, AND or OR. A rule may itself be a group with its own relation, as described under "filter_groups".',
 				'The date range is separate from the filter rules and is always combined with AND, so it narrows the export even when the rules use OR.',
 				'Dates are whole calendar days in the site timezone given under site.timezone, written as YYYY-MM-DD, and the "to" date is included in full.',
 				'Prefer a named preset from "date_presets" over explicit dates when the user asked for a relative period such as last month, because a preset stays relative when the export is saved and re-run.',
 				'Where a field lists "values", use one of those exactly; anything else will match no rows.',
-				'Sources are tiered. Prefer a source whose tier is "common"; the "advanced" tier is raw database tables, which are a power-user surface and have no meta, taxonomy or computed fields — only their own columns.',
+				'Sources are tiered. Prefer a source whose tier is "common"; the "advanced" tier is raw database tables, which are a power-user surface and have no meta, taxonomy or computed fields, only their own columns.',
 				'For WooCommerce orders always use the woo:orders source and its woo: field ids. Those ids mean the same thing whether the store keeps orders in wp_posts or in the High-Performance Order Storage tables, so a recipe written against them works on either.',
 				'If a source shows "fields_truncated": true, its custom fields were shortened to keep this document small; fetch the url in "to_see_all_fields" for that source\'s complete list.',
 				'The recipe only selects from what is listed here. It cannot reach data the administrator running it could not already export.',
@@ -148,28 +148,28 @@ class OPEX_Schema {
 	private static function recipe_format(): array {
 		return array(
 			'opex_recipe'   => self::RECIPE_VERSION,
-			'name'          => 'string — a short label for this export, shown to the user',
-			'source'        => 'string — one id from all_sources[].id',
-			'fields'        => array( 'string — field ids from sources[].fields[].id, in the column order you want' ),
+			'name'          => 'string: a short label for this export, shown to the user',
+			'source'        => 'string: one id from all_sources[].id',
+			'fields'        => array( 'string: field ids from sources[].fields[].id, in the column order you want' ),
 			'filters'       => array(
-				'relation' => 'string — "AND" (all rules must match) or "OR" (any rule)',
+				'relation' => 'string: "AND" (all rules must match) or "OR" (any rule)',
 				'rules'    => array(
 					array(
-						'field' => 'string — a field id',
-						'op'    => 'string — one id from operators[].id',
-						'value' => 'string — omit for the empty and not_empty operators; comma-separated for in and not_in',
+						'field' => 'string: a field id',
+						'op'    => 'string: one id from operators[].id',
+						'value' => 'string: omit for the empty and not_empty operators; comma-separated for in and not_in',
 					),
 				),
 			),
 			'date_range'    => array(
-				'field'  => 'string — one id from sources[].date_fields[].id',
-				'preset' => 'string — one id from date_presets[].id; use "custom" with from/to, or "all_time" for no range',
-				'from'   => 'string — YYYY-MM-DD, only when preset is "custom"',
-				'to'     => 'string — YYYY-MM-DD inclusive, only when preset is "custom"',
+				'field'  => 'string: one id from sources[].date_fields[].id',
+				'preset' => 'string: one id from date_presets[].id; use "custom" with from/to, or "all_time" for no range',
+				'from'   => 'string: YYYY-MM-DD, only when preset is "custom"',
+				'to'     => 'string: YYYY-MM-DD inclusive, only when preset is "custom"',
 			),
-			'format'        => 'string — csv, json, or xml',
-			'csv_delimiter' => 'string — comma, semicolon, or tab',
-			'column_labels' => array( 'field id' => 'string — a friendlier column header for that field' ),
+			'format'        => 'string: one id from formats',
+			'csv_delimiter' => 'string: comma, semicolon, or tab',
+			'column_labels' => array( 'field id' => 'string: a friendlier column header for that field' ),
 		);
 	}
 

@@ -188,8 +188,8 @@ class OPEX_CLI {
 	 * : The id or exact name of a template or schedule.
 	 *
 	 * [--format=<format>]
-	 * : Export file format for a template: csv, json, xml or xlsx. Overrides the
-	 * template's own format. Not allowed for a schedule.
+	 * : Export file format for a template: csv, json, xml, xlsx or html.
+	 * Overrides the template's own format. Not allowed for a schedule.
 	 *
 	 * [--output=<file>]
 	 * : Copy the finished file to this path. The folder must exist and be

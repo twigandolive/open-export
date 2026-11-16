@@ -36,6 +36,8 @@ class NoZipTest extends TestCase {
 		$this->assertSame( 'opex_no_zip', $res->get_error_code() );
 		$this->assertSame( 400, $res->get_error_data()['status'] );
 		$this->assertStringContainsString( 'zip extension', $res->get_error_message() );
+		// The advice names every format the server can still write, and not Excel.
+		$this->assertStringEndsWith( 'Pick another format: CSV, JSON, XML, HTML table.', $res->get_error_message() );
 	}
 
 	public function test_compression_is_refused() {

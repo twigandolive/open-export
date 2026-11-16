@@ -127,7 +127,22 @@ class OPEX_Config {
 		$format = in_array( $raw['format'] ?? '', self::FORMATS, true ) ? $raw['format'] : 'csv';
 		if ( 'xlsx' === ( $raw['format'] ?? '' ) ) {
 			if ( ! OPEX_Compress::available() ) {
-				return new WP_Error( 'opex_no_zip', __( 'Excel export needs the PHP zip extension, which is not installed on this server. Pick CSV, JSON or XML.', 'open-export' ), array( 'status' => 400 ) );
+				// Name the formats this server can write, so the advice never lists a format it cannot offer.
+				$writable = array();
+				foreach ( OPEX_Writer::formats() as $info ) {
+					if ( ! empty( $info['available'] ) ) {
+						$writable[] = $info['label'];
+					}
+				}
+				return new WP_Error(
+					'opex_no_zip',
+					sprintf(
+						/* translators: %s: the formats this server can write, as a comma-separated list such as "CSV, JSON, XML, HTML table". */
+						__( 'Excel export needs the PHP zip extension, which is not installed on this server. Pick another format: %s.', 'open-export' ),
+						implode( ', ', $writable )
+					),
+					array( 'status' => 400 )
+				);
 			}
 			$format = 'xlsx';
 		}
