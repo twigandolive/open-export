@@ -278,6 +278,38 @@ class NetworkExportTest extends TestCase {
 		}
 	}
 
+	/** A post type with content on the main site only: the other sites add no rows, and each says why once. */
+	public function test_a_site_without_the_post_type_gets_a_note(): void {
+		$this->needs_network();
+		register_post_type( 'opex_netprobe', array( 'public' => true ) );
+		$post = (int) wp_insert_post(
+			array(
+				'post_type'   => 'opex_netprobe',
+				'post_title'  => 'Only on site 1',
+				'post_status' => 'publish',
+			)
+		);
+		try {
+			$this->assertSame( 'ok', OPEX_Network::source_state( 'posts:opex_netprobe' ) );
+			switch_to_blog( 2 );
+			$state = OPEX_Network::source_state( 'posts:opex_netprobe' );
+			restore_current_blog();
+			$this->assertSame( 'empty', $state, 'registered for the request, but no content on site 2' );
+
+			$job  = $this->job( $this->config( array( 'source' => 'posts:opex_netprobe' ) ) );
+			$done = $this->finish( $job['id'] );
+			$this->assertSame( 'done', $done['status'], $done['error'] );
+			$this->assertSame( 1, $done['processed'] );
+			$notes = implode( "\n", $done['notes'] );
+			$this->assertStringContainsString( 'Site 2 (' . get_home_url( 2 ) . ') has no content of this type', $notes );
+			$this->assertStringContainsString( 'Site 3 (' . get_home_url( 3 ) . ') has no content of this type', $notes );
+			$this->assertStringNotContainsString( 'Site 1 (', $notes );
+		} finally {
+			wp_delete_post( $post, true );
+			unregister_post_type( 'opex_netprobe' );
+		}
+	}
+
 	public function test_preview_reads_this_site_only_and_says_so(): void {
 		$this->needs_network();
 		$config  = $this->config();

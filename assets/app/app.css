@@ -1,9 +1,8 @@
 /*
- * Open Export admin screen styles, taken from the approved v0 blueprint
- * (.handoff/v0/open-export.html). Every color is a token on .opex-wrap.
+ * Open Export admin screen styles. Every color is a token on .opex-wrap.
  * The resets weigh one element (:where() around the wrap), so they beat
- * wp-admin's bare element rules but never outrank a component class, which
- * fixes the blueprint's card headings and footer that lost their padding.
+ * wp-admin's bare element rules but never outrank a component class, so
+ * card headings and the footer keep their padding.
  * Builder, Export tab and delivery styles are in builder.css.
  */
 

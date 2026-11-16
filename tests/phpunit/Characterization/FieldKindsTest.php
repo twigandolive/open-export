@@ -16,6 +16,7 @@ class FieldKindsTest extends CharacterizationCase {
 	 * Posts with core, meta, tax and computed fields.
 	 */
 	public function test_posts_all_kinds(): void {
+		$this->single_site_only( 'the multisite main site uses pretty permalinks, the golden uses ?p= links.' );
 		$fields = array(
 			'core:ID', 'core:post_title', 'core:post_content', 'core:post_excerpt', 'core:post_status', 'core:post_name',
 			'core:post_date', 'core:post_date_gmt', 'core:post_modified', 'core:post_modified_gmt', 'core:post_author',
@@ -59,6 +60,7 @@ class FieldKindsTest extends CharacterizationCase {
 	 * Users with core, meta and computed fields. Password hashes never export.
 	 */
 	public function test_users_all_kinds(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		$fields = array( 'core:ID', 'core:user_login', 'core:user_email', 'core:user_nicename', 'core:user_url', 'core:user_registered', 'core:display_name', 'meta:first_name', 'meta:last_name', 'meta:opex_plan', 'meta:opex_prefs', 'meta:wp_capabilities', 'computed:roles' );
 		$res    = $this->export( array( 'source' => 'users', 'fields' => $fields, 'batch_size' => 10 ), 'kinds-users' );
 		$this->assert_golden( 'kinds-users-csv', $res );
@@ -73,6 +75,7 @@ class FieldKindsTest extends CharacterizationCase {
 	 * Raw tables accept only col fields, and reject the secret columns.
 	 */
 	public function test_table_col_fields(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		global $wpdb;
 		$notes  = array();
 		$config = $this->config( array( 'source' => 'table:' . $wpdb->users, 'fields' => array( 'col:ID', 'col:user_login', 'col:user_pass', 'col:user_activation_key', 'core:ID', 'meta:x', 'col:missing' ) ), $notes );

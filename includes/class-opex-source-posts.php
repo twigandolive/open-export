@@ -20,7 +20,7 @@ abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 	/** The post type this source reads. */
 	abstract public function post_type(): string;
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function src(): array {
 		return array(
 			'type'           => 'posts',
@@ -30,7 +30,7 @@ abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function from(): string {
 		global $wpdb;
 		return "{$wpdb->posts} p";
@@ -41,34 +41,34 @@ abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 		return array();
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function base_where(): array {
 		$base = array_merge( array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" ), $this->extra_where() );
 		return array( $base, array( $this->post_type() ) );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function primary_key(): string {
 		return 'p.ID';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id_prop(): string {
 		return 'ID';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function select_list( array $fields ): string {
 		return 'p.*';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function meta_table(): ?array {
 		global $wpdb;
 		return array( $wpdb->postmeta, 'post_id', 'p.ID' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function date_fields(): array {
 		return OPEX_Query_Dates::date_fields(
 			array(

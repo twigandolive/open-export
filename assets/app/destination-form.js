@@ -231,7 +231,7 @@
 			try {
 				const saved = await api.post( '/destinations/' + encodeURIComponent( record.id ), { reset_host_key: true } );
 				setRecord( saved );
-				// Servers before spec 3.5 ignore reset_host_key and keep the pin.
+				// An older server ignores reset_host_key and keeps the pin.
 				if ( saved.host_key ) {
 					result.set( 'error', __( 'The fingerprint was not reset. This version of Open Export cannot reset it yet.', 'open-export' ) );
 				} else {

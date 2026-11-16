@@ -17,7 +17,11 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Source_Labels {
 
-	/** @var array<string, string> Names found in this request, by source id. */
+	/**
+	 * Names found in this request, by source id.
+	 *
+	 * @var array<string, string>
+	 */
 	private static $memo = array();
 
 	/**

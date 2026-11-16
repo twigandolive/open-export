@@ -90,16 +90,19 @@ class OPEX_Writer_HTML extends OPEX_Writer {
 	}
 
 	/**
-	 * One cell as safe HTML. Invalid UTF-8 is cleaned first, because esc_html
-	 * returns nothing at all for a string that holds any. Control characters
-	 * go too, and line breaks become <br> so they show.
+	 * One cell as safe HTML that shows exactly its text. Every & is encoded,
+	 * even one that already starts an entity, so a cell holding "&amp;"
+	 * shows "&amp;" and not "&" (esc_html would leave it as it is).
+	 * Invalid UTF-8 is removed first, and control characters too. Line
+	 * breaks become <br> so they show.
 	 *
 	 * @param string $value Raw text.
 	 */
 	private static function cell( string $value ): string {
 		$value = wp_check_invalid_utf8( $value, true );
 		$value = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value );
-		return str_replace( array( "\r\n", "\r", "\n" ), '<br>', esc_html( $value ) );
+		$safe  = htmlspecialchars( $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', true );
+		return str_replace( array( "\r\n", "\r", "\n" ), '<br>', $safe );
 	}
 
 	/**

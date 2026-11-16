@@ -126,7 +126,7 @@ class OPEX_CLI_Runner {
 		if ( false === $folder || ! is_dir( $folder ) ) {
 			WP_CLI::error( 'The folder for --output does not exist.' );
 		}
-		if ( ! is_writable( $folder ) ) {
+		if ( ! wp_is_writable( $folder ) ) {
 			WP_CLI::error( 'The folder for --output is not writable.' );
 		}
 		$full   = trailingslashit( $folder ) . basename( $out );
@@ -178,8 +178,10 @@ class OPEX_CLI_Runner {
 			WP_CLI::error( 'The export finished but its file is missing.' );
 		}
 		if ( '' !== $dest ) {
+			// Copy next to the target, then rename, so the target is never half written.
+			// WP_Filesystem is not used: it may ask for FTP credentials, which a shell run cannot answer.
 			$part = $dest . '.opex-part';
-			if ( ! copy( $path, $part ) || ! rename( $part, $dest ) ) {
+			if ( ! copy( $path, $part ) || ! rename( $part, $dest ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
 				wp_delete_file( $part );
 				WP_CLI::error( 'Could not write the --output file.' );
 			}

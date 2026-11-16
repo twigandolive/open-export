@@ -10,6 +10,9 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Renders a file name pattern into a safe file name.
+ */
 class OPEX_Filename {
 
 	private const MAX_LENGTH = 120;
@@ -25,7 +28,8 @@ class OPEX_Filename {
 		$now = isset( $context['time'] ) ? (int) $context['time'] : time();
 		$map = array(
 			'label'    => (string) ( $context['label'] ?? '' ),
-			'source'   => (string) ( $context['source'] ?? '' ),
+			// The colon in a source id such as posts:post would vanish in sanitize_file_name.
+			'source'   => str_replace( ':', '-', (string) ( $context['source'] ?? '' ) ),
 			'id'       => (string) ( $context['id'] ?? '' ),
 			'site'     => (string) ( $context['site'] ?? self::site_host() ),
 			'date'     => wp_date( 'Y-m-d', $now ),

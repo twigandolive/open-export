@@ -128,4 +128,84 @@ class SiteHealthTest extends TestCase {
 		add_filter( 'opex_cron_disabled', '__return_true' );
 		$this->assertSame( 'good', OPEX_Site_Health::test_cron()['status'] );
 	}
+
+	/** The folder field says which rules exist and never claims nginx is covered. */
+	public function test_protection_names_the_rules_and_the_nginx_limit() {
+		opex_export_dir();
+		$field = OPEX_Site_Health::add_section( array() )['open-export']['fields']['protected'];
+		$this->assertSame( '.htaccess,web.config', $field['debug'] );
+		$this->assertStringContainsString( 'nginx', $field['value'] );
+		$this->assertNotSame( __( 'Yes', 'open-export' ), $field['value'] );
+	}
+
+	/** New folders get both rule files, an old one-line rule is upgraded, and a hand-edited one is kept. */
+	public function test_guard_files_are_written_and_upgraded() {
+		$dir = trailingslashit( get_temp_dir() ) . 'opex-guard-' . wp_generate_password( 8, false );
+		wp_mkdir_p( $dir );
+		$rules = opex_export_dir_rules();
+		try {
+			opex_guard_export_dir( $dir );
+			$this->assertSame( $rules['.htaccess'], file_get_contents( $dir . '/.htaccess' ) );
+			$this->assertSame( $rules['web.config'], file_get_contents( $dir . '/web.config' ) );
+			$this->assertStringContainsString( 'Require all denied', $rules['.htaccess'] );
+			$this->assertStringContainsString( 'Deny from all', $rules['.htaccess'] );
+			$this->assertNotFalse( simplexml_load_string( $rules['web.config'] ), 'web.config is well-formed XML' );
+
+			file_put_contents( $dir . '/.htaccess', "Require all denied\n" );
+			wp_delete_file( $dir . '/web.config' );
+			opex_guard_export_dir( $dir );
+			$this->assertSame( $rules['.htaccess'], file_get_contents( $dir . '/.htaccess' ), 'the 2.0 rule replaces the old one' );
+			$this->assertFileExists( $dir . '/web.config' );
+
+			file_put_contents( $dir . '/.htaccess', "# Edited by the host.\nRequire all denied\n" );
+			opex_guard_export_dir( $dir );
+			$this->assertSame( "# Edited by the host.\nRequire all denied\n", file_get_contents( $dir . '/.htaccess' ) );
+		} finally {
+			foreach ( array( 'index.php', '.htaccess', 'web.config' ) as $name ) {
+				if ( is_file( $dir . '/' . $name ) ) {
+					wp_delete_file( $dir . '/' . $name );
+				}
+			}
+			@rmdir( $dir );
+		}
+	}
+
+	/** A background export with no batch for over an hour is reported. */
+	public function test_stuck_background_job_is_reported() {
+		$this->assertSame( 'good', OPEX_Site_Health::test_stuck_jobs()['status'] );
+		$config = OPEX_Exporter::sanitize_config(
+			array(
+				'source'     => 'posts:post',
+				'fields'     => array( 'core:ID' ),
+				'batch_size' => 10,
+			)
+		);
+		$job = OPEX_Exporter::create( $config, 'Stuck test', array( 'mode' => 'background' ) );
+		$this->assertSame( 'running', $job['status'] );
+		try {
+			OPEX_Jobs::update(
+				$job['id'],
+				static function ( array $stored ): array {
+					$stored['heartbeat'] = time() - 1800;
+					return $stored;
+				}
+			);
+			$this->assertSame( 'good', OPEX_Site_Health::test_stuck_jobs()['status'], 'half an hour is not stuck yet' );
+
+			OPEX_Jobs::update(
+				$job['id'],
+				static function ( array $stored ): array {
+					$stored['heartbeat'] = time() - 2 * HOUR_IN_SECONDS;
+					return $stored;
+				}
+			);
+			$result = OPEX_Site_Health::test_stuck_jobs();
+			$this->assertSame( 'recommended', $result['status'] );
+			$this->assertStringContainsString( '1 background export', $result['description'] );
+			$this->assertSame( 'open_export_stuck', $result['test'] );
+		} finally {
+			OPEX_Jobs::delete( $job['id'] );
+			wp_clear_scheduled_hook( 'opex_run_job', array( $job['id'] ) );
+		}
+	}
 }

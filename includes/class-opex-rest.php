@@ -1,16 +1,24 @@
 <?php
 /**
- * REST API. Every route requires the admin capability; WordPress cookie
+ * REST API. Every route requires the admin capability, and WordPress cookie
  * auth additionally enforces the wp_rest nonce (sent as X-WP-Nonce by
  * apiFetch, or as _wpnonce on download links).
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Registers and answers the core admin routes: sources, fields, preview, jobs and templates.
+ */
 class OPEX_Rest {
 
 	private const NS = 'open-export/v1';
 
+	/**
+	 * Registers the core admin routes. Every one needs the plugin capability.
+	 */
 	public static function register_routes(): void {
 		$can = static function (): bool {
 			return current_user_can( opex_capability() );
@@ -191,6 +199,9 @@ class OPEX_Rest {
 		OPEX_Rest_Screen::register_routes();
 	}
 
+	/**
+	 * GET /sources: the sources this person may export, grouped for the picker.
+	 */
 	public static function sources(): WP_REST_Response {
 		return rest_ensure_response( OPEX_Catalog::sources() );
 	}
@@ -244,7 +255,7 @@ class OPEX_Rest {
 
 	/**
 	 * Turn an assistant's recipe into a validated config for the UI to apply.
-	 * This configures the screen; it does not start an export.
+	 * This configures the screen. It does not start an export.
 	 */
 	public static function recipe( WP_REST_Request $request ) {
 		$body = $request->get_json_params();
@@ -266,6 +277,12 @@ class OPEX_Rest {
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	/**
+	 * POST /preview: the first rows and the row count for a config.
+	 *
+	 * @param WP_REST_Request $request Request with the config as JSON.
+	 * @return array|WP_Error
+	 */
 	public static function preview( WP_REST_Request $request ) {
 		$notes  = array();
 		$config = OPEX_Exporter::sanitize_config( (array) $request->get_json_params(), $notes );
@@ -280,6 +297,9 @@ class OPEX_Rest {
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	/**
+	 * GET /jobs: every job, newest first.
+	 */
 	public static function jobs(): WP_REST_Response {
 		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
 		usort(
@@ -291,6 +311,12 @@ class OPEX_Rest {
 		return rest_ensure_response( $jobs );
 	}
 
+	/**
+	 * POST /jobs: starts an export from a config, in the browser or in the background.
+	 *
+	 * @param WP_REST_Request $request Request with config, label, mode and delivery.
+	 * @return array|WP_Error
+	 */
 	public static function create_job( WP_REST_Request $request ) {
 		$body   = (array) $request->get_json_params();
 		$notes  = array();
@@ -327,6 +353,13 @@ class OPEX_Rest {
 		return rest_ensure_response( $result );
 	}
 
+	/**
+	 * POST /jobs/{id}/run: runs one batch. Only the Resume button passes resume, so a late
+	 * request from another window cannot undo a pause.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
 	public static function run_job( WP_REST_Request $request ) {
 		// Only the Resume button sends resume, so a late run call cannot undo a pause.
 		$resume = rest_sanitize_boolean( $request->get_param( 'resume' ) );
@@ -344,11 +377,23 @@ class OPEX_Rest {
 		return rest_ensure_response( $result );
 	}
 
+	/**
+	 * POST /jobs/{id}/pause.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
 	public static function pause_job( WP_REST_Request $request ) {
 		$result = OPEX_Exporter::pause( (string) $request['id'] );
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	/**
+	 * GET /jobs/{id}: one job with its config, for reloading it in the builder.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
 	public static function get_job( WP_REST_Request $request ) {
 		$job = OPEX_Jobs::get( (string) $request['id'] );
 		if ( ! $job ) {
@@ -357,11 +402,22 @@ class OPEX_Rest {
 		return rest_ensure_response( OPEX_Jobs::expose_detail( $job ) );
 	}
 
+	/**
+	 * POST /jobs/{id}/rerun: a new job from an old job's config.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
 	public static function rerun_job( WP_REST_Request $request ) {
 		$result = OPEX_Exporter::rerun( (string) $request['id'] );
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	/**
+	 * DELETE /jobs/{id}: removes the job and its file.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 */
 	public static function delete_job( WP_REST_Request $request ): WP_REST_Response {
 		OPEX_Jobs::delete( (string) $request['id'] );
 		return rest_ensure_response( array( 'deleted' => true ) );
@@ -386,6 +442,9 @@ class OPEX_Rest {
 		return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
 	}
 
+	/**
+	 * GET /templates: every template, most recently changed first.
+	 */
 	public static function templates(): WP_REST_Response {
 		$list = array_map( array( 'OPEX_Templates', 'expose' ), array_values( OPEX_Templates::all() ) );
 		usort(
@@ -397,6 +456,12 @@ class OPEX_Rest {
 		return rest_ensure_response( $list );
 	}
 
+	/**
+	 * POST /templates: saves a template. A name that exists updates that template.
+	 *
+	 * @param WP_REST_Request $request Request with name and config.
+	 * @return array|WP_Error
+	 */
 	public static function save_template( WP_REST_Request $request ) {
 		$body   = (array) $request->get_json_params();
 		$name   = sanitize_text_field( (string) ( $body['name'] ?? '' ) );
@@ -405,6 +470,11 @@ class OPEX_Rest {
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
+	/**
+	 * DELETE /templates/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 */
 	public static function delete_template( WP_REST_Request $request ): WP_REST_Response {
 		OPEX_Templates::delete( (string) $request['id'] );
 		return rest_ensure_response( array( 'deleted' => true ) );

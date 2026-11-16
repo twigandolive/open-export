@@ -98,8 +98,8 @@
 			} );
 		}
 
-		// POST /jobs/{id}/deliver arrives with spec 3.5. history-view.js shows
-		// the button only when the server sends the 3.5 job fields.
+		// An older server has no POST /jobs/{id}/deliver. history-view.js shows
+		// the button only when the server sends the job fields that go with it.
 		function deliver( job ) {
 			return app.api.post( '/jobs/' + encodeURIComponent( job.id ) + '/deliver' ).then( ( result ) => {
 				if ( result && result.id ) {

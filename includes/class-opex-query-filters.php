@@ -3,12 +3,17 @@
  * Turns one export filter rule into a SQL fragment.
  *
  * Part of the query compartment. Reached only through OPEX_Query.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Builds the SQL condition for one filter rule. Values always go through placeholders.
+ */
 class OPEX_Query_Filters {
 
 	/**
@@ -31,7 +36,7 @@ class OPEX_Query_Filters {
 		// 2026-03-31" means through the end of that day, and a value like
 		// 20260301 is a date, not a number to cast the column down to. Only a
 		// date column reads relative tokens such as "today": in a text field
-		// the word is just text.
+		// the word is plain text.
 		$date_defs = OPEX_Query_Dates::date_fields( $src );
 		$is_date   = isset( $date_defs[ $field ] );
 		if ( $is_date ) {
@@ -103,7 +108,7 @@ class OPEX_Query_Filters {
 			return self::value_condition( $lhs, $op, $value, $args );
 		}
 
-		// Meta rule, e.g. meta:_sku; EXISTS / NOT EXISTS subquery.
+		// Meta rule, such as meta:_sku: an EXISTS or NOT EXISTS subquery.
 		if ( 0 === strpos( $field, 'meta:' ) && 'table' !== $src['type'] ) {
 			$key = substr( $field, 5 );
 			if ( OPEX_Query::is_credential_meta( $key ) ) {
@@ -301,8 +306,10 @@ class OPEX_Query_Filters {
 					'lte' => '<=',
 				)[ $op ];
 				if ( ! $textual && is_numeric( $value ) ) {
-					$args[] = (float) $value;
-					return "CAST({$lhs} AS DECIMAL(24,6)) {$sym} %f";
+					// The value stays a string and the database casts both sides, so
+					// money compares exactly. A PHP float would round 0.1 and long amounts.
+					$args[] = trim( $value );
+					return "CAST({$lhs} AS DECIMAL(24,6)) {$sym} CAST(%s AS DECIMAL(24,6))";
 				}
 				$args[] = $value;
 				return "{$lhs} {$sym} %s";
@@ -391,20 +398,20 @@ class OPEX_Query_Filters {
 	 * @param string $op     Operator.
 	 * @param string $value  Rule value.
 	 * @param array  $args   Receives prepare() values.
-	 * @param string $object SQL for the object id the terms belong to, from a provider constant.
+	 * @param string $object_sql SQL for the object id the terms belong to, from a provider constant.
 	 */
-	public static function term_clause( string $tax, string $op, string $value, array &$args, string $object ): string {
-		return self::tax_clause( $tax, $op, $value, $args, $object );
+	public static function term_clause( string $tax, string $op, string $value, array &$args, string $object_sql ): string {
+		return self::tax_clause( $tax, $op, $value, $args, $object_sql );
 	}
 
 	/** Taxonomy membership tests match term slug or name. */
-	private static function tax_clause( string $tax, string $op, string $value, array &$args, string $object = 'p.ID' ): string {
+	private static function tax_clause( string $tax, string $op, string $value, array &$args, string $object_sql = 'p.ID' ): string {
 		global $wpdb;
 
 		$exists_open = "EXISTS (SELECT 1 FROM {$wpdb->term_relationships} tr" .
 			" INNER JOIN {$wpdb->term_taxonomy} xt ON xt.term_taxonomy_id = tr.term_taxonomy_id" .
 			" INNER JOIN {$wpdb->terms} xtm ON xtm.term_id = xt.term_id" .
-			" WHERE tr.object_id = {$object} AND xt.taxonomy = %s";
+			" WHERE tr.object_id = {$object_sql} AND xt.taxonomy = %s";
 
 		if ( 'empty' === $op ) {
 			$args[] = $tax;

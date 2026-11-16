@@ -191,7 +191,13 @@
 					report.hidden = false;
 				}
 				if ( answer && answer.ok && answer.config ) {
-					o.onApply( answer.config, answer.name || '' );
+					const config = Object.assign( {}, answer.config );
+					// A recipe that names no speed gets the screen's default speed,
+					// not the server's own fallback size, which no speed choice uses.
+					if ( ! Object.prototype.hasOwnProperty.call( recipe, 'batch_size' ) ) {
+						config.batch_size = app.builder.defaults().batch_size;
+					}
+					o.onApply( config, answer.name || '' );
 					applyResult.set( 'success', __( 'Recipe applied. Check the setup below, then start the export.', 'open-export' ) );
 				} else {
 					applyResult.set( 'error', __( 'The recipe was not applied. See the result below.', 'open-export' ) );

@@ -30,12 +30,14 @@ class OPEX_Compress {
 	const PART = '.zip.part';
 
 	/**
-	 * Whether this server can make zip files.
+	 * Whether this server can make zip files: Excel files and zip compression
+	 * both need it. The opex_zip_available filter can turn zip output off
+	 * (tests use it to reach the refusals), but never on without the extension.
 	 *
 	 * @return bool
 	 */
 	public static function available(): bool {
-		return class_exists( 'ZipArchive' );
+		return class_exists( 'ZipArchive' ) && (bool) apply_filters( 'opex_zip_available', true );
 	}
 
 	/**
@@ -65,12 +67,13 @@ class OPEX_Compress {
 	 *
 	 * @param array $job Job record whose file name is still the plain file.
 	 * @return string The file name the job should save: the zip's.
+	 * @throws OPEX_User_Error When this server has no zip extension.
 	 * @throws RuntimeException When the zip cannot be made.
 	 */
 	public static function apply( array $job ): string {
 		$plain = OPEX_Jobs::file_path( $job );
 		if ( ! self::available() ) {
-			throw new RuntimeException( 'Could not compress the export file: the PHP zip extension is missing.' );
+			throw new OPEX_User_Error( esc_html__( 'Could not compress the export file: the PHP zip extension is missing.', 'open-export' ) );
 		}
 		if ( ! is_file( $plain ) ) {
 			throw new RuntimeException( 'Could not compress the export file: it is missing.' );

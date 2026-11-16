@@ -3,22 +3,54 @@
  * Streaming file writers. Each is stateless between batches: the exporter
  * calls start() once, append() per batch, finish() once. Files are opened
  * in append mode so a job can resume after any interruption.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output; WP_Filesystem cannot append to multi-gigabyte files across hundreds of requests.
 
+/**
+ * Base of every file writer, with the checkpoint and restore that make a batch safe to replay.
+ */
 abstract class OPEX_Writer {
 
+	/**
+	 * Path of the output file.
+	 *
+	 * @var string
+	 */
 	protected string $path;
+
+	/**
+	 * Column labels by field id, in output order.
+	 *
+	 * @var array<string, string>
+	 */
 	protected array $headers;
 
+	/**
+	 * Sets up a writer. Nothing is written until start().
+	 *
+	 * @param string $path    Output file path.
+	 * @param array  $headers Column labels by field id.
+	 */
 	public function __construct( string $path, array $headers ) {
 		$this->path    = $path;
 		$this->headers = $headers;
 	}
 
+	/**
+	 * The writer for a format.
+	 *
+	 * @param string $format  csv, json, xml, xlsx or html. Anything else gets CSV.
+	 * @param string $path    Output file path.
+	 * @param array  $headers Column labels by field id.
+	 * @param array  $options csv_delimiter, csv_encoding, csv_eol, csv_enclosure,
+	 *                        csv_quote_all, xml_template and title.
+	 * @throws OPEX_User_Error When Excel is asked for without the zip extension.
+	 */
 	public static function make( string $format, string $path, array $headers, array $options = array() ): OPEX_Writer {
 		switch ( $format ) {
 			case 'json':
@@ -30,8 +62,8 @@ abstract class OPEX_Writer {
 				}
 				return new OPEX_Writer_XML( $path, $headers );
 			case 'xlsx':
-				if ( ! class_exists( 'ZipArchive' ) ) {
-					throw new RuntimeException( 'Excel export needs the PHP zip extension, which is not installed on this server.' );
+				if ( ! OPEX_Compress::available() ) {
+					throw new OPEX_User_Error( esc_html__( 'Excel export needs the PHP zip extension, which is not installed on this server.', 'open-export' ) );
 				}
 				return new OPEX_Writer_XLSX( $path, $headers );
 			case 'html':
@@ -52,7 +84,9 @@ abstract class OPEX_Writer {
 	/**
 	 * Lists the output formats this server can write.
 	 *
-	 * @return array id => { label, extension, mime, available }.
+	 * @return array id => { label, extension, mime, available, reason }. The
+	 *               reason says why a format is not available, and is empty
+	 *               when it is.
 	 */
 	public static function formats(): array {
 		return array(
@@ -61,30 +95,35 @@ abstract class OPEX_Writer {
 				'extension' => 'csv',
 				'mime'      => 'text/csv',
 				'available' => true,
+				'reason'    => '',
 			),
 			'json' => array(
 				'label'     => __( 'JSON', 'open-export' ),
 				'extension' => 'json',
 				'mime'      => 'application/json',
 				'available' => true,
+				'reason'    => '',
 			),
 			'xml'  => array(
 				'label'     => __( 'XML', 'open-export' ),
 				'extension' => 'xml',
 				'mime'      => 'application/xml',
 				'available' => true,
+				'reason'    => '',
 			),
 			'xlsx' => array(
 				'label'     => __( 'Excel (XLSX)', 'open-export' ),
 				'extension' => 'xlsx',
 				'mime'      => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'available' => class_exists( 'ZipArchive' ),
+				'available' => OPEX_Compress::available(),
+				'reason'    => OPEX_Compress::available() ? '' : __( 'Excel files need the PHP zip extension, which this server does not have.', 'open-export' ),
 			),
 			'html' => array(
 				'label'     => __( 'HTML table', 'open-export' ),
 				'extension' => 'html',
 				'mime'      => 'text/html',
 				'available' => true,
+				'reason'    => '',
 			),
 		);
 	}
@@ -142,7 +181,8 @@ abstract class OPEX_Writer {
 	 *
 	 * @param string $file Path.
 	 * @param int    $size Bytes to keep.
-	 * @throws RuntimeException When the file is already shorter or cannot be opened.
+	 * @throws OPEX_User_Error When the file is already shorter.
+	 * @throws RuntimeException When the file cannot be opened.
 	 */
 	protected static function truncate_to( string $file, int $size ): void {
 		$have = self::file_size( $file );
@@ -150,7 +190,7 @@ abstract class OPEX_Writer {
 			return;
 		}
 		if ( $have < $size ) {
-			throw new RuntimeException( 'The export file is shorter than expected, so the export cannot continue safely. Start a new export.' );
+			throw new OPEX_User_Error( esc_html__( 'The export file is shorter than expected, so the export cannot continue safely. Start a new export.', 'open-export' ) );
 		}
 		$handle = fopen( $file, 'r+b' );
 		if ( false === $handle || ! ftruncate( $handle, $size ) ) {
@@ -179,13 +219,31 @@ abstract class OPEX_Writer {
 		return "'" . $value;
 	}
 
+	/**
+	 * Creates the file and writes what comes before the first row.
+	 */
 	abstract public function start(): void;
 
-	/** @param array $rows list of assoc arrays keyed by field id. */
+	/**
+	 * Adds one batch of rows after the ones already written.
+	 *
+	 * @param array $rows        Rows keyed by field id.
+	 * @param bool  $first_batch True for the first batch, for formats that separate rows.
+	 */
 	abstract public function append( array $rows, bool $first_batch ): void;
 
+	/**
+	 * Writes what comes after the last row.
+	 */
 	abstract public function finish(): void;
 
+	/**
+	 * Opens the output file for appending. Each call is a fresh open, because
+	 * the next batch may run in another PHP process.
+	 *
+	 * @return resource
+	 * @throws RuntimeException When the file cannot be opened.
+	 */
 	protected function open() {
 		$handle = fopen( $this->path, 'ab' );
 		if ( false === $handle ) {
@@ -195,10 +253,30 @@ abstract class OPEX_Writer {
 	}
 }
 
+/**
+ * CSV with a choice of delimiter, quote character, line ending and encoding.
+ */
 class OPEX_Writer_CSV extends OPEX_Writer {
 
+	/**
+	 * Cell separator: comma, semicolon or tab.
+	 *
+	 * @var string
+	 */
 	private string $delimiter;
+
+	/**
+	 * The encoding: utf8_bom, utf8, win1252 or utf16le.
+	 *
+	 * @var string
+	 */
 	private string $encoding;
+
+	/**
+	 * Record ending: lf or crlf.
+	 *
+	 * @var string
+	 */
 	private string $eol;
 
 	/**
@@ -215,6 +293,17 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 */
 	private bool $quote_all;
 
+	/**
+	 * Sets up the CSV options. An unknown value falls back to the default.
+	 *
+	 * @param string $path      Output file path.
+	 * @param array  $headers   Column labels by field id.
+	 * @param string $delimiter Cell separator.
+	 * @param string $encoding  utf8_bom, utf8, win1252 or utf16le.
+	 * @param string $eol       lf or crlf.
+	 * @param string $enclosure Quote character: " or '.
+	 * @param bool   $quote_all True to quote every cell.
+	 */
 	public function __construct( string $path, array $headers, string $delimiter = ',', string $encoding = 'utf8_bom', string $eol = 'lf', string $enclosure = '"', bool $quote_all = false ) {
 		parent::__construct( $path, $headers );
 		$this->delimiter = in_array( $delimiter, array( ',', ';', "\t" ), true ) ? $delimiter : ',';
@@ -224,6 +313,9 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		$this->quote_all = $quote_all;
 	}
 
+	/**
+	 * Writes the byte order mark the encoding needs, then the header row.
+	 */
 	public function start(): void {
 		$handle = $this->open();
 		if ( 'utf16le' === $this->encoding ) {
@@ -236,6 +328,12 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		fclose( $handle );
 	}
 
+	/**
+	 * Adds one batch of rows, each cell guarded against formula injection.
+	 *
+	 * @param array $rows        Rows keyed by field id.
+	 * @param bool  $first_batch Unused: CSV rows need no separator.
+	 */
 	public function append( array $rows, bool $first_batch ): void {
 		$handle = $this->open();
 		foreach ( $rows as $row ) {
@@ -248,18 +346,25 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		fclose( $handle );
 	}
 
+	/**
+	 * CSV has nothing after the last row.
+	 */
 	public function finish(): void {}
 
 	/**
 	 * Writes one record, applying the line ending and encoding options.
-	 * The default options take the plain fputcsv path, so output is unchanged.
+	 *
+	 * The escape argument is empty on purpose. With PHP's default backslash,
+	 * a cell holding a backslash before a quote is written in a way RFC 4180
+	 * readers (Excel, Google Sheets, Python's csv module) read back wrong.
+	 * Empty means a quote inside a cell is always doubled, the RFC rule.
 	 *
 	 * @param resource $handle Open file handle.
 	 * @param array    $fields Cell values.
 	 */
 	private function put( $handle, array $fields ): void {
 		if ( ! $this->quote_all && in_array( $this->encoding, array( 'utf8_bom', 'utf8' ), true ) && 'lf' === $this->eol ) {
-			fputcsv( $handle, $fields, $this->delimiter, $this->enclosure, '\\' );
+			fputcsv( $handle, $fields, $this->delimiter, $this->enclosure, '' );
 			return;
 		}
 		$line = $this->quote_all ? $this->quoted_line( $fields ) : $this->csv_line( $fields );
@@ -279,13 +384,14 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * One record as fputcsv writes it, with only the cells that need it quoted.
 	 *
 	 * @param array $fields Cell values.
+	 * @throws RuntimeException When no temporary stream can be opened.
 	 */
 	private function csv_line( array $fields ): string {
 		$temp = fopen( 'php://temp', 'w+b' );
 		if ( false === $temp ) {
 			throw new RuntimeException( 'Could not open export file for writing.' );
 		}
-		fputcsv( $temp, $fields, $this->delimiter, $this->enclosure, '\\' );
+		fputcsv( $temp, $fields, $this->delimiter, $this->enclosure, '' );
 		rewind( $temp );
 		$line = (string) stream_get_contents( $temp );
 		fclose( $temp );
@@ -377,14 +483,26 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	}
 }
 
+/**
+ * A JSON array with one object per row, written a batch at a time.
+ */
 class OPEX_Writer_JSON extends OPEX_Writer {
 
+	/**
+	 * Opens the array.
+	 */
 	public function start(): void {
 		$handle = $this->open();
 		fwrite( $handle, "[\n" );
 		fclose( $handle );
 	}
 
+	/**
+	 * Adds one object per row, keyed by column label.
+	 *
+	 * @param array $rows        Rows keyed by field id.
+	 * @param bool  $first_batch True when no row has been written yet, so no comma comes first.
+	 */
 	public function append( array $rows, bool $first_batch ): void {
 		$handle = $this->open();
 		$first  = $first_batch;
@@ -399,6 +517,9 @@ class OPEX_Writer_JSON extends OPEX_Writer {
 		fclose( $handle );
 	}
 
+	/**
+	 * Closes the array.
+	 */
 	public function finish(): void {
 		$handle = $this->open();
 		fwrite( $handle, "\n]\n" );
@@ -406,14 +527,26 @@ class OPEX_Writer_JSON extends OPEX_Writer {
 	}
 }
 
+/**
+ * Plain XML with one element per row.
+ */
 class OPEX_Writer_XML extends OPEX_Writer {
 
+	/**
+	 * Writes the declaration and opens the root element.
+	 */
 	public function start(): void {
 		$handle = $this->open();
 		fwrite( $handle, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<records>\n" );
 		fclose( $handle );
 	}
 
+	/**
+	 * Adds one record element per row, with one child per column.
+	 *
+	 * @param array $rows        Rows keyed by field id.
+	 * @param bool  $first_batch Unused: XML records need no separator.
+	 */
 	public function append( array $rows, bool $first_batch ): void {
 		$handle = $this->open();
 		foreach ( $rows as $row ) {
@@ -427,12 +560,21 @@ class OPEX_Writer_XML extends OPEX_Writer {
 		fclose( $handle );
 	}
 
+	/**
+	 * Closes the root element.
+	 */
 	public function finish(): void {
 		$handle = $this->open();
 		fwrite( $handle, "</records>\n" );
 		fclose( $handle );
 	}
 
+	/**
+	 * An XML element name made from a column label: anything not allowed in
+	 * a name becomes an underscore, and a name may not start with a digit.
+	 *
+	 * @param string $label Column label.
+	 */
 	private function element_name( string $label ): string {
 		$name = preg_replace( '/[^A-Za-z0-9_\-]/', '_', $label );
 		if ( '' === $name || ! preg_match( '/^[A-Za-z_]/', $name ) ) {

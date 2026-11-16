@@ -42,6 +42,15 @@ class SourcesTest extends CharacterizationCase {
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'sources' )]
 	public function test_source_through_engine( string $source, array $fields, int $expected ): void {
 		global $wpdb;
+		$network = array(
+			'posts_post' => 'the multisite main site uses pretty permalinks, the golden uses ?p= links.',
+			'posts_page' => 'the multisite main site uses pretty permalinks, the golden uses ?p= links.',
+			'users'      => 'the users table is shared by every site of the network.',
+			'comments'   => 'the network seed writes WooCommerce order notes with another address.',
+		);
+		if ( isset( $network[ $this->dataName() ] ) ) {
+			$this->single_site_only( $network[ $this->dataName() ] );
+		}
 		$source = str_replace( '{prefix}', $wpdb->prefix, $source );
 		$name   = 'source-' . preg_replace( '/[^a-z0-9]+/i', '-', $this->dataName() );
 		$raw    = array( 'source' => $source, 'fields' => $fields, 'batch_size' => 10 );

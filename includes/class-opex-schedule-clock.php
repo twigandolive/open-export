@@ -10,6 +10,9 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Works out when a schedule runs next. It has no side effects, so tests can check the time zone edge cases directly.
+ */
 class OPEX_Schedule_Clock {
 
 	/**
@@ -87,7 +90,7 @@ class OPEX_Schedule_Clock {
 			$want = $schedule['monthday'] ?? 1;
 			$dom  = (int) $day->format( 'j' );
 			$last = (int) $day->format( 't' );
-			$ok   = ( 'last' === $want ) ? ( $dom === $last ) : ( $dom === min( (int) $want, $last ) );
+			$ok   = ( 'last' === $want ) ? ( $last === $dom ) : ( min( (int) $want, $last ) === $dom );
 			if ( ! $ok ) {
 				return array();
 			}

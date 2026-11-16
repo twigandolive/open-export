@@ -5,10 +5,15 @@
  *
  * Meta key sampling and grouping live in OPEX_Catalog_Meta. Other code calls
  * them through this class.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Lists the sources and the fields each one offers.
+ */
 class OPEX_Catalog {
 
 	private const POST_TYPE_SKIP = array(
@@ -171,12 +176,12 @@ class OPEX_Catalog {
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- table inventory, cached in a transient below.
-		$status = $wpdb->get_results( 'SHOW TABLE STATUS' );
+		$status = $wpdb->get_results( 'SHOW TABLE STATUS', ARRAY_A );
 		$tables = array();
 		foreach ( (array) $status as $row ) {
 			$tables[] = array(
-				'name' => (string) $row->Name,
-				'rows' => (int) $row->Rows,
+				'name' => (string) ( $row['Name'] ?? '' ),
+				'rows' => (int) ( $row['Rows'] ?? 0 ),
 			);
 		}
 
@@ -185,9 +190,17 @@ class OPEX_Catalog {
 		return $tables;
 	}
 
-	/** Per-request memo of table names (name => true). Null until first use. */
+	/**
+	 * Per-request memo of table names (name => true). Null until first use.
+	 *
+	 * @var array<string, bool>|null
+	 */
 	private static $table_names = null;
-	/** Per-request memo of column definitions, by table name. */
+	/**
+	 * Per-request memo of column definitions, by table name.
+	 *
+	 * @var array<string, array>
+	 */
 	private static $column_memo = array();
 
 	/** Forget the table list and every column list. A site switch keeps the per-site transient. */
@@ -222,15 +235,15 @@ class OPEX_Catalog {
 		}
 
 		$safe = str_replace( '`', '', $table );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- identifier validated against SHOW TABLE STATUS above; identifiers cannot be parameterized.
-		$cols = $wpdb->get_results( "DESCRIBE `{$safe}`" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a table name cannot be a placeholder; it is checked against SHOW TABLE STATUS above.
+		$cols = $wpdb->get_results( "DESCRIBE `{$safe}`", ARRAY_A );
 
 		$out = array();
 		foreach ( (array) $cols as $col ) {
 			$out[] = array(
-				'name' => (string) $col->Field,
-				'type' => (string) $col->Type,
-				'pk'   => 'PRI' === $col->Key,
+				'name' => (string) ( $col['Field'] ?? '' ),
+				'type' => (string) ( $col['Type'] ?? '' ),
+				'pk'   => 'PRI' === ( $col['Key'] ?? '' ),
 			);
 		}
 		self::$column_memo[ $table ] = $out;
@@ -267,6 +280,11 @@ class OPEX_Catalog {
 		return array();
 	}
 
+	/**
+	 * Field groups of a post type: core columns, computed fields, taxonomies and meta.
+	 *
+	 * @param string $post_type Post type.
+	 */
 	private static function post_fields( string $post_type ): array {
 		$core = OPEX_Core_Columns::for_type( 'posts' );
 
@@ -322,6 +340,9 @@ class OPEX_Catalog {
 		return array_merge( $groups, self::grouped_meta( self::sample_meta_keys( 'posts', $post_type ), self::acf_keys() ) );
 	}
 
+	/**
+	 * Field groups of users. Credential columns are left out.
+	 */
 	private static function user_fields(): array {
 		$core = OPEX_Core_Columns::for_type( 'users' );
 
@@ -343,6 +364,9 @@ class OPEX_Catalog {
 		return array_merge( $groups, self::grouped_meta( OPEX_Access::user_meta_keys( self::sample_meta_keys( 'users' ) ), self::acf_keys() ) );
 	}
 
+	/**
+	 * Field groups of comments.
+	 */
 	private static function comment_fields(): array {
 		$core = OPEX_Core_Columns::for_type( 'comments' );
 
@@ -355,6 +379,11 @@ class OPEX_Catalog {
 		return array_merge( $groups, self::grouped_meta( self::sample_meta_keys( 'comments' ), array() ) );
 	}
 
+	/**
+	 * Field groups of a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name.
+	 */
 	private static function term_fields( string $taxonomy ): array {
 		$core = OPEX_Core_Columns::for_type( 'terms' );
 
@@ -367,6 +396,11 @@ class OPEX_Catalog {
 		return array_merge( $groups, self::grouped_meta( self::sample_meta_keys( 'terms', $taxonomy ), self::acf_keys() ) );
 	}
 
+	/**
+	 * The one field group of a raw table: its columns.
+	 *
+	 * @param string $table Table name, already checked.
+	 */
 	private static function table_fields( string $table ): array {
 		$fields = array();
 		foreach ( self::table_columns( $table ) as $col ) {
@@ -386,6 +420,11 @@ class OPEX_Catalog {
 		);
 	}
 
+	/**
+	 * A picker entry for a core column.
+	 *
+	 * @param string $col Column name.
+	 */
 	private static function core_field( string $col ): array {
 		return array(
 			'id'    => 'core:' . $col,

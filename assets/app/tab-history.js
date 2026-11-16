@@ -36,7 +36,7 @@
 		let loadState = 'idle';
 		let loadError = null;
 		let schedulesAsked = false;
-		// The send again button needs POST /jobs/{id}/deliver (spec 3.5).
+		// The send again button needs POST /jobs/{id}/deliver, which an older server does not have.
 		let canDeliver = false;
 
 		app.append( panel, [ messages, body ] );

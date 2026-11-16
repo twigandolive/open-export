@@ -10,9 +10,12 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Runs exports and deliveries from cron, without a browser.
+ */
 class OPEX_Runner {
 
-	private const STALL_AFTER  = 600;
+	public const STALL_AFTER   = 600;
 	private const DELIVER_LOCK = 300;
 	private const HOOKS        = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
 
@@ -79,13 +82,15 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Record that a batch just ran. */
+	/** Records when the last batch ran, so a stalled background job can be spotted. */
 	private static function stamp( string $job_id ): void {
-		$job = OPEX_Jobs::get( $job_id );
-		if ( $job ) {
-			$job['heartbeat'] = time();
-			OPEX_Jobs::save( $job );
-		}
+		OPEX_Jobs::update(
+			$job_id,
+			static function ( array $job ): array {
+				$job['heartbeat'] = time();
+				return $job;
+			}
+		);
 	}
 
 	/** Schedule an immediate background run of a job, once. */
@@ -206,12 +211,9 @@ class OPEX_Runner {
 			if ( ! $job || ! self::has_pending( $job ) ) {
 				return;
 			}
-			$list  = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ) );
-			$fresh = OPEX_Jobs::get( $job_id );
-			if ( $fresh ) {
-				$fresh['deliveries'] = $list;
-				OPEX_Jobs::save( $fresh );
-				self::queue_retry( $job_id, $list );
+			$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ) );
+			if ( self::save_deliveries( $job_id, $deliveries ) ) {
+				self::queue_retry( $job_id, $deliveries );
 			}
 		} finally {
 			OPEX_Lock::release( 'deliver_' . $job_id, $token );
@@ -241,12 +243,9 @@ class OPEX_Runner {
 		try {
 			$job = OPEX_Jobs::get( $job_id );
 			if ( $job && self::has_pending( $job ) ) {
-				$list  = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), true );
-				$fresh = OPEX_Jobs::get( $job_id );
-				if ( $fresh ) {
-					$fresh['deliveries'] = $list;
-					OPEX_Jobs::save( $fresh );
-					self::queue_retry( $job_id, $list );
+				$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), true );
+				if ( self::save_deliveries( $job_id, $deliveries ) ) {
+					self::queue_retry( $job_id, $deliveries );
 				}
 			}
 		} finally {
@@ -257,14 +256,32 @@ class OPEX_Runner {
 	}
 
 	/**
+	 * Store the delivery list on the job as it is stored now.
+	 *
+	 * @param string $job_id Job id.
+	 * @param array  $deliveries   The job's deliveries after this pass.
+	 * @return bool False when the job was deleted meanwhile.
+	 */
+	private static function save_deliveries( string $job_id, array $deliveries ): bool {
+		$saved = OPEX_Jobs::update(
+			$job_id,
+			static function ( array $job ) use ( $deliveries ): array {
+				$job['deliveries'] = $deliveries;
+				return $job;
+			}
+		);
+		return null !== $saved;
+	}
+
+	/**
 	 * Schedule the next delivery attempt, if any item still has one coming.
 	 *
 	 * @param string $job_id Job id.
-	 * @param array  $list   The job's deliveries after this pass.
+	 * @param array  $deliveries   The job's deliveries after this pass.
 	 */
-	private static function queue_retry( string $job_id, array $list ): void {
+	private static function queue_retry( string $job_id, array $deliveries ): void {
 		wp_clear_scheduled_hook( 'opex_deliver', array( $job_id ) );
-		$next = OPEX_Delivery::next_attempt_at( $list );
+		$next = OPEX_Delivery::next_attempt_at( $deliveries );
 		if ( $next > 0 ) {
 			wp_schedule_single_event( max( $next, time() + 1 ), 'opex_deliver', array( $job_id ) );
 		}

@@ -65,7 +65,7 @@
 		const formats = ctx.options.formats || {};
 		const formatName = app.uid( 'opex-format' );
 		const speedName = app.uid( 'opex-speed' );
-		const formatInputs = Object.keys( formats ).map( ( id ) => choice( formatName, id, formats[ id ].label, describe( id ), { reason: formats[ id ].available ? '' : unavailable( id ) } ) );
+		const formatInputs = Object.keys( formats ).map( ( id ) => choice( formatName, id, formats[ id ].label, describe( id ), { reason: formats[ id ].available ? '' : formats[ id ].reason || unavailable( id ) } ) );
 		formatInputs.forEach( ( c ) => c.input.addEventListener( 'change', () => {
 			ctx.config.format = c.input.value;
 			if ( 'xlsx' === ctx.config.format ) {
@@ -111,6 +111,8 @@
 
 		// Zip compression of the finished file.
 		const canZip = !! ( ctx.options.features || {} ).compress;
+		// The server says why when it cannot zip. An older server does not, and then the screen says it.
+		const zipReason = ( ctx.options.compression || {} ).reason || unavailable( 'xlsx' );
 		const zipReasonId = canZip ? null : app.uid( 'opex-reason' );
 		const zip = el( 'input', { type: 'checkbox', disabled: ! canZip, 'aria-describedby': zipReasonId } );
 		zip.addEventListener( 'change', () => {
@@ -121,7 +123,7 @@
 			el( 'legend', {}, __( 'Compression', 'open-export' ) ),
 			el( 'label', { class: 'opex-checkline' }, [ zip, __( 'Compress the finished file as a zip', 'open-export' ) ] ),
 			el( 'p', { class: 'opex-help' }, __( 'The download, email attachment, webhook link and server upload get one .zip file that holds the export.', 'open-export' ) ),
-			canZip ? null : el( 'p', { class: 'opex-choice-reason', id: zipReasonId }, [ app.icon( 'warning', { sm: true, cls: 'opex-c-warning' } ), unavailable( 'xlsx' ) ] ),
+			canZip ? null : el( 'p', { class: 'opex-choice-reason', id: zipReasonId }, [ app.icon( 'warning', { sm: true, cls: 'opex-c-warning' } ), zipReason ] ),
 		] );
 
 		// XML template editor.
@@ -331,7 +333,7 @@
 				const list = [];
 				const def = formats[ ctx.config.format ];
 				if ( def && ! def.available ) {
-					list.push( { message: unavailable( ctx.config.format ), focus: () => formatInputs[ 0 ].input.focus() } );
+					list.push( { message: def.reason || unavailable( ctx.config.format ), focus: () => formatInputs[ 0 ].input.focus() } );
 				}
 				if ( 'zip' === ctx.config.compress && ! canZip && 'xlsx' !== ctx.config.format ) {
 					list.push( { message: __( 'Zip compression needs the PHP zip extension. Turn compression off.', 'open-export' ), focus: () => zip.focus() } );

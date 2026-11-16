@@ -19,6 +19,10 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
+// The defaults below take every argument an override may need and ignore the
+// ones they do not, so the unused-parameter check does not apply to this file.
+// phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter
+
 /**
  * Base class every source provider extends.
  */

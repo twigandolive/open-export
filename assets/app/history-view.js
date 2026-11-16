@@ -13,7 +13,7 @@
  *   startedBy( job )        Who or what started the job, with the schedule name.
  *   formatLabel( job )      Format label from /options.
  *   detail( job, ctx )      The detail panel. Pass ctx.onDeliver( job ) only
- *                           when the server has the deliver route (spec 3.5).
+ *                           when the server has the deliver route.
  *   detailKey( job )        A string that changes when the detail would change.
  */
 ( function () {
@@ -25,9 +25,9 @@
 	const ui = app.ui;
 
 	// The server tries a delivery at most three times (class-opex-delivery.php).
-	const MAX_ATTEMPTS = 3;
+	const maxAttempts = () => app.store.limit( 'delivery_attempts', 3 );
 	// A background job with no batch for this long is restarted by the hourly maintenance task.
-	const STALL_SECONDS = 600;
+	const stallSeconds = () => app.store.limit( 'stall_seconds', 600 );
 
 	function statusKind( job ) {
 		return 'error' === job.status ? 'failed' : job.status;
@@ -100,8 +100,8 @@
 	}
 
 	/**
-	 * The schedule name comes from the job when the server sends it (spec
-	 * 3.5 schedule_name), otherwise from the schedules list.
+	 * The schedule name comes from the job's schedule_name when the server
+	 * sends it, otherwise from the schedules list.
 	 *
 	 * @param {Object} job Exposed job.
 	 * @return {string} Name or "".
@@ -173,13 +173,13 @@
 		const parts = [];
 		if ( item.attempts > 0 ) {
 			/* translators: 1: attempt number, 2: most attempts. */
-			parts.push( sprintf( __( 'Attempt %1$d of %2$d.', 'open-export' ), item.attempts, MAX_ATTEMPTS ) );
+			parts.push( sprintf( __( 'Attempt %1$d of %2$d.', 'open-export' ), item.attempts, maxAttempts() ) );
 		}
 		if ( item.message ) {
 			parts.push( item.message );
 		}
 		if ( 'failed' === item.status ) {
-			parts.push( item.attempts < MAX_ATTEMPTS ? __( 'Open Export will try again.', 'open-export' ) : __( 'No more automatic tries.', 'open-export' ) );
+			parts.push( item.attempts < maxAttempts() ? __( 'Open Export will try again.', 'open-export' ) : __( 'No more automatic tries.', 'open-export' ) );
 		}
 		if ( item.time > 0 ) {
 			/* translators: %s: date and time. */
@@ -190,7 +190,7 @@
 
 	function isStalled( job ) {
 		const beat = Number( job.heartbeat ) || 0;
-		return 'background' === job.mode && 'running' === job.status && beat > 0 && Date.now() / 1000 - beat > STALL_SECONDS;
+		return 'background' === job.mode && 'running' === job.status && beat > 0 && Date.now() / 1000 - beat > stallSeconds();
 	}
 
 	// Offered for a finished job with a delivery still to send. The caller
@@ -207,7 +207,15 @@
 			top.push( ui.notice( 'error', job.error, { tight: true, role: 'note' } ) );
 		}
 		if ( isStalled( job ) ) {
-			top.push( ui.notice( 'warning', __( 'This background export has made no progress for 10 minutes. The maintenance task restarts it within the hour.', 'open-export' ), { tight: true, role: 'note' } ) );
+			top.push( ui.notice(
+				'warning',
+				sprintf(
+					/* translators: %d: minutes. */
+					__( 'This background export has made no progress for %d minutes. The maintenance task restarts it within the hour.', 'open-export' ),
+					Math.round( stallSeconds() / 60 )
+				),
+				{ tight: true, role: 'note' }
+			) );
 		}
 		if ( job.finished > 0 ) {
 			/* translators: %s: date and time. */

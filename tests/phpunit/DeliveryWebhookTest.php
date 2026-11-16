@@ -183,4 +183,54 @@ class DeliveryWebhookTest extends TestCase {
 		// The receiver overwrites its record on every request, so a followed redirect would show /hook.
 		$this->assertSame( '/redirect', $this->recorded()['path'] );
 	}
+
+	public function test_pin_is_the_address_the_check_saw() {
+		$this->assertNull( OPEX_Delivery_Webhook::pin_for( 'http://127.0.0.1:8123/hook' ), 'An IP address needs no lookup, so nothing is pinned.' );
+		$this->assertInstanceOf( WP_Error::class, OPEX_Delivery_Webhook::pin_for( 'https://localhost/hook' ), 'A private address needs the opt-in.' );
+		$this->assertInstanceOf( WP_Error::class, OPEX_Delivery_Webhook::pin_for( 'https://opex-no-such-host.invalid/hook' ) );
+
+		add_filter( 'http_request_host_is_external', '__return_true' );
+		$this->assertSame(
+			array(
+				'host' => 'localhost',
+				'port' => 443,
+				'ip'   => '127.0.0.1',
+			),
+			OPEX_Delivery_Webhook::pin_for( 'https://localhost/hook' )
+		);
+		$this->assertSame( 8123, OPEX_Delivery_Webhook::pin_for( 'http://localhost:8123/hook' )['port'] );
+	}
+
+	public function test_a_host_name_send_is_pinned_for_that_request_only() {
+		if ( ! self::$server ) {
+			$this->markTestSkipped( 'Could not start the local php -S receiver.' );
+		}
+		if ( ! function_exists( 'curl_init' ) ) {
+			$this->markTestSkipped( 'The pin works through cURL, which is not installed here.' );
+		}
+		$this->allow_loopback();
+		$url  = 'http://localhost:' . self::$server->port . '/hook';
+		$seen = array();
+		$spy  = static function ( $handle, $request, $request_url ) use ( &$seen ): void {
+			$seen[] = $request_url;
+		};
+		$hooked = static function (): int {
+			global $wp_filter;
+			return isset( $wp_filter['http_api_curl'] ) ? count( $wp_filter['http_api_curl']->callbacks, COUNT_RECURSIVE ) : 0;
+		};
+		$before = $hooked();
+		add_action( 'http_api_curl', $spy, 20, 3 );
+		try {
+			$job = $this->make_job();
+			$res = OPEX_Delivery_Webhook::send( $job, array( 'url' => $url ), OPEX_Jobs::file_path( $job ) );
+		} finally {
+			remove_action( 'http_api_curl', $spy, 20 );
+		}
+		$after = $hooked();
+
+		$this->assertTrue( $res );
+		$this->assertSame( array( $url ), $seen, 'The request went through cURL, where the pin applies.' );
+		$this->assertSame( '/hook', $this->recorded()['path'] );
+		$this->assertSame( $before, $after, 'The pin hook is gone after the send.' );
+	}
 }

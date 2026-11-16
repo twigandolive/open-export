@@ -1,9 +1,9 @@
 /**
  * Open Export admin screen: the delivery block (shared component).
  *
- * Reads and writes the delivery object of spec 2.6:
+ * Reads and writes the delivery object the server stores:
  *   email:       { enabled, to: [ up to 10 addresses ], mode: 'link'|'attach', subject }
- *   webhook:     { enabled, url, secret }   (write-only secret; has_secret on read, clear_secret to remove)
+ *   webhook:     { enabled, url, secret }   (the secret is write-only: has_secret on read, clear_secret to remove)
  *   destination: { enabled, id }
  * The Export tab sends it with a new job. The Schedules tab will reuse it.
  * The screen applies the server's rules before sending, because the server
@@ -22,9 +22,10 @@
 	const ui = app.ui;
 	const store = app.store;
 
-	const MAX_TO = 10; // OPEX_Delivery: at most 10 addresses.
-	const MAX_SUBJECT = 200;
-	const MAX_SECRET = 256;
+	// Limits from /options (OPEX_Delivery), with the same numbers as fallbacks.
+	const maxTo = () => store.limit( 'email_recipients', 10 );
+	const maxSubject = () => store.limit( 'email_subject', 200 );
+	const maxSecret = () => store.limit( 'webhook_secret', 256 );
 	const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 	function normalize( raw ) {
@@ -66,7 +67,12 @@
 
 		// Email.
 		const to = el( 'input', { type: 'text', class: 'opex-w-full', autocomplete: 'off' } );
-		fields.to = ui.field( { label: __( 'Addresses', 'open-export' ), control: to, help: __( 'Up to 10 addresses, separated by commas, spaces or semicolons.', 'open-export' ) } );
+		fields.to = ui.field( {
+			label: __( 'Addresses', 'open-export' ),
+			control: to,
+			/* translators: %d: most addresses. */
+			help: sprintf( __( 'Up to %d addresses, separated by commas, spaces or semicolons.', 'open-export' ), maxTo() ),
+		} );
 		const modeName = app.uid( 'opex-mode' );
 		const modeLabel = app.uid( 'opex-l' );
 		const modes = [ [ 'attach', __( 'Attach the file', 'open-export' ) ], [ 'link', __( 'Send a download link', 'open-export' ) ] ].map( ( pair ) => {
@@ -214,13 +220,13 @@
 				} else if ( bad.length ) {
 					/* translators: %s: list of addresses. */
 					add( fields.to, to, sprintf( __( 'These are not email addresses: %s', 'open-export' ), bad.join( ', ' ) ) );
-				} else if ( list.length > MAX_TO ) {
+				} else if ( list.length > maxTo() ) {
 					/* translators: %d: most addresses. */
-					add( fields.to, to, sprintf( __( 'Enter at most %d addresses.', 'open-export' ), MAX_TO ) );
+					add( fields.to, to, sprintf( __( 'Enter at most %d addresses.', 'open-export' ), maxTo() ) );
 				}
-				if ( value.email.subject.length > MAX_SUBJECT ) {
+				if ( value.email.subject.length > maxSubject() ) {
 					/* translators: %d: most characters. */
-					add( fields.subject, subject, sprintf( __( 'Use at most %d characters.', 'open-export' ), MAX_SUBJECT ) );
+					add( fields.subject, subject, sprintf( __( 'Use at most %d characters.', 'open-export' ), maxSubject() ) );
 				}
 			}
 			if ( value.webhook.enabled ) {
@@ -235,9 +241,9 @@
 				} else if ( 'https:' !== parsed.protocol && ! isThisSite( parsed ) ) {
 					add( fields.url, url, __( 'The webhook address must start with https.', 'open-export' ) );
 				}
-				if ( secret.value.length > MAX_SECRET ) {
+				if ( secret.value.length > maxSecret() ) {
 					/* translators: %d: most characters. */
-					add( fields.secret, secret, sprintf( __( 'Use at most %d characters.', 'open-export' ), MAX_SECRET ) );
+					add( fields.secret, secret, sprintf( __( 'Use at most %d characters.', 'open-export' ), maxSecret() ) );
 				}
 			}
 			if ( value.destination.enabled && ! destination.input.disabled && ! value.destination.id ) {

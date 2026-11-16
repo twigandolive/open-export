@@ -11,7 +11,7 @@
  *
  *   recipe_to_config() takes the export the assistant asks for and turns it
  *                      into a validated config, reporting exactly what it could
- *                      not honour rather than quietly dropping it.
+ *                      not honor rather than quietly dropping it.
  *
  * A recipe is only ever a *request*. It selects from what already exists: it
  * cannot name a column, table, or operator the plugin would not otherwise
@@ -19,10 +19,15 @@
  *
  * The per-source description lives in OPEX_Schema_Sources and the recipe
  * resolver in OPEX_Schema_Resolver. Other code calls them through this class.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Builds the capability document and resolves recipes against it.
+ */
 class OPEX_Schema {
 
 	/** Bumped when the document shape changes incompatibly. */
@@ -34,7 +39,7 @@ class OPEX_Schema {
 	 *
 	 * @param string $source_id Source to describe in full. Empty means none.
 	 * @param bool   $all       Describe every source in full. Large sites will
-	 *                          produce a big document; the caller opts in.
+	 *                          produce a big document, so the caller opts in.
 	 */
 	public static function build( string $source_id = '', bool $all = false ): array {
 		$groups = OPEX_Catalog::sources();
@@ -99,6 +104,9 @@ class OPEX_Schema {
 		);
 	}
 
+	/**
+	 * The site's name, address, time zone and versions, so a recipe is written for this site.
+	 */
 	private static function site_info(): array {
 		$info = array(
 			'timezone'  => wp_timezone_string(),
@@ -165,6 +173,9 @@ class OPEX_Schema {
 		);
 	}
 
+	/**
+	 * The filter operators with a short meaning for each, for the assistant.
+	 */
 	private static function operators(): array {
 		$labels = array(
 			'eq'           => 'equals',
@@ -194,6 +205,9 @@ class OPEX_Schema {
 		return $out;
 	}
 
+	/**
+	 * The date range presets with their meanings.
+	 */
 	private static function date_presets(): array {
 		$out = array();
 		foreach ( OPEX_Dates::PRESETS as $preset ) {

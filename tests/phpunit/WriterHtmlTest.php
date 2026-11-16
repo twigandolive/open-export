@@ -110,6 +110,28 @@ class WriterHtmlTest extends TestCase {
 		$this->assertSame( 'Orders & <Refunds>', $doc->getElementsByTagName( 'title' )->item( 0 )->textContent );
 	}
 
+	/** Text that looks like an entity shows as typed: "&amp;" stays "&amp;", not "&". */
+	public function test_every_cell_shows_exactly_its_text(): void {
+		$path   = $this->path();
+		$values = array( '&amp;', 'A &lt; B', '&#8212; and &copy;', "Tom's \"quote\"" );
+		$writer = OPEX_Writer::make( 'html', $path, array( 'a' => '&amp; header' ), array( 'title' => 'R&amp;D' ) );
+		$writer->start();
+		$rows = array();
+		foreach ( $values as $value ) {
+			$rows[] = array( 'a' => $value );
+		}
+		$writer->append( $rows, true );
+		$writer->finish();
+		$doc = $this->dom( (string) file_get_contents( $path ) );
+
+		$this->assertSame( 'R&amp;D', $doc->getElementsByTagName( 'title' )->item( 0 )->textContent );
+		$this->assertSame( '&amp; header', $doc->getElementsByTagName( 'th' )->item( 0 )->textContent );
+		$cells = $doc->getElementsByTagName( 'td' );
+		foreach ( $values as $i => $value ) {
+			$this->assertSame( $value, $cells->item( $i )->textContent );
+		}
+	}
+
 	/** A batch replayed from a checkpoint, and a finish replayed, give the same page. */
 	public function test_checkpoint_replay(): void {
 		$headers = array( 'a' => 'A' );

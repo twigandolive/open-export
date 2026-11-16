@@ -5,12 +5,17 @@
  * wrong guess would match nothing.
  *
  * Part of the schema compartment. Other code reaches it through OPEX_Schema.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Describes one source for the capability document.
+ */
 class OPEX_Schema_Sources {
 
 	/** Values are only enumerated up to this many per field. */
@@ -18,7 +23,7 @@ class OPEX_Schema_Sources {
 
 	/**
 	 * Meta fields listed per source when describing several at once. A single
-	 * source is always described in full; this only bounds the overview, which
+	 * source is always described in full. This only bounds the overview, which
 	 * says so in the payload and points at the per-source call.
 	 */
 	private const MAX_META_IN_OVERVIEW = 120;
@@ -29,7 +34,7 @@ class OPEX_Schema_Sources {
 	 * @param string $source_id Source to describe.
 	 * @param array  $index     all_sources entries, for the label, tier and count.
 	 * @param bool   $overview  Trim the custom-field list. A single-source
-	 *                          request never trims; the overview says when it did.
+	 *                          request never trims. The overview says when it did.
 	 *
 	 * @internal Called by OPEX_Schema::build only.
 	 */
@@ -164,6 +169,11 @@ class OPEX_Schema_Sources {
 		return 'text';
 	}
 
+	/**
+	 * The name a person sees for a source.
+	 *
+	 * @param string $source_id Source id.
+	 */
 	private static function source_label( string $source_id ): string {
 		foreach ( OPEX_Catalog::sources() as $group ) {
 			foreach ( $group['items'] as $item ) {

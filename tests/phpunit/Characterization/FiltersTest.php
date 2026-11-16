@@ -134,6 +134,7 @@ class FiltersTest extends CharacterizationCase {
 	 * Negative meta operators also match users that lack the key.
 	 */
 	public function test_meta_on_users(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		$r = $this->all_ops( 'users', 'meta:opex_plan', array( 'eq' => 'pro', 'neq' => 'pro', 'contains' => 'e', 'not_contains' => 'e', 'starts_with' => 'f', 'ends_with' => 'm', 'gt' => 'free', 'gte' => 'free', 'lt' => 'pro', 'lte' => 'pro', 'in' => 'free,team', 'not_in' => 'free,team' ) );
 		$this->assert_golden_json( 'filters-meta-users', $r );
 	}
@@ -152,6 +153,7 @@ class FiltersTest extends CharacterizationCase {
 	 * The roles filter on users.
 	 */
 	public function test_computed_roles(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		$r = $this->all_ops( 'users', 'computed:roles', array( 'eq' => 'editor', 'neq' => 'editor', 'contains' => 'edit', 'not_contains' => 'edit', 'starts_with' => 'ed', 'ends_with' => 'or', 'gt' => 'a', 'gte' => 'a', 'lt' => 'z', 'lte' => 'z', 'in' => 'editor,author', 'not_in' => 'editor,author' ) );
 		$this->assertSame( 5, $r['eq']['count'] );
 		$this->assertSame( 21, $r['neq']['count'] );
@@ -164,6 +166,7 @@ class FiltersTest extends CharacterizationCase {
 	 * Operators on a user core field and a comment core field.
 	 */
 	public function test_other_sources_core(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		$u = $this->all_ops( 'users', 'core:user_email', array( 'eq' => 'user5@example.test', 'neq' => 'user5@example.test', 'contains' => 'user1', 'not_contains' => 'user1', 'starts_with' => 'user2', 'ends_with' => '9@example.test', 'gt' => 'user5', 'gte' => 'user5', 'lt' => 'user5', 'lte' => 'user5', 'in' => 'user1@example.test,user2@example.test', 'not_in' => 'user1@example.test' ) );
 		$c = $this->all_ops( 'comments', 'core:comment_approved', array( 'eq' => '0', 'neq' => '0', 'contains' => '1', 'not_contains' => '1', 'starts_with' => '1', 'ends_with' => '0', 'gt' => '0', 'gte' => '1', 'lt' => '1', 'lte' => '0', 'in' => '0,spam', 'not_in' => '0' ) );
 		$this->assert_golden_json( 'filters-user-email', $u );

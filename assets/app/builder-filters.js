@@ -56,17 +56,25 @@
 		const maxDepth = Number( ctx.limits.filter_depth ) || 3;
 		const maxRules = Number( ctx.limits.filter_rules ) || 50;
 
-		// /options sends operators since spec 3.5. An older server gets the old screen's list.
+		// /options sends the operators. An older server does not, and then the screen uses its own list.
 		function operators() {
 			const list = ( ctx.options.operators || [] ).filter( ( op ) => op && op.id );
 			return list.length ? list : fallbackOps();
 		}
 
-		// Computed fields cannot be filtered, except roles (OPEX_Query::is_filterable_field).
+		// The server marks each field `filterable`. An older server does not, and
+		// there computed fields are the ones a rule cannot use, except roles.
+		function canFilter( f ) {
+			if ( 'boolean' === typeof f.filterable ) {
+				return f.filterable;
+			}
+			return 0 !== f.id.indexOf( 'computed:' ) || 'computed:roles' === f.id;
+		}
+
 		function filterable() {
 			const groups = [];
 			( ( ctx.fields && ctx.fields.groups ) || [] ).forEach( ( group ) => {
-				const fields = ( group.fields || [] ).filter( ( f ) => 0 !== f.id.indexOf( 'computed:' ) || 'computed:roles' === f.id );
+				const fields = ( group.fields || [] ).filter( canFilter );
 				if ( fields.length ) {
 					groups.push( { label: group.label, fields } );
 				}

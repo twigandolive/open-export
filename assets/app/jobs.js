@@ -81,7 +81,7 @@
 
 	/**
 	 * Calls run until the job is no longer running. The id is held locally,
-	 * so deleting the job mid-run cannot break the loop (old bug S-29).
+	 * so deleting the job mid-run cannot break the loop.
 	 *
 	 * @param {string}  id     Job id.
 	 * @param {boolean} resume True only for the Resume button.

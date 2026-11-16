@@ -39,10 +39,12 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 
 	/**
 	 * Starts a new workbook: resets the sidecars and writes the header row.
+	 *
+	 * @throws OPEX_User_Error When there are more columns than a sheet holds.
 	 */
 	public function start(): void {
 		if ( count( $this->headers ) > self::MAX_COLS ) {
-			throw new RuntimeException( 'Excel sheets hold at most 16,384 columns. Choose fewer fields or use CSV.' );
+			throw new OPEX_User_Error( esc_html__( 'Excel sheets hold at most 16,384 columns. Choose fewer fields or use CSV.', 'open-export' ) );
 		}
 		$handle = $this->open();
 		fclose( $handle );
@@ -103,6 +105,8 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	/**
 	 * Builds the zip at the export path and removes the sidecars. Safe to
 	 * call twice: the second call finds no sidecar and does nothing.
+	 *
+	 * @throws RuntimeException When the zip cannot be written.
 	 */
 	public function finish(): void {
 		$rows = $this->rows_path();
@@ -141,6 +145,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param string $rows  Sidecar path.
 	 * @param string $sheet Output path.
+	 * @throws RuntimeException When a file cannot be read or written.
 	 */
 	private function build_sheet( string $rows, string $sheet ): void {
 		$out = fopen( $sheet, 'wb' );
@@ -167,17 +172,19 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param array $lines  List of lists of string cell values.
 	 * @param bool  $header True for the bold header row.
+	 * @throws OPEX_User_Error When the sheet is full or was never started.
+	 * @throws RuntimeException When the sidecar cannot be written.
 	 */
 	private function write_rows( array $lines, bool $header ): void {
 		$counter = $this->counter_path();
 		$next    = is_file( $counter ) ? (int) file_get_contents( $counter ) : 0;
 		if ( $next < 1 ) {
-			throw new RuntimeException( 'The Excel export was not started. Start the export again.' );
+			throw new OPEX_User_Error( esc_html__( 'The Excel export was not started. Start the export again.', 'open-export' ) );
 		}
 		$xml = '';
 		foreach ( $lines as $line ) {
 			if ( $next > self::MAX_ROWS ) {
-				throw new RuntimeException( 'This export has more rows than one Excel sheet can hold (1,048,576). Use CSV, or narrow the filters.' );
+				throw new OPEX_User_Error( esc_html__( 'This export has more rows than one Excel sheet can hold (1,048,576). Use CSV, or narrow the filters.', 'open-export' ) );
 			}
 			$xml .= $this->row_xml( $next, $line, $header );
 			++$next;
@@ -238,6 +245,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param string $file    Path.
 	 * @param string $content Content.
+	 * @throws RuntimeException When the file cannot be written.
 	 */
 	private function write_file( string $file, string $content ): void {
 		if ( false === file_put_contents( $file, $content, LOCK_EX ) ) {

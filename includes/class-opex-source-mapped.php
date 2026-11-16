@@ -28,7 +28,11 @@ defined( 'ABSPATH' ) || exit;
  */
 trait OPEX_Source_Mapped {
 
-	/** @var array<string, array<string, array>> Field definitions by defs_key(). */
+	/**
+	 * Field definitions, by defs_key().
+	 *
+	 * @var array<string, array<string, array>>
+	 */
 	private $mapped_defs = array();
 
 	/**
@@ -82,23 +86,23 @@ trait OPEX_Source_Mapped {
 		return $this->defs()[ $field ] ?? null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function has_field( string $field ): bool {
 		return null !== $this->def( $field );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function field_type( string $field ): string {
 		return (string) ( $this->def( $field )['type'] ?? 'text' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function resolve_field( string $field ): string {
 		$def = $this->def( $field );
 		return isset( $def['read'] ) ? (string) $def['read'] : $field;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function filter_expr( string $field ): ?string {
 		$def = $this->def( $field );
 		if ( isset( $def['filter'] ) ) {
@@ -107,13 +111,13 @@ trait OPEX_Source_Mapped {
 		return isset( $def['sql'] ) ? (string) $def['sql'] : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function is_filterable( string $field ): bool {
 		$def = $this->def( $field );
 		return ! isset( $def['php'] ) || isset( $def['filter'] ) || isset( $def['terms'] );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function filter_clause( string $field, string $op, string $value, array &$args ): ?string {
 		$def = $this->def( $field );
 		if ( null === $def ) {
@@ -129,7 +133,7 @@ trait OPEX_Source_Mapped {
 		return null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function flag_sql( string $field ): ?string {
 		$def = $this->def( $field );
 		if ( null === $def || 'boolean' !== ( $def['type'] ?? '' ) ) {
@@ -153,13 +157,13 @@ trait OPEX_Source_Mapped {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function row_alias( string $field ): ?string {
 		$def = $this->def( $field );
 		return isset( $def['sql'] ) ? 'wf_' . substr( $field, 4 ) : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function select_list( array $fields ): string {
 		$parts = array( $this->base_select() );
 		$seen  = array();
@@ -176,7 +180,7 @@ trait OPEX_Source_Mapped {
 		return implode( ', ', $parts );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function format_value( string $field, string $value ): string {
 		$def = $this->def( $field );
 		if ( null === $def ) {
@@ -199,7 +203,7 @@ trait OPEX_Source_Mapped {
 		return $value;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function field_groups(): array {
 		$buckets = array();
 		foreach ( $this->defs() as $id => $def ) {
@@ -219,7 +223,7 @@ trait OPEX_Source_Mapped {
 		return array_merge( $groups, $this->extra_groups() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function field_values( string $field ): array {
 		return array_values( (array) ( $this->def( $field )['values'] ?? array() ) );
 	}

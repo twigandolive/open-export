@@ -92,9 +92,9 @@
 				if ( rows.length > max ) {
 					/* translators: %s: most pairs. */
 					out[ name ] = sprintf( __( 'Use at most %s value pairs.', 'open-export' ), app.formatNumber( max ) );
-				} else if ( rows.some( ( row ) => row[ 0 ].length > B.pairs.MAX_LENGTH || row[ 1 ].length > B.pairs.MAX_LENGTH ) ) {
+				} else if ( rows.some( ( row ) => row[ 0 ].length > B.pairs.maxLength() || row[ 1 ].length > B.pairs.maxLength() ) ) {
 					/* translators: %s: most characters. */
-					out[ name ] = sprintf( __( 'Each value can have at most %s characters.', 'open-export' ), app.formatNumber( B.pairs.MAX_LENGTH ) );
+					out[ name ] = sprintf( __( 'Each value can have at most %s characters.', 'open-export' ), app.formatNumber( B.pairs.maxLength() ) );
 				} else if ( rows.some( ( row ) => ( seen.has( row[ 0 ] ) ? true : ( seen.add( row[ 0 ] ), false ) ) ) ) {
 					out[ name ] = __( 'Each value to replace can be listed only once.', 'open-export' );
 				}

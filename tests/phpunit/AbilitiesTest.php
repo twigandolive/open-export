@@ -30,8 +30,12 @@ class AbilitiesTest extends TestCase {
 	protected function tearDown(): void {
 		wp_set_current_user( $this->admin_id );
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+		// On a network wp_delete_user only removes the user from this site, so the user would stay.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 		foreach ( $this->made as $id ) {
-			wp_delete_user( $id );
+			is_multisite() ? wpmu_delete_user( $id ) : wp_delete_user( $id );
 		}
 		$this->reset_registry();
 	}

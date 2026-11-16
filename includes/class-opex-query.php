@@ -6,10 +6,15 @@
  *
  * The SQL building, counting and batch fetching live in OPEX_Query_Fetch.
  * Other code calls them through this class.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Front door of the query compartment: sources, fields and the SQL for one export.
+ */
 class OPEX_Query {
 
 	public const OPS = array(
@@ -49,6 +54,11 @@ class OPEX_Query {
 		return self::OPS;
 	}
 
+	/**
+	 * Whether an operator is one the filter rules know.
+	 *
+	 * @param string $op Operator id.
+	 */
 	public static function is_valid_op( string $op ): bool {
 		return in_array( $op, self::OPS, true );
 	}
@@ -91,7 +101,7 @@ class OPEX_Query {
 
 	/**
 	 * Fail closed when the last query ran into a database error. The detail
-	 * goes to the debug log only; the exception text stays generic.
+	 * goes to the debug log only. The exception text stays generic.
 	 *
 	 * @throws RuntimeException When the database reported an error.
 	 */
@@ -200,7 +210,7 @@ class OPEX_Query {
 
 	/**
 	 * Validate and decompose a source id like "posts:product" or "table:wp_options".
-	 * Returns null for unknown sources; downstream code never trusts raw input.
+	 * Returns null for unknown sources, so downstream code never trusts raw input.
 	 */
 	public static function parse_source( string $source_id ): ?array {
 		// A registered provider serves its own ids. The order provider keeps

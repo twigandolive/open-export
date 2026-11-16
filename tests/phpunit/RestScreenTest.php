@@ -47,8 +47,12 @@ class RestScreenTest extends TestCase {
 		}
 		$GLOBALS['wp_rest_server'] = null;
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+		// On a network wp_delete_user only removes the user from this site, so the user would stay.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 		foreach ( $this->users as $uid ) {
-			wp_delete_user( $uid );
+			is_multisite() ? wpmu_delete_user( $uid ) : wp_delete_user( $uid );
 		}
 	}
 

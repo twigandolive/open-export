@@ -25,6 +25,9 @@ class OPEX_Rest_Public {
 	private const FAIL_KEY   = 'opex_trig_fail_';
 	private const FAIL_LIMIT = 10;
 	private const FAIL_SPAN  = 600;
+	private const IP_KEY     = 'opex_trig_ip_';
+	private const IP_LIMIT   = 30;
+	private const TRIGGER    = '#^/open-export/v1/schedules/s[a-f0-9]{12}/trigger$#';
 
 	/**
 	 * Registers the routes.
@@ -48,6 +51,7 @@ class OPEX_Rest_Public {
 				),
 			)
 		);
+		add_filter( 'rest_request_after_callbacks', array( __CLASS__, 'retry_after' ), 10, 3 );
 
 		register_rest_route(
 			self::NS,
@@ -95,6 +99,11 @@ class OPEX_Rest_Public {
 	 * constant time. An unknown id compares against a dummy key so the work
 	 * is the same.
 	 *
+	 * Wrong keys are counted twice: per schedule, only for a schedule that
+	 * exists, so made-up ids cannot fill the options table, and per address,
+	 * for every id, so one caller cannot guess at many schedules. Unknown and
+	 * known ids get the same 403.
+	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return true|WP_Error
 	 */
@@ -106,31 +115,85 @@ class OPEX_Rest_Public {
 		$given    = self::plain_string( $request->get_param( 'key' ) );
 		$match    = hash_equals( $known, $given );
 
-		// Known and unknown ids take this same path. After too many wrong keys
-		// the id answers 429 until the window ends, even for the right key.
-		$fails = self::failures( $id );
-		if ( $fails['count'] >= self::FAIL_LIMIT ) {
+		$sched_key = self::FAIL_KEY . $id;
+		$ip_key    = self::ip_key();
+		$fails     = self::failures( $sched_key );
+		$ip_fails  = '' !== $ip_key ? self::failures( $ip_key ) : self::failures( '' );
+		// Once over a limit the answer is 429 until the window ends, even for the right key.
+		if ( $fails['count'] >= self::FAIL_LIMIT || $ip_fails['count'] >= self::IP_LIMIT ) {
+			$until = max( $fails['count'] >= self::FAIL_LIMIT ? $fails['until'] : 0, $ip_fails['count'] >= self::IP_LIMIT ? $ip_fails['until'] : 0 );
 			return new WP_Error(
 				'opex_too_many',
 				__( 'Too many tries. Wait a few minutes.', 'open-export' ),
-				array( 'status' => 429 )
+				array(
+					'status'      => 429,
+					'retry_after' => max( 1, $until - time() ),
+				)
 			);
 		}
 		if ( $match && $schedule && '' !== $stored ) {
 			return true;
 		}
-		self::count_failure( $id, $fails );
+		if ( $schedule ) {
+			self::count_failure( $sched_key, $fails );
+		}
+		if ( '' !== $ip_key ) {
+			self::count_failure( $ip_key, $ip_fails );
+		}
 		return self::denied( 403 );
 	}
 
 	/**
-	 * The failed-key counter for one schedule id.
+	 * Transient name for the caller's address: a keyed hash, so the stored
+	 * name never reveals the address. Empty when the address is unknown.
 	 *
-	 * @param string $id Schedule id from the URL.
+	 * The address is the connection's own (REMOTE_ADDR). Forwarding headers
+	 * are not trusted, because any caller can set them. Behind a proxy every
+	 * caller therefore shares one bucket, which errs on the side of stopping
+	 * guesses.
+	 *
+	 * @return string
+	 */
+	private static function ip_key(): string {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return '';
+		}
+		return self::IP_KEY . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 32 );
+	}
+
+	/**
+	 * Adds a Retry-After header to the trigger route's 429. A permission
+	 * callback can only return an error, so the error becomes a response
+	 * here, after the callbacks, with the same body plus the header.
+	 *
+	 * @param mixed           $response Result so far: a response or a WP_Error.
+	 * @param array           $handler  Route handler.
+	 * @param WP_REST_Request $request  Request.
+	 * @return mixed
+	 */
+	public static function retry_after( $response, $handler, $request ) {
+		unset( $handler );
+		if ( ! is_wp_error( $response ) || 'opex_too_many' !== $response->get_error_code() || ! $request instanceof WP_REST_Request || 1 !== preg_match( self::TRIGGER, $request->get_route() ) ) {
+			return $response;
+		}
+		$after = (int) ( $response->get_error_data()['retry_after'] ?? 0 );
+		$out   = rest_convert_error_to_response( $response );
+		if ( $after > 0 ) {
+			$out->header( 'Retry-After', (string) $after );
+		}
+		$out->header( 'Cache-Control', 'no-store' );
+		return $out;
+	}
+
+	/**
+	 * A failed-key counter.
+	 *
+	 * @param string $key Transient name, or '' for none.
 	 * @return array count and until (end of the window).
 	 */
-	private static function failures( string $id ): array {
-		$saved = get_transient( self::FAIL_KEY . $id );
+	private static function failures( string $key ): array {
+		$saved = '' !== $key ? get_transient( $key ) : false;
 		if ( is_array( $saved ) && (int) ( $saved['until'] ?? 0 ) > time() ) {
 			return array(
 				'count' => (int) ( $saved['count'] ?? 0 ),
@@ -147,13 +210,13 @@ class OPEX_Rest_Public {
 	 * Adds one failed key. The window starts at the first failure and does not
 	 * move, so a steady trickle of guesses cannot keep it open forever.
 	 *
-	 * @param string $id    Schedule id.
+	 * @param string $key   Transient name.
 	 * @param array  $fails Current counter.
 	 */
-	private static function count_failure( string $id, array $fails ): void {
+	private static function count_failure( string $key, array $fails ): void {
 		$until = $fails['until'] > 0 ? $fails['until'] : time() + self::FAIL_SPAN;
 		set_transient(
-			self::FAIL_KEY . $id,
+			$key,
 			array(
 				'count' => $fails['count'] + 1,
 				'until' => $until,

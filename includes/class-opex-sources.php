@@ -25,7 +25,11 @@ class OPEX_Sources {
 	 */
 	private static $resolvers = null;
 
-	/** @var array<string, OPEX_Source_Provider> Provider objects by class name (they hold no state). */
+	/**
+	 * Provider objects by class name. They hold no state, so one each is enough.
+	 *
+	 * @var array<string, OPEX_Source_Provider>
+	 */
 	private static $instances = array();
 
 	/**
@@ -49,13 +53,13 @@ class OPEX_Sources {
 	/**
 	 * One shared object per provider class.
 	 *
-	 * @param string $class Provider class name.
+	 * @param string $class_name Provider class name.
 	 */
-	public static function instance( string $class ): OPEX_Source_Provider {
-		if ( ! isset( self::$instances[ $class ] ) ) {
-			self::$instances[ $class ] = new $class();
+	public static function instance( string $class_name ): OPEX_Source_Provider {
+		if ( ! isset( self::$instances[ $class_name ] ) ) {
+			self::$instances[ $class_name ] = new $class_name();
 		}
-		return self::$instances[ $class ];
+		return self::$instances[ $class_name ];
 	}
 
 	/**

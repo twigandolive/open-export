@@ -110,11 +110,59 @@ class CsvQuotingTest extends TestCase {
 		);
 		$body   = $this->write( array(), $rows );
 		$handle = fopen( 'php://temp', 'w+b' );
-		fputcsv( $handle, array( 'A', 'B' ), ',', '"', '\\' );
-		fputcsv( $handle, array( 'plain', 'with, comma and "quote"' ), ',', '"', '\\' );
+		fputcsv( $handle, array( 'A', 'B' ), ',', '"', '' );
+		fputcsv( $handle, array( 'plain', 'with, comma and "quote"' ), ',', '"', '' );
 		rewind( $handle );
 		$this->assertSame( stream_get_contents( $handle ), $body );
 		fclose( $handle );
+	}
+
+	/**
+	 * Cells a backslash escape would garble read back exactly with a plain
+	 * RFC 4180 reader: str_getcsv with no escape character. Checked for both
+	 * quote characters, in the default and the converted write paths.
+	 */
+	public function test_rfc4180_round_trip(): void {
+		foreach ( array( '"', "'" ) as $q ) {
+			$cells = array(
+				'a' => 'say \\' . $q . 'hi' . $q,
+				'b' => "ends with a backslash \\",
+			);
+			$lines = array(
+				'a' => "first line\nsecond \\" . $q . ' line',
+				'b' => 'plain',
+			);
+			foreach ( array( array(), array( 'csv_eol' => 'crlf' ), array( 'csv_quote_all' => true ) ) as $extra ) {
+				$body    = $this->write( array( 'csv_enclosure' => $q ) + $extra, array( $cells, $lines ) );
+				$records = $this->records( $body, $q );
+				$label   = 'quote ' . $q . ' ' . wp_json_encode( $extra );
+				$this->assertCount( 3, $records, $label );
+				$this->assertSame( array( 'A', 'B' ), $records[0], $label );
+				$this->assertSame( array_values( $cells ), $records[1], $label );
+				$this->assertSame( array_values( $lines ), $records[2], $label );
+			}
+		}
+	}
+
+	/**
+	 * Splits a CSV body into records with an RFC 4180 reader: a line break
+	 * inside quotes belongs to the cell.
+	 *
+	 * @param string $body CSV text.
+	 * @param string $q    Quote character.
+	 */
+	private function records( string $body, string $q ): array {
+		$records = array();
+		$current = '';
+		foreach ( preg_split( '/(?<=\n)/', $body, -1, PREG_SPLIT_NO_EMPTY ) as $line ) {
+			$current .= $line;
+			// A record ends where the quote characters seen so far are balanced.
+			if ( 0 === substr_count( $current, $q ) % 2 ) {
+				$records[] = str_getcsv( rtrim( $current, "\r\n" ), ',', $q, '' );
+				$current   = '';
+			}
+		}
+		return $records;
 	}
 
 	/** Quote all: every cell is wrapped, inner quotes are doubled, and the formula guard still runs. */

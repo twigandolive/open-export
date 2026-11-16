@@ -21,7 +21,7 @@ abstract class OPEX_Source_Table extends OPEX_Source_Provider {
 	/** The source type the engine passes around for this provider. */
 	abstract public function src_type(): string;
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function src(): array {
 		return array(
 			'type'           => $this->src_type(),

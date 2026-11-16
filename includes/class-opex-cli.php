@@ -296,7 +296,7 @@ class OPEX_CLI {
 		if ( '' === $path ) {
 			WP_CLI::error( 'Pass --config=<file>, or --config=- to read STDIN.' );
 		}
-		$json = '-' === $path ? stream_get_contents( STDIN ) : ( is_readable( $path ) ? file_get_contents( $path ) : false );
+		$json = '-' === $path ? stream_get_contents( STDIN ) : ( is_readable( $path ) ? file_get_contents( $path ) : false ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file the shell user named.
 		if ( ! is_string( $json ) ) {
 			WP_CLI::error( 'Could not read the config.' );
 		}
@@ -364,7 +364,7 @@ class OPEX_CLI {
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Named arguments.
 	 */
-	public function clean( $args, $assoc_args ): void {
+	public function clean( $args, $assoc_args ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WP-CLI passes both; this command takes none.
 		$before = array_keys( OPEX_Jobs::all() );
 		OPEX_Runner::maintenance();
 		$removed = count( array_diff( $before, array_keys( OPEX_Jobs::all() ) ) );

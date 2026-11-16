@@ -47,11 +47,17 @@ class OPEX_Download_Tokens {
 	 * @return string Raw token.
 	 */
 	public static function issue_saved( array $job, int $ttl ): string {
-		$stored = OPEX_Jobs::get( (string) ( $job['id'] ?? '' ) );
-		$work   = null !== $stored ? $stored : $job;
-		$token  = self::issue( $work, $ttl );
-		if ( null !== $stored ) {
-			OPEX_Jobs::save( $work );
+		$token = '';
+		$saved = OPEX_Jobs::update(
+			(string) ( $job['id'] ?? '' ),
+			static function ( array $stored ) use ( $ttl, &$token ): array {
+				$token = self::issue( $stored, $ttl );
+				return $stored;
+			}
+		);
+		if ( null === $saved ) {
+			// No stored job to keep it on: the token is still valid for this copy.
+			$token = self::issue( $job, $ttl );
 		}
 		return $token;
 	}

@@ -28,7 +28,11 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 	/** The source id saved configs use. */
 	const SOURCE = 'woo:customers';
 
-	/** @var array<int, array{spend: string, count: int}> Totals of the current batch, by customer id. */
+	/**
+	 * Totals of the current batch, by customer id.
+	 *
+	 * @var array<int, array{spend: string, count: int}>
+	 */
 	private $totals = array();
 
 	/** The provider when WooCommerce is active, else null. */
@@ -36,59 +40,59 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function src_type(): string {
 		return 'woo_customers';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function defs_key(): string {
 		global $wpdb;
 		// The order count reads the orders table of the current storage engine.
 		return $wpdb->prefix . ( OPEX_Woo::use_hpos() ? '|hpos' : '|legacy' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function is_available(): bool {
 		return OPEX_Catalog::table_exists( self::lookup_table() ) && OPEX_Catalog::table_exists( self::stats_table() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function from(): string {
 		return '`' . self::lookup_table() . '` c';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function base_where(): array {
 		return array( array(), array() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function primary_key(): string {
 		return 'c.customer_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id_prop(): string {
 		return 'customer_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function base_select(): string {
 		return 'c.customer_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function label(): string {
 		return __( 'WooCommerce Customers', 'open-export' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -98,7 +102,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function date_fields(): array {
 		// WooCommerce writes the registered date in site time and the last
 		// active date in UTC.
@@ -118,7 +122,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function prime( array $ids ): void {
 		global $wpdb;
 		$this->totals = array();
@@ -129,7 +133,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		$holders                          = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$stats                            = self::stats_table();
 		$sql                              = $wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names come from $wpdb->prefix; every value is bound.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- table names come from $wpdb->prefix, the placeholder lists are built above, and every value is bound.
 			"SELECT s.customer_id, s.total_sales, {$this->countable_sql()} AS countable FROM `{$stats}` s WHERE s.customer_id IN ({$holders}) AND {$status_sql}",
 			array_merge( $ids, $status_args )
 		);
@@ -153,7 +157,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		}
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function compute_value( object $row, string $field, int $id ): ?string {
 		if ( 'woo:total_spend' !== $field && 'woo:avg_order_value' !== $field ) {
 			return null;
@@ -169,7 +173,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		return $totals['count'] > 0 ? OPEX_Decimal::divide( $totals['spend'], $totals['count'], OPEX_Woo_Format::price_decimals() ) : '';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function field_defs(): array {
 		$who   = __( 'Customer', 'open-export' );
 		$where = __( 'Location', 'open-export' );
@@ -294,8 +298,8 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 	private function status_condition(): array {
 		$excluded = (array) get_option( 'woocommerce_excluded_report_order_statuses', array( 'pending', 'cancelled', 'failed' ) );
 		$excluded = array_merge( array( 'auto-draft', 'trash' ), $excluded );
-		/** This filter belongs to WooCommerce. Applying it keeps the totals equal to its reports. */
-		$excluded = (array) apply_filters( 'woocommerce_analytics_excluded_order_statuses', $excluded );
+		// WooCommerce's own filter: applying it keeps the totals equal to its reports.
+		$excluded = (array) apply_filters( 'woocommerce_analytics_excluded_order_statuses', $excluded ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- a WooCommerce hook, applied on purpose.
 		$stored   = array();
 		foreach ( $excluded as $status ) {
 			$status = trim( (string) $status );

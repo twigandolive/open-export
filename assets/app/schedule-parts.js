@@ -5,7 +5,7 @@
  * (schedule-card.js) and the add and edit form (schedule-form.js).
  *
  * Exposes opexApp.scheduleParts:
- *   MAX                    The most schedules the server keeps (50).
+ *   max()                  The most schedules the server keeps (/options limits.schedules).
  *   TOKENS                 File name tokens the server knows.
  *   timetable( s )         "Daily at 03:00", "Weekly on Monday at 07:00".
  *   nextRun( s )           Next run in the site time zone, or why there is none.
@@ -186,7 +186,8 @@
 		const parts = siteParts();
 		const map = {
 			label: ctx.label || '',
-			source: ctx.source || '',
+			// The server turns the colon in posts:post into a hyphen, so the sample does too.
+			source: String( ctx.source || '' ).replace( /:/g, '-' ),
 			id: ctx.id || '',
 			site: window.location.hostname,
 			date: parts.date,
@@ -210,8 +211,7 @@
 	}
 
 	app.scheduleParts = {
-		// OPEX_Schedules::MAX.
-		MAX: 50,
+		max: () => store.limit( 'schedules', 50 ),
 		TOKENS,
 		timetable,
 		nextRun,

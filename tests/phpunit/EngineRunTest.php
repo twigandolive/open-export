@@ -58,10 +58,21 @@ class EngineRunTest extends TestCase {
 			OPEX_Lock::force_release( $name );
 		}
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+		// On a network wp_delete_user only removes the user from this site, so the user would stay.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 		foreach ( $this->users as $uid ) {
-			wp_delete_user( $uid );
+			is_multisite() ? wpmu_delete_user( $uid ) : wp_delete_user( $uid );
 		}
 		delete_transient( 'opex_trig_fail_s0000000000aa' );
+		self::forget_address_counters();
+	}
+
+	/** Remove this test address's failure counter, so one test's wrong keys never limit the next. */
+	public static function forget_address_counters(): void {
+		$ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		delete_transient( 'opex_trig_ip_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 32 ) );
 	}
 
 	/** Assert that a value is a WP_Error. */
@@ -293,13 +304,46 @@ class EngineRunTest extends TestCase {
 		set_transient( 'opex_trig_fail_' . $s['id'], array( 'count' => 10, 'until' => time() - 1 ), 600 );
 		$this->assertSame( 200, $this->call( 'GET', $path, array(), array( 'key' => $s['trigger_key'] ) )->get_status() );
 
-		// An unknown id takes the same road and gets the same answers.
+		// An unknown id takes the same road and gets the same 403, but writes
+		// no counter of its own, so made-up ids cannot fill the options table.
 		$unknown = '/schedules/s0000000000aa/trigger';
 		for ( $i = 0; $i < 10; $i++ ) {
 			$this->assertSame( 403, $this->call( 'GET', $unknown, array(), array( 'key' => 'wrong' . $i ) )->get_status() );
 		}
-		$this->assertSame( 429, $this->call( 'GET', $unknown, array(), array( 'key' => 'wrong' ) )->get_status() );
-		$this->assertSame( 10, get_transient( 'opex_trig_fail_s0000000000aa' )['count'] );
+		$this->assertFalse( get_transient( 'opex_trig_fail_s0000000000aa' ) );
+
+		// The caller's address has now failed 20 times. Its own limit (30) stops
+		// it on any id, known or not, and says when to come back.
+		for ( $i = 0; $i < 10; $i++ ) {
+			$this->assertSame( 403, $this->call( 'GET', '/schedules/s0000000000ab/trigger', array(), array( 'key' => 'wrong' . $i ) )->get_status() );
+		}
+		$limited = $this->call( 'GET', $unknown, array(), array( 'key' => 'wrong' ) );
+		$this->assertSame( 429, $limited->get_status() );
+		$this->assertGreaterThan( 0, (int) ( $limited->get_headers()['Retry-After'] ?? 0 ) );
+		$this->assertSame( 429, $this->call( 'GET', $path, array(), array( 'key' => $s['trigger_key'] ) )->get_status(), 'the address limit covers known ids too' );
+		$this->assertSame( 0, $this->ip_counters_holding( '127.0.0.1' ), 'the stored name never holds the raw address' );
+	}
+
+	public function test_the_schedule_limit_answer_says_when_to_retry(): void {
+		wp_set_current_user( 0 );
+		$s    = $this->schedule( array( 'frequency' => 'manual' ) );
+		$path = '/schedules/' . $s['id'] . '/trigger';
+		set_transient( 'opex_trig_fail_' . $s['id'], array( 'count' => 10, 'until' => time() + 120 ), 600 );
+		$limited = $this->call( 'GET', $path, array(), array( 'key' => $s['trigger_key'] ) );
+		$this->assertSame( 429, $limited->get_status() );
+		$after = (int) ( $limited->get_headers()['Retry-After'] ?? 0 );
+		$this->assertGreaterThan( 100, $after );
+		$this->assertLessThanOrEqual( 120, $after );
+	}
+
+	/**
+	 * Option rows whose name holds a raw address.
+	 *
+	 * @param string $ip Address.
+	 */
+	private function ip_counters_holding( string $ip ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s", '%' . $wpdb->esc_like( $ip ) . '%' ) );
 	}
 
 	public function test_a_good_key_does_not_count_as_a_failure(): void {

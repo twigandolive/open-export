@@ -8,7 +8,7 @@
  *   fields( record, types )  Every input and its row. Returns the inputs by name plus rows.
  *   fingerprint( { onReset } ) The SFTP fingerprint row. Returns { row, update( record ) }.
  *   showNote( box, record, notes, type )  The server's security note for a type.
- *   lastTest( lastTest )     Status line for a stored test result (spec 3.5).
+ *   lastTest( lastTest )     Status line for a stored test result.
  *   wasTested( record )      True when the record holds a real test result.
  */
 ( function () {
@@ -87,7 +87,7 @@
 
 	/**
 	 * The server writes the security note on each saved record, and on each
-	 * GET /options destination_types entry. A type the person just picked
+	 * GET /options destination_types entry. A type the person has picked
 	 * shows the note from /options, else from any saved record of that type.
 	 *
 	 * @param {HTMLElement} box    Container under the type select.

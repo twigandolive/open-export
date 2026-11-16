@@ -8,6 +8,8 @@
  * This file cannot load the plugin's classes, so it uses option names and
  * WordPress functions directly. The names below are shipped: keep them in step
  * with the plugin.
+ *
+ * @package Open_Export
  */
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
@@ -83,8 +85,8 @@ function opex_uninstall_site( string $dir = '' ): void {
 			wp_delete_file( $dir . '/' . $name );
 		}
 	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- removing our own export directory on uninstall; fails silently only if a stray folder remains.
-	@rmdir( $dir );
+	// The folder stays if something else was put in it. That is fine, so the warning is silenced.
+	@rmdir( $dir ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.PHP.NoSilencedErrors.Discouraged -- removing our own export folder.
 }
 
 // Tests load this file for the function only.

@@ -16,6 +16,16 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Delivery {
 
 	public const MAX_ATTEMPTS = 3;
+
+	/** Most email recipients for one delivery. */
+	public const MAX_RECIPIENTS = 10;
+
+	/** Longest email subject, in characters. */
+	public const MAX_SUBJECT = 200;
+
+	/** Longest webhook secret, in characters. */
+	public const MAX_SECRET = 256;
+
 	private const RETRY_WAITS = array(
 		1 => 300,
 		2 => 1800,
@@ -50,7 +60,7 @@ class OPEX_Delivery {
 			}
 			$to[] = $address;
 		}
-		$to = array_slice( array_values( array_unique( $to ) ), 0, 10 );
+		$to = array_slice( array_values( array_unique( $to ) ), 0, self::MAX_RECIPIENTS );
 		$on = ! empty( $email['enabled'] );
 		if ( $on && ! $to ) {
 			$on      = false;
@@ -74,12 +84,12 @@ class OPEX_Delivery {
 		}
 		$secret = (string) ( $hook['secret'] ?? '' );
 		if ( '' !== $secret && ! OPEX_Secrets::is_encrypted( $secret ) ) {
-			$secret = OPEX_Secrets::encrypt( mb_substr( $secret, 0, 256 ) );
+			$secret = OPEX_Secrets::encrypt( mb_substr( $secret, 0, self::MAX_SECRET ) );
 		}
 		if ( '' === $secret ) {
 			$kept = (string) ( $previous['webhook']['secret'] ?? '' );
 			if ( '' !== $kept && ! OPEX_Secrets::is_encrypted( $kept ) ) {
-				$kept = OPEX_Secrets::encrypt( mb_substr( $kept, 0, 256 ) ); // A plain value saved by an older build.
+				$kept = OPEX_Secrets::encrypt( mb_substr( $kept, 0, self::MAX_SECRET ) ); // A plain value saved by an older build.
 			}
 			$secret = empty( $hook['clear_secret'] ) ? $kept : '';
 		}
@@ -97,7 +107,7 @@ class OPEX_Delivery {
 				'enabled' => $on,
 				'to'      => $to,
 				'mode'    => 'attach' === $mode ? 'attach' : 'link',
-				'subject' => mb_substr( trim( preg_replace( '/[\r\n]+/', ' ', sanitize_text_field( (string) ( $email['subject'] ?? '' ) ) ) ), 0, 200 ),
+				'subject' => mb_substr( trim( preg_replace( '/[\r\n]+/', ' ', sanitize_text_field( (string) ( $email['subject'] ?? '' ) ) ) ), 0, self::MAX_SUBJECT ),
 			),
 			'webhook'     => array(
 				'enabled' => $hon,
@@ -223,7 +233,7 @@ class OPEX_Delivery {
 		$name = sanitize_file_name( (string) ( $job['delivery_name'] ?? '' ) );
 		if ( '' === $name ) {
 			$name = sanitize_file_name( $disk );
-		} elseif ( '' !== $ext && '.' . $ext !== strtolower( substr( $name, -strlen( $ext ) - 1 ) ) ) {
+		} elseif ( '' !== $ext && strtolower( substr( $name, -strlen( $ext ) - 1 ) ) !== '.' . $ext ) {
 			$name .= '.' . $ext;
 		}
 		return $zip ? $name . OPEX_Compress::SUFFIX : $name;

@@ -11,6 +11,7 @@
  *   set( key, value )       Stores a value and calls that key's listeners.
  *   update( key, fn )       set( key, fn( get( key ) ) ).
  *   subscribe( key, fn )    Calls fn( value, key ) on each set. Returns an unsubscribe function.
+ *   limit( key, fallback )  A number from /options `limits`, or the fallback before /options arrives.
  *
  * Keys in use: options, jobs, driving, schedules, destinations, settings,
  * session, sources, builderLoad (Export tab), historyFocus (History tab).
@@ -50,5 +51,12 @@
 		};
 	}
 
-	app.store = { get, set, update, subscribe };
+	// The server sends the limits it enforces. The fallbacks match it, for the
+	// moment before /options arrives and for an older server.
+	function limit( key, fallback ) {
+		const value = Number( ( ( get( 'options' ) || {} ).limits || {} )[ key ] );
+		return value > 0 ? value : fallback;
+	}
+
+	app.store = { get, set, update, subscribe, limit };
 }() );

@@ -4,12 +4,17 @@
  * line into the one saved shape the query layer and the writers expect.
  *
  * Part of the export engine. Other code reaches it through OPEX_Exporter.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds code moved from class-opex-exporter.php, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Cleans an export config into the one shape that is saved and run.
+ */
 class OPEX_Config {
 
 	private const FORMATS       = array( 'csv', 'json', 'xml', 'html' );
@@ -59,7 +64,7 @@ class OPEX_Config {
 			if ( ! OPEX_Query::is_field_id( $field ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: it is not a recognised field id.', 'open-export' ),
+					__( 'Field "%s" was ignored: it is not a recognized field id.', 'open-export' ),
 					$field
 				);
 				continue;
@@ -121,7 +126,7 @@ class OPEX_Config {
 
 		$format = in_array( $raw['format'] ?? '', self::FORMATS, true ) ? $raw['format'] : 'csv';
 		if ( 'xlsx' === ( $raw['format'] ?? '' ) ) {
-			if ( ! class_exists( 'ZipArchive' ) ) {
+			if ( ! OPEX_Compress::available() ) {
 				return new WP_Error( 'opex_no_zip', __( 'Excel export needs the PHP zip extension, which is not installed on this server. Pick CSV, JSON or XML.', 'open-export' ), array( 'status' => 400 ) );
 			}
 			$format = 'xlsx';
@@ -284,7 +289,7 @@ class OPEX_Config {
 	/**
 	 * Validate the date range. The field is checked against the source's own
 	 * allowlist of real date columns, so nothing caller-supplied can reach SQL;
-	 * an unrecognised field simply disables the range rather than failing the
+	 * an unrecognized field turns the range off rather than failing the
 	 * export. Relative presets are stored unresolved so a saved template still
 	 * means "last 30 days" the next time it runs, not the 30 days it meant when
 	 * it was saved.
@@ -319,7 +324,7 @@ class OPEX_Config {
 			if ( '' === $from && '' === $to ) {
 				return $empty;
 			}
-			// A backwards range would match nothing at all; swapping is what
+			// A backwards range would match nothing at all. Swapping is what
 			// the user meant and is cheaper than an error round-trip.
 			if ( '' !== $from && '' !== $to && $from > $to ) {
 				list( $from, $to ) = array( $to, $from );

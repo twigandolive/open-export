@@ -16,6 +16,7 @@ class SchemaTest extends CharacterizationCase {
 	 * Top-level shape of the default document.
 	 */
 	public function test_build_shape(): void {
+		$this->single_site_only( 'a super admin on a network sees the tables of every site.' );
 		$doc = OPEX_Schema::build();
 		$this->assertSame(
 			array( 'opex_schema', 'plugin', 'plugin_version', 'generated', 'site', 'how_to_use', 'recipe_format', 'operators', 'date_presets', 'formats', 'csv_delimiters', 'all_sources', 'sources', 'format_options', 'csv_encodings', 'csv_eols', 'transforms', 'custom_columns', 'filter_groups', 'xml_template', 'network' ),
@@ -47,6 +48,7 @@ class SchemaTest extends CharacterizationCase {
 	 * One source in full: keys and field list.
 	 */
 	public function test_build_one_source(): void {
+		$this->single_site_only( 'a network adds primary_blog and source_domain user meta.' );
 		$doc = OPEX_Schema::build( 'users' );
 		$src = null;
 		foreach ( $doc['sources'] as $s ) {

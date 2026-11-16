@@ -3,12 +3,17 @@
  * Turns database rows into export rows keyed by field id.
  *
  * Part of the query compartment. Reached only through OPEX_Query.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Turns database rows into export rows keyed by field id.
+ */
 class OPEX_Query_Rows {
 
 	/**
@@ -63,9 +68,10 @@ class OPEX_Query_Rows {
 		$n     = 0;
 		foreach ( $rows as $row ) {
 			// Let a long batch keep its lock alive.
-			if ( is_callable( $tick ) && 0 === ( $n++ % 100 ) ) {
+			if ( is_callable( $tick ) && 0 === $n % 100 ) {
 				call_user_func( $tick );
 			}
+			++$n;
 			$id   = $id_prop ? (int) $row->{$id_prop} : 0;
 			$item = array();
 			foreach ( $fields as $field ) {
@@ -85,6 +91,16 @@ class OPEX_Query_Rows {
 		return $provider ? $provider->format_value( $field, $value ) : $value;
 	}
 
+	/**
+	 * The value of one field for one row, before transforms.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param object $row   Database row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 * @param array  $meta  Meta values of the batch, by row id and key.
+	 * @param array  $tax   Term names of the batch, by row id and taxonomy.
+	 */
 	private static function raw_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
 		$provider = OPEX_Sources::for_src( $src );
 
@@ -132,6 +148,14 @@ class OPEX_Query_Rows {
 		return '';
 	}
 
+	/**
+	 * A computed field: a value the database does not hold as such, like a permalink or roles.
+	 *
+	 * @param array  $src  Parsed source.
+	 * @param object $row  Database row.
+	 * @param string $what Computed field name, without the prefix.
+	 * @param int    $id   Row id.
+	 */
 	private static function computed_value( array $src, object $row, string $what, int $id ): string {
 		switch ( $what ) {
 			case 'permalink':
@@ -181,9 +205,8 @@ class OPEX_Query_Rows {
 		$id_holders  = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$key_holders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholder lists built above; every value is bound.
 		$sql = $wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table/column names come from the fixed map above.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- table and column names come from the fixed map above, and the placeholder lists are built above.
 			"SELECT {$fk} AS oid, meta_key, meta_value FROM {$table} WHERE {$fk} IN ({$id_holders}) AND meta_key IN ({$key_holders})",
 			array_merge( $ids, $keys )
 		);
@@ -230,6 +253,11 @@ class OPEX_Query_Rows {
 		return (string) $value;
 	}
 
+	/**
+	 * Several values in one cell, joined with a comma.
+	 *
+	 * @param array $values Values.
+	 */
 	private static function flatten_many( array $values ): string {
 		return implode( ' | ', array_map( array( __CLASS__, 'flatten' ), $values ) );
 	}

@@ -126,7 +126,7 @@
 	/**
 	 * Whether the server registers a route whose pattern contains the given
 	 * text. Reads the namespace index once. Used to show controls that need
-	 * routes from spec 3.5 only when the server has them.
+	 * newer routes only when the server has them.
 	 *
 	 * @param {string} fragment Part of a route pattern, such as "/deliver".
 	 * @return {Promise<boolean>} True when a route matches.

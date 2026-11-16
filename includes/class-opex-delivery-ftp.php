@@ -99,6 +99,12 @@ class OPEX_Delivery_Ftp {
 			return new WP_Error( 'opex_ftp_connect', __( 'Could not connect to the server.', 'open-export' ) );
 		}
 		@ftp_set_option( $conn, FTP_TIMEOUT_SEC, self::IO_TIMEOUT ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( defined( 'FTP_USEPASVADDRESS' ) ) {
+			// Connect the data channel to the server we logged in to, not to the
+			// address its passive reply names, which a hostile server could point
+			// at another machine on this network. Must be set before ftp_pasv().
+			@ftp_set_option( $conn, FTP_USEPASVADDRESS, false ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
 
 		if ( ! @ftp_login( $conn, (string) ( $d['username'] ?? '' ), $password ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_close( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged

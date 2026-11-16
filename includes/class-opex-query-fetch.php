@@ -5,12 +5,17 @@
  * ORDER BY pk) so batch N is as fast as batch 1.
  *
  * Part of the query compartment. Other code reaches it through OPEX_Query.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Counts rows and fetches batches, paging by primary key.
+ */
 class OPEX_Query_Fetch {
 
 	/** Total row count for a config, used for the progress bar. */
@@ -43,8 +48,11 @@ class OPEX_Query_Fetch {
 	 *   cursor: opaque int to pass back for the next batch
 	 *   done:   true when the source is exhausted
 	 *
-	 * @param callable|null $tick Called now and then while rows are assembled, so a
-	 *                            long batch can refresh its lock.
+	 * @param array         $config Export config.
+	 * @param int           $cursor Last primary key read, 0 to start.
+	 * @param int           $limit  Most rows to read.
+	 * @param callable|null $tick   Called now and then while rows are assembled, so a
+	 *                              long batch can refresh its lock.
 	 * @throws RuntimeException When the database reports an error.
 	 */
 	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {
@@ -205,7 +213,7 @@ class OPEX_Query_Fetch {
 		if ( 1 !== count( $pks ) ) {
 			return '';
 		}
-		// Keyset paging needs integer comparison semantics; only use numeric PKs.
+		// Keyset paging compares numbers, so only a numeric primary key can drive it.
 		foreach ( OPEX_Catalog::table_columns( $table ) as $col ) {
 			if ( $col['name'] === $pks[0] && ! preg_match( '/int/i', $col['type'] ) ) {
 				return '';
@@ -251,6 +259,11 @@ class OPEX_Query_Fetch {
 		return $notes;
 	}
 
+	/**
+	 * A column reference without its table alias, such as post_title for p.post_title.
+	 *
+	 * @param string $col Column, maybe with an alias.
+	 */
 	private static function unqualified( string $col ): string {
 		$col = str_replace( '`', '', $col );
 		$dot = strrpos( $col, '.' );
@@ -287,7 +300,7 @@ class OPEX_Query_Fetch {
 		// The usermeta table needs its key column to blank credential values.
 		global $wpdb;
 		if ( $wpdb->usermeta === $src['table'] && isset( $cols['meta_value'] ) ) {
-			$cols['meta_key'] = true;
+			$cols['meta_key'] = true; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- a column list entry, not a meta query.
 		}
 
 		$parts = array();

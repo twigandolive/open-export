@@ -176,7 +176,7 @@ class WritersTest extends TestCase {
 		$formats = OPEX_Writer::formats();
 		$this->assertSame( array( 'csv', 'json', 'xml', 'xlsx', 'html' ), array_keys( $formats ) );
 		foreach ( $formats as $format ) {
-			$this->assertSame( array( 'label', 'extension', 'mime', 'available' ), array_keys( $format ) );
+			$this->assertSame( array( 'label', 'extension', 'mime', 'available', 'reason' ), array_keys( $format ) );
 		}
 		$this->assertTrue( $formats['csv']['available'] );
 		$this->assertSame( class_exists( 'ZipArchive' ), $formats['xlsx']['available'] );

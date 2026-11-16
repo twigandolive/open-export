@@ -19,18 +19,29 @@ class RestPublicTest extends TestCase {
 	/** @var string[] */
 	private $made = array();
 
+	/** Whether setUp added the route hook, so tearDown leaves the plugin's own hook in place. */
+	private bool $added_hook = false;
+
 	protected function setUp(): void {
 		delete_option( 'opex_schedules' );
 		$this->jobs_before         = array_keys( OPEX_Jobs::all() );
 		$GLOBALS['wp_rest_server'] = null;
-		add_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+		// The plugin hooks this itself. Add it only when missing, and take away only what was added here.
+		$this->added_hook = false === has_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+		if ( $this->added_hook ) {
+			add_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+		}
 		rest_get_server();
 		wp_set_current_user( 0 );
 	}
 
 	protected function tearDown(): void {
 		wp_set_current_user( 1 );
-		remove_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+		if ( $this->added_hook ) {
+			remove_action( 'rest_api_init', array( 'OPEX_Rest_Public', 'register_routes' ) );
+		}
+		$ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		delete_transient( 'opex_trig_ip_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 32 ) );
 		$GLOBALS['wp_rest_server'] = null;
 		foreach ( array_keys( OPEX_Schedules::all() ) as $id ) {
 			delete_transient( 'opex_trigger_' . $id );

@@ -16,6 +16,13 @@ class FilenameTest extends TestCase {
 		$this->assertSame( 'Posts-' . wp_date( 'Y-m-d', $time ) . '-' . wp_date( 'His', $time ) . '-' . wp_date( 'Y-m-d-His', $time ) . '-s1-example-test', $out );
 	}
 
+	/** A source id keeps its two parts apart: posts:post becomes posts-post, not postspost. */
+	public function test_source_token_keeps_its_parts() {
+		$this->assertSame( 'posts-post', OPEX_Filename::render( '{source}', array( 'source' => 'posts:post' ) ) );
+		$this->assertSame( 'Orders-woo-orders', OPEX_Filename::render( '{label}-{source}', array( 'label' => 'Orders', 'source' => 'woo:orders' ) ) );
+		$this->assertSame( 'terms-product_cat', OPEX_Filename::render( '{source}', array( 'source' => 'terms:product_cat' ) ) );
+	}
+
 	public function test_unknown_tokens_are_removed() {
 		$this->assertSame( 'a-b', OPEX_Filename::render( 'a-{nope}-b', array() ) );
 		$this->assertSame( 'export', OPEX_Filename::render( '{foo}{bar}', array() ) );

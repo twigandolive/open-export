@@ -4,12 +4,17 @@
  * appends them to the file and saves the cursor with the file checkpoint.
  *
  * Part of the export engine. Other code reaches it through OPEX_Exporter.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Runs one batch of a job while holding the job's lock.
+ */
 class OPEX_Export_Run {
 
 	/** Exception code for a worker that lost its lock. */
@@ -66,9 +71,23 @@ class OPEX_Export_Run {
 			return OPEX_Jobs::expose( $job );
 		}
 		if ( 'running' !== $job['status'] ) {
-			$job['status'] = 'running';
-			$job['error']  = '';
-			OPEX_Jobs::save( $job );
+			$job = OPEX_Jobs::update(
+				$id,
+				static function ( array $stored ) use ( $resume ): ?array {
+					if ( 'done' === $stored['status'] || ( 'paused' === $stored['status'] && ! $resume ) ) {
+						return null;
+					}
+					$stored['status'] = 'running';
+					$stored['error']  = '';
+					return $stored;
+				}
+			);
+			if ( ! $job ) {
+				return self::missing();
+			}
+			if ( 'running' !== $job['status'] ) {
+				return OPEX_Jobs::expose( $job );
+			}
 		}
 
 		$config = $job['config'];
@@ -76,7 +95,7 @@ class OPEX_Export_Run {
 		// A worker that lost its lock must stop at once: the new holder owns the job.
 		$guard = static function () use ( $id ): void {
 			if ( ! OPEX_Jobs::refresh_lock( $id ) ) {
-				throw new RuntimeException( 'The export lock was lost.', self::LOCK_LOST );
+				throw new RuntimeException( 'The export lock was lost.', self::LOCK_LOST ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- an internal signal, caught below and never shown.
 			}
 		};
 
@@ -158,14 +177,20 @@ class OPEX_Export_Run {
 				);
 			}
 			OPEX_Exporter::log_exception( $e );
-			$fresh = OPEX_Jobs::get( $id );
+			$message = OPEX_Exporter::public_error_message( $e );
+			$fresh   = OPEX_Jobs::update(
+				$id,
+				static function ( array $stored ) use ( $message ): array {
+					$stored['status'] = 'error';
+					$stored['error']  = $message;
+					return $stored;
+				}
+			);
 			if ( ! $fresh ) {
 				OPEX_Jobs::discard_files( $job );
 				return self::missing();
 			}
-			$fresh['status'] = 'error';
-			$fresh['error']  = OPEX_Exporter::public_error_message( $e );
-			OPEX_Jobs::save( $fresh );
+			do_action( 'opex_job_failed', $fresh );
 			return OPEX_Jobs::expose( $fresh );
 		}
 	}
@@ -180,13 +205,16 @@ class OPEX_Export_Run {
 	 * @param array  $changes Keys to set.
 	 */
 	private static function save_progress( string $id, array $job, array $changes ): ?array {
-		$fresh = OPEX_Jobs::get( $id );
+		$fresh = OPEX_Jobs::update(
+			$id,
+			static function ( array $stored ) use ( $changes ): array {
+				return array_merge( $stored, $changes );
+			}
+		);
 		if ( ! $fresh ) {
 			OPEX_Jobs::discard_files( $job );
 			return null;
 		}
-		$fresh = array_merge( $fresh, $changes );
-		OPEX_Jobs::save( $fresh );
 		return $fresh;
 	}
 

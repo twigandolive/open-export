@@ -23,6 +23,7 @@ class OPEX_Delivery_Sftp {
 	private const CONNECT_TIMEOUT = 15;
 	private const IO_TIMEOUT      = 60;
 	private const SFTP_CLASS      = 'phpseclib3\\Net\\SFTP';
+	private const KEY_LOADER      = 'phpseclib3\\Crypt\\PublicKeyLoader';
 
 	/**
 	 * Uploads the export.
@@ -110,20 +111,28 @@ class OPEX_Delivery_Sftp {
 			return '';
 		}
 		$parts = is_string( $line ) ? explode( ' ', $line ) : array();
-		$blob  = isset( $parts[1] ) ? base64_decode( $parts[1], true ) : false;
+		// The host key arrives base64 encoded, and fingerprints are written in base64 too (as ssh-keygen shows them).
+		$blob = isset( $parts[1] ) ? base64_decode( $parts[1], true ) : false; // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- decoding a public host key.
 		if ( false === $blob || '' === $blob ) {
 			return '';
 		}
-		return 'SHA256:' . rtrim( base64_encode( hash( 'sha256', $blob, true ) ), '=' );
+		return 'SHA256:' . rtrim( base64_encode( hash( 'sha256', $blob, true ) ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- the standard SHA256 fingerprint form.
 	}
 
 	/**
-	 * Loads phpseclib when no other copy is present.
+	 * Loads phpseclib 3 for a send.
+	 *
+	 * The bundled copy is not prefixed, so it shares the phpseclib3 namespace
+	 * with any copy another plugin brings. When another copy is already loaded,
+	 * or an autoloader that is already registered can load it, that copy is
+	 * used for every class and the bundled autoloader is never registered.
+	 * Two copies loading classes side by side is what goes wrong. The bundled
+	 * copy loads only when nothing else provides phpseclib 3.
 	 *
 	 * @return bool
 	 */
 	private static function load_library(): bool {
-		if ( class_exists( self::SFTP_CLASS, false ) ) {
+		if ( class_exists( self::SFTP_CLASS ) && class_exists( self::KEY_LOADER ) ) {
 			return true;
 		}
 		$autoload = dirname( __DIR__ ) . '/lib/vendor/autoload.php';
@@ -131,7 +140,7 @@ class OPEX_Delivery_Sftp {
 			return false;
 		}
 		require_once $autoload;
-		return class_exists( self::SFTP_CLASS );
+		return class_exists( self::SFTP_CLASS ) && class_exists( self::KEY_LOADER );
 	}
 
 	/**

@@ -44,7 +44,11 @@ class RestTest extends CharacterizationCase {
 	 */
 	protected function tearDown(): void {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
-		wp_delete_user( $this->subscriber );
+		// On a network wp_delete_user only removes the user from this site, so the user would stay.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
+		is_multisite() ? wpmu_delete_user( $this->subscriber ) : wp_delete_user( $this->subscriber );
 		parent::tearDown();
 	}
 

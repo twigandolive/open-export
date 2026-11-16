@@ -5,12 +5,17 @@
  * for each miss.
  *
  * Part of the schema compartment. Other code reaches it through OPEX_Schema.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Turns a version 1 recipe into a config and a report of what was kept.
+ */
 class OPEX_Schema_Resolver {
 
 	/**
@@ -243,7 +248,7 @@ class OPEX_Schema_Resolver {
 		return false !== strpos( $id, ':' ) ? substr( $id, strrpos( $id, ':' ) + 1 ) : $id;
 	}
 
-	/** A scalar as text; anything else (an array from a bad recipe) becomes ''. */
+	/** A scalar as text. Anything else (an array from a bad recipe) becomes ''. */
 	private static function scalar_text( $value ): string {
 		return is_scalar( $value ) ? (string) $value : '';
 	}
@@ -252,7 +257,7 @@ class OPEX_Schema_Resolver {
 	 * Nearest usable id for something the assistant got wrong.
 	 *
 	 * An id with the right name but the wrong prefix ("billing_state" for
-	 * "woo:billing_state") is the common miss and is matched exactly; anything
+	 * "woo:billing_state") is the common miss and is matched exactly, and anything
 	 * else falls back to edit distance, and only when it is close enough to be
 	 * worth showing.
 	 */

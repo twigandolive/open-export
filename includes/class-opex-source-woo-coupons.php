@@ -28,27 +28,27 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function post_type(): string {
 		return 'shop_coupon';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function base_select(): string {
 		return 'p.*';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function label(): string {
 		return __( 'WooCommerce Coupons', 'open-export' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -58,7 +58,7 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function date_fields(): array {
 		global $wpdb;
 		return array(
@@ -80,12 +80,12 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function extra_groups(): array {
 		return OPEX_Catalog::grouped_meta( OPEX_Catalog::sample_meta_keys( 'posts', 'shop_coupon' ), OPEX_Catalog::acf_keys() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function field_defs(): array {
 		$coupon = __( 'Coupon', 'open-export' );
 		$limits = __( 'Usage limits', 'open-export' );

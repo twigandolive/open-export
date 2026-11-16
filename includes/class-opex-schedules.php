@@ -10,10 +10,13 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Reads, saves and starts schedules.
+ */
 class OPEX_Schedules {
 
 	private const OPTION      = 'opex_schedules';
-	private const MAX         = 50;
+	public const MAX          = 50;
 	private const FREQUENCIES = array( 'manual', 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' );
 	private const HOOK        = 'opex_run_schedule';
 
@@ -71,9 +74,17 @@ class OPEX_Schedules {
 
 	/** All schedules keyed by id, defaults filled. */
 	public static function all(): array {
-		$raw = get_option( self::OPTION, array() );
+		return self::filled( OPEX_Store::read( self::OPTION ) );
+	}
+
+	/**
+	 * Every usable record of a stored registry, defaults filled.
+	 *
+	 * @param array $raw The option as stored.
+	 */
+	private static function filled( array $raw ): array {
 		$out = array();
-		foreach ( is_array( $raw ) ? $raw : array() as $id => $rec ) {
+		foreach ( $raw as $id => $rec ) {
 			if ( is_array( $rec ) ) {
 				$out[ (string) $id ] = self::fill( $rec, (string) $id );
 			}
@@ -104,9 +115,26 @@ class OPEX_Schedules {
 		return $out;
 	}
 
-	/** Write the whole registry. */
-	private static function write( array $all ): void {
-		update_option( self::OPTION, $all, false );
+	/**
+	 * Changes one stored schedule under the registry lock, starting from the
+	 * record as stored right now. A run finishing and a person editing the
+	 * schedule at the same moment therefore both keep their changes.
+	 *
+	 * @param string   $id     Schedule id.
+	 * @param callable $change Receives the filled record and returns the record to store.
+	 * @return array|null The stored record, or null when there is no such schedule.
+	 */
+	private static function patch( string $id, callable $change ): ?array {
+		return OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$stored ) use ( $id, $change ): ?array {
+				if ( ! isset( $stored[ $id ] ) || ! is_array( $stored[ $id ] ) ) {
+					return null;
+				}
+				$stored[ $id ] = $change( self::fill( $stored[ $id ], $id ) );
+				return $stored[ $id ];
+			}
+		);
 	}
 
 	/**
@@ -118,7 +146,34 @@ class OPEX_Schedules {
 	 * @return array|WP_Error
 	 */
 	public static function save( array $raw, string $id = '', array &$notes = array() ) {
-		$all = self::all();
+		$rec = OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$stored ) use ( $raw, $id, &$notes ) {
+				$all = self::filled( $stored );
+				$rec = self::build( $all, $raw, $id, $notes );
+				if ( is_array( $rec ) ) {
+					$all[ $rec['id'] ] = $rec;
+					$stored            = $all;
+				}
+				return $rec;
+			}
+		);
+		if ( is_array( $rec ) ) {
+			self::arm( $rec );
+		}
+		return $rec;
+	}
+
+	/**
+	 * Validates input against the stored registry and returns the record to store.
+	 *
+	 * @param array    $all   Stored schedules, filled.
+	 * @param array    $raw   Untrusted input.
+	 * @param string   $id    Existing schedule id, or '' to create.
+	 * @param string[] $notes Receives cleaning notes.
+	 * @return array|WP_Error
+	 */
+	private static function build( array $all, array $raw, string $id, array &$notes ) {
 		if ( '' !== $id ) {
 			if ( ! isset( $all[ $id ] ) ) {
 				return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
@@ -210,10 +265,6 @@ class OPEX_Schedules {
 		}
 		$rec['updated']  = $now;
 		$rec['next_run'] = self::next_run( $rec, $now );
-
-		$all[ $id ] = $rec;
-		self::write( $all );
-		self::arm( $rec );
 		return $rec;
 	}
 
@@ -247,24 +298,25 @@ class OPEX_Schedules {
 	 * @return array|null The saved record, or null when there is no such schedule.
 	 */
 	public static function reset_watermark( string $id ): ?array {
-		$all = self::all();
-		if ( ! isset( $all[ $id ] ) ) {
-			return null;
-		}
-		$all[ $id ]['watermark'] = '';
-		$all[ $id ]['updated']   = time();
-		self::write( $all );
-		return $all[ $id ];
+		return self::patch(
+			$id,
+			static function ( array $rec ): array {
+				$rec['watermark'] = '';
+				$rec['updated']   = time();
+				return $rec;
+			}
+		);
 	}
 
 	/** Delete a schedule and its cron event. */
 	public static function delete( string $id ): void {
 		self::disarm( $id );
-		$all = self::all();
-		if ( isset( $all[ $id ] ) ) {
-			unset( $all[ $id ] );
-			self::write( $all );
-		}
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$stored ) use ( $id ): void {
+				unset( $stored[ $id ] );
+			}
+		);
 	}
 
 	/** Public shape: no key, no webhook secret, plus the trigger URL. */
@@ -303,14 +355,36 @@ class OPEX_Schedules {
 
 	/** Recompute next_run from now, store it and re-arm. Returns the record. */
 	public static function refresh( array $schedule ): array {
-		$schedule['next_run'] = self::next_run( $schedule, time() );
-		$all                  = self::all();
-		if ( isset( $all[ $schedule['id'] ] ) ) {
-			$all[ $schedule['id'] ] = $schedule;
-			self::write( $all );
+		$saved = self::rearm( (string) ( $schedule['id'] ?? '' ), null );
+		if ( null !== $saved ) {
+			return $saved;
 		}
-		self::arm( $schedule );
+		$schedule['next_run'] = self::next_run( $schedule, time() );
 		return $schedule;
+	}
+
+	/**
+	 * Stores a new next_run (and last_run when given) on the stored record, then arms it.
+	 *
+	 * @param string     $id       Schedule id.
+	 * @param array|null $last_run New last_run, or null to keep the stored one.
+	 * @return array|null The stored record, or null when there is no such schedule.
+	 */
+	private static function rearm( string $id, ?array $last_run ): ?array {
+		$saved = self::patch(
+			$id,
+			static function ( array $rec ) use ( $last_run ): array {
+				if ( null !== $last_run ) {
+					$rec['last_run'] = $last_run;
+				}
+				$rec['next_run'] = self::next_run( $rec, time() );
+				return $rec;
+			}
+		);
+		if ( null !== $saved ) {
+			self::arm( $saved );
+		}
+		return $saved;
 	}
 
 	/**
@@ -348,18 +422,18 @@ class OPEX_Schedules {
 			return $job;
 		}
 
-		// A job that finished inside create() already updated the schedule through
-		// opex_job_done, so read the record again before saving the next run.
-		$s = self::get( $id ) ?? $s;
+		// A job that finished inside create() already set last_run through
+		// opex_job_done, so only a job still running writes it here.
+		$last_run = null;
 		if ( 'running' === $job['status'] ) {
-			$s['last_run'] = array(
+			$last_run = array(
 				'time'   => time(),
 				'job_id' => (string) $job['id'],
 				'status' => (string) $job['status'],
 				'rows'   => (int) $job['processed'],
 			);
 		}
-		self::refresh( $s );
+		self::rearm( $id, $last_run );
 
 		if ( 'running' === $job['status'] ) {
 			OPEX_Runner::dispatch( (string) $job['id'] );
@@ -410,26 +484,60 @@ class OPEX_Schedules {
 	 */
 	public static function on_job_done( array $job ): void {
 		$sid = (string) ( $job['schedule_id'] ?? '' );
-		$s   = '' === $sid ? null : self::get( $sid );
-		if ( ! $s ) {
+		if ( '' === $sid ) {
 			return;
 		}
-		$s['last_run'] = array(
+		self::patch(
+			$sid,
+			static function ( array $s ) use ( $job ): array {
+				$s['last_run'] = self::last_run_of( $job );
+				if ( 'done' === ( $job['status'] ?? '' ) ) {
+					$mark = gmdate( 'Y-m-d H:i:s', (int) ( $job['created'] ?? time() ) );
+					if ( $mark > (string) $s['watermark'] ) {
+						$s['watermark'] = $mark;
+					}
+				}
+				return $s;
+			}
+		);
+	}
+
+	/**
+	 * Hook for `opex_job_failed`. Without it a failed scheduled run would show
+	 * "Running" for good. The watermark stays, so the next run tries the same rows again.
+	 *
+	 * @param array $job Failed job record.
+	 */
+	public static function on_job_failed( $job ): void {
+		$job = is_array( $job ) ? $job : array();
+		$sid = (string) ( $job['schedule_id'] ?? '' );
+		if ( '' === $sid ) {
+			return;
+		}
+		self::patch(
+			$sid,
+			static function ( array $s ) use ( $job ): array {
+				// An older run failing late must not hide a newer run.
+				$current = (string) $s['last_run']['job_id'];
+				if ( '' === $current || (string) ( $job['id'] ?? '' ) === $current ) {
+					$s['last_run'] = array_merge( self::last_run_of( $job ), array( 'status' => 'error' ) );
+				}
+				return $s;
+			}
+		);
+	}
+
+	/**
+	 * The last_run block for a job.
+	 *
+	 * @param array $job Job record.
+	 */
+	private static function last_run_of( array $job ): array {
+		return array(
 			'time'   => (int) ( $job['created'] ?? time() ),
 			'job_id' => (string) ( $job['id'] ?? '' ),
 			'status' => (string) ( $job['status'] ?? '' ),
 			'rows'   => (int) ( $job['processed'] ?? 0 ),
 		);
-		if ( 'done' === ( $job['status'] ?? '' ) ) {
-			$mark = gmdate( 'Y-m-d H:i:s', (int) ( $job['created'] ?? time() ) );
-			if ( $mark > (string) $s['watermark'] ) {
-				$s['watermark'] = $mark;
-			}
-		}
-		$all = self::all();
-		if ( isset( $all[ $sid ] ) ) {
-			$all[ $sid ] = $s;
-			self::write( $all );
-		}
 	}
 }

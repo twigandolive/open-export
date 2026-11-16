@@ -3,10 +3,15 @@
  * Job persistence. A job is small (config + cursor + counters), so the whole
  * registry lives in one non-autoloaded option. History is capped, and files
  * older than the retention setting are swept by the hourly maintenance run.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Stores job records in one option and guards each running job with a lock.
+ */
 class OPEX_Jobs {
 
 	private const OPTION   = 'opex_jobs';
@@ -15,12 +20,16 @@ class OPEX_Jobs {
 	/** Most jobs the history keeps. Running and paused jobs never count against it. */
 	public const MAX_HISTORY = 200;
 
-	/** Lock owner tokens held by this process, by job id. */
+	/**
+	 * Lock owner tokens held by this process, by job id.
+	 *
+	 * @var array<string, string>
+	 */
 	private static array $tokens = array();
 
 	/**
 	 * Every key a job record can have, with the value an older record gets
-	 * when it lacks the key. The first twelve are the original record; the
+	 * when it lacks the key. The first twelve are the original record, and the
 	 * rest were added later and are always optional on read.
 	 */
 	private const DEFAULTS = array(
@@ -87,10 +96,9 @@ class OPEX_Jobs {
 		'compress'       => 'none',
 	);
 
-	/** The stored registry, exactly as saved. */
+	/** The stored registry as the database holds it now, never a copy cached earlier in the request. */
 	private static function stored(): array {
-		$jobs = get_option( self::OPTION, array() );
-		return is_array( $jobs ) ? $jobs : array();
+		return OPEX_Store::read( self::OPTION );
 	}
 
 	/** Fill every missing key of one record. */
@@ -111,6 +119,13 @@ class OPEX_Jobs {
 		return isset( $jobs[ $id ] ) && is_array( $jobs[ $id ] ) ? self::with_defaults( $jobs[ $id ] ) : null;
 	}
 
+	/**
+	 * Saves one job record. Other jobs are read fresh under the registry lock, so another
+	 * process's changes to them are kept. To change a job that may have changed
+	 * meanwhile, use update().
+	 *
+	 * @param array $job Job record.
+	 */
 	public static function save( array $job ): void {
 		// Keep records lean: an optional key at its default is left out and read back by get().
 		// The mode, origin and schedule are always written: they say where a job came from.
@@ -122,23 +137,64 @@ class OPEX_Jobs {
 				unset( $job[ $key ] );
 			}
 		}
-		$jobs               = self::stored();
-		$jobs[ $job['id'] ] = $job;
-
-		$jobs = self::trim_history( $jobs, (string) $job['id'] );
-
-		update_option( self::OPTION, $jobs, false );
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$jobs ) use ( $job ): void {
+				$jobs[ $job['id'] ] = $job;
+				$jobs               = self::trim_history( $jobs, (string) $job['id'] );
+			}
+		);
 	}
 
+	/**
+	 * Changes one stored job under the registry lock. The callback gets the
+	 * job as stored right now, so a pause, a delete or a finish that another
+	 * process wrote is never undone by an older copy.
+	 *
+	 * @param string   $id     Job id.
+	 * @param callable $change Receives the job with defaults and returns the
+	 *                         job to save, or null to leave it as it is.
+	 * @return array|null The job as stored afterward, or null when it does not exist.
+	 */
+	public static function update( string $id, callable $change ): ?array {
+		$current = null;
+		$next    = null;
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$jobs ) use ( $id, $change, &$current, &$next ): void {
+				if ( ! isset( $jobs[ $id ] ) || ! is_array( $jobs[ $id ] ) ) {
+					return;
+				}
+				$current = self::with_defaults( $jobs[ $id ] );
+				$next    = $change( $current );
+				if ( is_array( $next ) ) {
+					self::save( $next );
+				}
+			}
+		);
+		if ( null === $current ) {
+			return null;
+		}
+		return is_array( $next ) ? self::with_defaults( $next ) : $current;
+	}
+
+	/**
+	 * Removes a job, its file and its lock.
+	 *
+	 * @param string $id Job id.
+	 */
 	public static function delete( string $id ): void {
 		unset( self::$tokens[ $id ] );
 		OPEX_Lock::force_release( $id );
-		$jobs = self::stored();
-		if ( isset( $jobs[ $id ] ) ) {
-			self::remove_file( $jobs[ $id ] );
-			unset( $jobs[ $id ] );
-			update_option( self::OPTION, $jobs, false );
-		}
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$jobs ) use ( $id ): void {
+				if ( isset( $jobs[ $id ] ) ) {
+					self::remove_file( (array) $jobs[ $id ] );
+					unset( $jobs[ $id ] );
+				}
+			}
+		);
 	}
 
 	/**
@@ -148,20 +204,20 @@ class OPEX_Jobs {
 	 * times were saved) counts from when it was created.
 	 */
 	public static function sweep(): void {
-		$jobs    = self::stored();
-		$changed = false;
 		$max_age = max( 1, (int) OPEX_Settings::get( 'retention_days' ) ) * DAY_IN_SECONDS;
-		foreach ( $jobs as $id => $job ) {
-			$since = (int) ( $job['finished'] ?? 0 ) > 0 ? (int) $job['finished'] : (int) ( $job['created'] ?? 0 );
-			if ( time() - $since > $max_age ) {
-				self::remove_file( $job );
-				unset( $jobs[ $id ] );
-				$changed = true;
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$jobs ) use ( $max_age ): void {
+				foreach ( $jobs as $id => $job ) {
+					$job   = (array) $job;
+					$since = (int) ( $job['finished'] ?? 0 ) > 0 ? (int) $job['finished'] : (int) ( $job['created'] ?? 0 );
+					if ( time() - $since > $max_age ) {
+						self::remove_file( $job );
+						unset( $jobs[ $id ] );
+					}
+				}
 			}
-		}
-		if ( $changed ) {
-			update_option( self::OPTION, $jobs, false );
-		}
+		);
 	}
 
 	/** Public job shape for the UI; excludes server paths. */
@@ -275,6 +331,11 @@ class OPEX_Jobs {
 		);
 	}
 
+	/**
+	 * Full path of a job's file.
+	 *
+	 * @param array $job Job record.
+	 */
 	public static function file_path( array $job ): string {
 		return trailingslashit( opex_export_dir() ) . $job['filename'];
 	}
@@ -317,6 +378,11 @@ class OPEX_Jobs {
 		self::remove_file( $job );
 	}
 
+	/**
+	 * Deletes a job's file and any sidecar a writer or the zip step left.
+	 *
+	 * @param array $job Job record.
+	 */
 	private static function remove_file( array $job ): void {
 		$job  = self::with_defaults( $job );
 		$path = self::file_path( $job );

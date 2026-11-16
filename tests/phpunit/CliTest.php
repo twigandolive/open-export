@@ -72,8 +72,8 @@ class CliTest extends TestCase {
 				'-d',
 				'error_reporting=22527',
 				$this->wp_binary(),
+				// The active plugin registers `wp opex` itself, so the command is not added again here.
 				'--path=' . rtrim( (string) getenv( 'OPEX_TEST_SITE' ), '/' ) . '/wordpress',
-				'--exec=WP_CLI::add_hook("after_wp_load", function(){ require_once "' . dirname( __DIR__, 2 ) . '/includes/class-opex-cli.php"; OPEX_CLI::register(); });',
 			),
 			$args
 		);

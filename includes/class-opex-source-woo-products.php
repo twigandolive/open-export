@@ -33,37 +33,37 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function post_type(): string {
 		return 'product';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function base_where(): array {
 		return array( array( "p.post_type IN ('product', 'product_variation')", "p.post_status <> 'auto-draft'" ), array() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function base_select(): string {
 		return 'p.*';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function term_object(): string {
 		return self::OWNER;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function label(): string {
 		return __( 'WooCommerce Products', 'open-export' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -73,7 +73,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function date_fields(): array {
 		global $wpdb;
 		$epoch = array(
@@ -107,12 +107,12 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function prime( array $ids ): void {
 		OPEX_Source_Woo_Product_Values::prime( $ids );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function compute_value( object $row, string $field, int $id ): ?string {
 		switch ( $field ) {
 			case 'woo:attributes':
@@ -131,7 +131,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		return null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function derive_value( string $field, string $value ): string {
 		// A variable product keeps one _price row per distinct variation price.
 		// WooCommerce shows the lowest as its "from" price, so this does too.
@@ -149,12 +149,12 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		return (string) $low;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function extra_groups(): array {
 		return OPEX_Catalog::grouped_meta( OPEX_Catalog::sample_meta_keys( 'posts', 'product' ), OPEX_Catalog::acf_keys() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function field_defs(): array {
 		$product  = __( 'Product', 'open-export' );
 		$price    = __( 'Price', 'open-export' );
@@ -371,11 +371,11 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	 * SQL for the first value of a meta key on a given row.
 	 *
 	 * @param string $key    Meta key, a constant in this class.
-	 * @param string $object SQL for the row id, a constant in this class.
+	 * @param string $row_id SQL for the row id, a constant in this class.
 	 */
-	private function meta_sql( string $key, string $object ): string {
+	private function meta_sql( string $key, string $row_id ): string {
 		global $wpdb;
-		return "(SELECT pm1.meta_value FROM {$wpdb->postmeta} pm1 WHERE pm1.post_id = {$object} AND pm1.meta_key = '{$key}' ORDER BY pm1.meta_id LIMIT 1)";
+		return "(SELECT pm1.meta_value FROM {$wpdb->postmeta} pm1 WHERE pm1.post_id = {$row_id} AND pm1.meta_key = '{$key}' ORDER BY pm1.meta_id LIMIT 1)";
 	}
 
 	/**

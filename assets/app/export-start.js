@@ -121,7 +121,7 @@
 			presetHelp.textContent = p ? String( p.description || '' ) : '';
 		} );
 
-		// Feed presets need GET /presets (spec 3.5) and an active WooCommerce.
+		// Feed presets need GET /presets and an active WooCommerce.
 		app.api.hasRoute( '/presets' ).then( ( yes ) => ( yes ? app.api.get( '/presets' ) : [] ) ).then( ( list ) => {
 			presets = ( Array.isArray( list ) ? list : [] ).filter( ( p ) => p && p.id && p.config );
 			if ( ! presets.length ) {

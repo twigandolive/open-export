@@ -146,8 +146,9 @@ class OPEX_Network {
 			$total += (int) self::in_site(
 				$site_id,
 				static function () use ( $query, $site_id, &$notes ): int {
-					if ( ! self::source_here( (string) $query['source'] ) ) {
-						$notes[] = self::missing_note( $site_id );
+					$state = self::source_state( (string) $query['source'] );
+					if ( 'ok' !== $state ) {
+						$notes[] = self::missing_note( $site_id, $state );
 						return 0;
 					}
 					return OPEX_Query::count( $query );
@@ -196,8 +197,9 @@ class OPEX_Network {
 		$result              = self::in_site(
 			$site_id,
 			static function () use ( $query, $config, $job, $site_id, $tick, $out ): array {
-				if ( ! self::source_here( (string) $query['source'] ) ) {
-					$out['note'] = self::missing_note( $site_id );
+				$state = self::source_state( (string) $query['source'] );
+				if ( 'ok' !== $state ) {
+					$out['note'] = self::missing_note( $site_id, $state );
 					return $out;
 				}
 				$batch          = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $tick );
@@ -282,10 +284,39 @@ class OPEX_Network {
 	 * @param string $source_id Source id.
 	 */
 	public static function source_here( string $source_id ): bool {
+		return 'missing' !== self::source_state( $source_id );
+	}
+
+	/**
+	 * What the current site has of a source: 'ok', 'missing' (the source is
+	 * not there) or 'empty' (a post type or taxonomy with no content here).
+	 *
+	 * Post types and taxonomies are registered by code for the whole request,
+	 * so after switching sites one registered by a plugin that is active only
+	 * on the first site still looks present. Its content decides instead.
+	 *
+	 * @param string $source_id Source id.
+	 */
+	public static function source_state( string $source_id ): string {
+		global $wpdb;
 		if ( 0 === strpos( $source_id, 'woo:' ) && ! self::woo_active_here() ) {
-			return false;
+			return 'missing';
 		}
-		return null !== OPEX_Query::parse_source( $source_id );
+		$src = OPEX_Query::parse_source( $source_id );
+		if ( null === $src ) {
+			return 'missing';
+		}
+		if ( 'posts' === ( $src['type'] ?? '' ) && 0 === strpos( $source_id, 'posts:' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one existence check per site, at job creation and per batch.
+			$any = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s LIMIT 1", substr( $source_id, 6 ) ) );
+			return null === $any ? 'empty' : 'ok';
+		}
+		if ( 0 === strpos( $source_id, 'terms:' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one existence check per site, at job creation and per batch.
+			$any = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s LIMIT 1", substr( $source_id, 6 ) ) );
+			return null === $any ? 'empty' : 'ok';
+		}
+		return 'ok';
 	}
 
 	/** Whether WooCommerce is active on the current site or for the whole network. */
@@ -298,11 +329,20 @@ class OPEX_Network {
 	}
 
 	/**
-	 * The job note for a site that does not have the source.
+	 * The job note for a site that adds no rows because of the source.
 	 *
-	 * @param int $site_id Site id.
+	 * @param int    $site_id Site id.
+	 * @param string $state   'missing' or 'empty', from source_state().
 	 */
-	private static function missing_note( int $site_id ): string {
+	private static function missing_note( int $site_id, string $state = 'missing' ): string {
+		if ( 'empty' === $state ) {
+			return sprintf(
+				/* translators: 1: site id, 2: site address. */
+				__( 'Site %1$d (%2$s) has no content of this type, so it adds no rows.', 'open-export' ),
+				$site_id,
+				get_home_url( $site_id )
+			);
+		}
 		return sprintf(
 			/* translators: 1: site id, 2: site address. */
 			__( 'Site %1$d (%2$s) does not have this data source, so it adds no rows.', 'open-export' ),

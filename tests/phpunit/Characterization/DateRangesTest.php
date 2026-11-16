@@ -157,6 +157,7 @@ class DateRangesTest extends CharacterizationCase {
 	 * Users: the range compares user_registered (stored in UTC).
 	 */
 	public function test_custom_range_users(): void {
+		$this->single_site_only( 'the users table is shared by every site of the network.' );
 		global $wpdb;
 		$want = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users} WHERE user_registered >= '2026-03-01 00:00:00' AND user_registered < '2026-04-01 00:00:00'" );
 		$this->assertGreaterThan( 0, $want );

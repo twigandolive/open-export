@@ -3,12 +3,17 @@
  * Date columns per source and the SQL for date ranges and date rules.
  *
  * Part of the query compartment. Reached only through OPEX_Query.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Knows each source's date columns and turns date ranges and date rules into SQL.
+ */
 class OPEX_Query_Dates {
 
 	/**
@@ -30,7 +35,12 @@ class OPEX_Query_Dates {
 		return $memo[ $key ];
 	}
 
-	/** @see date_fields() - split out so the memo above wraps every branch. */
+	/**
+	 * Builds the date fields of a source. Kept apart from date_fields() so its
+	 * memo wraps every branch.
+	 *
+	 * @param array $src Parsed source.
+	 */
 	private static function build_date_fields( array $src ): array {
 		$provider = OPEX_Sources::for_src( $src );
 		if ( $provider ) {
@@ -266,7 +276,7 @@ class OPEX_Query_Dates {
 			return null;
 		}
 		if ( 'meta_epoch' === ( $def['kind'] ?? 'column' ) ) {
-			// Epoch meta has no column to compare against; ranges handle these.
+			// Epoch meta has no column to compare against. Ranges handle these.
 			return null;
 		}
 

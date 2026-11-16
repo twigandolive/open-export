@@ -29,7 +29,7 @@
 		const messages = el( 'div', { class: 'opex-messages', 'aria-live': 'polite' } );
 		const limitHelp = el( 'p', { class: 'opex-help', id: app.uid( 'opex-limit' ), hidden: true },
 			/* translators: %d: most schedules allowed. */
-			sprintf( __( 'You can have at most %d schedules. Delete one to add another.', 'open-export' ), parts.MAX ) );
+			sprintf( __( 'You can have at most %d schedules. Delete one to add another.', 'open-export' ), parts.max() ) );
 		const addButton = ui.button( { label: __( 'Add schedule', 'open-export' ), icon: 'plus', primary: true, action: 'add', describedBy: limitHelp.id, onClick: () => openForm( null, addButton ) } );
 		const listBox = el( 'div', {} );
 		const listView = el( 'div', {}, [
@@ -102,7 +102,7 @@
 				addButton.disabled = true;
 				return;
 			}
-			const full = items.length >= parts.MAX;
+			const full = items.length >= parts.max();
 			addButton.disabled = full;
 			limitHelp.hidden = ! full;
 			if ( ! items.length ) {

@@ -151,6 +151,26 @@ class OPEX_Rest_Screen {
 	}
 
 	/**
+	 * Counts and sizes the server enforces, so the screen can check them
+	 * before saving instead of repeating the numbers.
+	 *
+	 * @return array<string, int>
+	 */
+	public static function count_limits(): array {
+		return array(
+			'history'           => OPEX_Jobs::MAX_HISTORY,
+			'map_pair_length'   => OPEX_Transforms::MAX_PAIR_LEN,
+			'email_recipients'  => OPEX_Delivery::MAX_RECIPIENTS,
+			'email_subject'     => OPEX_Delivery::MAX_SUBJECT,
+			'webhook_secret'    => OPEX_Delivery::MAX_SECRET,
+			'schedules'         => OPEX_Schedules::MAX,
+			'destinations'      => OPEX_Destinations::MAX,
+			'delivery_attempts' => OPEX_Delivery::MAX_ATTEMPTS,
+			'stall_seconds'     => OPEX_Runner::STALL_AFTER,
+		);
+	}
+
+	/**
 	 * Adds the operators, the text and history limits, the super admin flag,
 	 * whether zip compression works, the CSV quote characters and each
 	 * destination type's security note to the GET /options payload.
@@ -160,8 +180,12 @@ class OPEX_Rest_Screen {
 	 */
 	public static function extend_options( array $options ): array {
 		$options['operators']            = self::operators();
-		$options['limits']               = array_merge( (array) ( $options['limits'] ?? array() ), self::string_limits(), array( 'history' => OPEX_Jobs::MAX_HISTORY ) );
+		$options['limits']               = array_merge( (array) ( $options['limits'] ?? array() ), self::string_limits(), self::count_limits() );
 		$options['features']['compress'] = OPEX_Compress::available();
+		$options['compression']          = array(
+			'available' => OPEX_Compress::available(),
+			'reason'    => OPEX_Compress::available() ? '' : __( 'Zip compression needs the PHP zip extension, which this server does not have.', 'open-export' ),
+		);
 		$options['csv_enclosures']       = array(
 			array(
 				'id'    => 'double',

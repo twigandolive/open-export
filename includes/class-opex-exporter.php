@@ -1,15 +1,20 @@
 <?php
 /**
- * Job lifecycle: create() writes the file header and counts rows; each run()
+ * Job lifecycle: create() writes the file header and counts rows, and each run()
  * processes exactly one batch and returns. The client paces run() calls, so
  * no PHP worker is held longer than one batch.
  *
  * The batch run itself lives in OPEX_Export_Run. Other code calls it through
  * this class.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Creates, runs, pauses and previews export jobs: the front door of the export engine.
+ */
 class OPEX_Exporter {
 
 	/**
@@ -277,13 +282,18 @@ class OPEX_Exporter {
 
 	/** Pause a running job so it can be resumed later. */
 	public static function pause( string $id ) {
-		$job = OPEX_Jobs::get( $id );
+		$job = OPEX_Jobs::update(
+			$id,
+			static function ( array $stored ): ?array {
+				if ( 'running' !== $stored['status'] ) {
+					return null;
+				}
+				$stored['status'] = 'paused';
+				return $stored;
+			}
+		);
 		if ( ! $job ) {
 			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
-		}
-		if ( 'running' === $job['status'] ) {
-			$job['status'] = 'paused';
-			OPEX_Jobs::save( $job );
 		}
 		return OPEX_Jobs::expose( $job );
 	}
@@ -299,12 +309,17 @@ class OPEX_Exporter {
 	}
 
 	/**
-	 * User-safe export error text; full detail is logged server-side.
+	 * The error text a person sees and the job stores. Raw exception text
+	 * never goes out, debug mode or not, because a PHP error can hold server
+	 * paths. Only an OPEX_User_Error, written for people, passes through.
+	 * Detail goes to the debug log (see log_exception).
 	 *
 	 * @internal Shared with OPEX_Export_Run only.
+	 *
+	 * @param Throwable $e What stopped the export.
 	 */
 	public static function public_error_message( Throwable $e ): string {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		if ( $e instanceof OPEX_User_Error ) {
 			return $e->getMessage();
 		}
 		if ( false !== stripos( $e->getMessage(), 'export file' ) ) {
@@ -314,14 +329,17 @@ class OPEX_Exporter {
 	}
 
 	/**
-	 * Write exception detail to the PHP error log when debugging is enabled.
+	 * Writes the exception detail to the PHP error log, only when WP_DEBUG and
+	 * WP_DEBUG_LOG are both on.
 	 *
 	 * @internal Shared with OPEX_Export_Run only.
+	 *
+	 * @param Throwable $e What stopped the export.
 	 */
 	public static function log_exception( Throwable $e ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional server-side logging when debug is on.
-			error_log( 'Open Export: ' . $e->getMessage() );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- server-side detail, only with debug logging on.
+			error_log( 'Open Export: ' . get_class( $e ) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
 		}
 	}
 

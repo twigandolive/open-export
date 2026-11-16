@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Destinations {
 
 	private const OPTION       = 'opex_destinations';
-	private const MAX          = 20;
+	public const MAX           = 20;
 	private const MAX_KEY_SIZE = 16384;
 	private const MAX_PASSWORD = 1024;
 	private const TYPES        = array( 'ftp', 'ftps', 'sftp' );
@@ -33,8 +33,7 @@ class OPEX_Destinations {
 	 * @return array
 	 */
 	public static function all(): array {
-		$list = get_option( self::OPTION, array() );
-		return is_array( $list ) ? $list : array();
+		return OPEX_Store::read( self::OPTION );
 	}
 
 	/**
@@ -44,8 +43,8 @@ class OPEX_Destinations {
 	 * @return array|null
 	 */
 	public static function get( string $id ): ?array {
-		$list = self::all();
-		return isset( $list[ $id ] ) && is_array( $list[ $id ] ) ? $list[ $id ] : null;
+		$records = self::all();
+		return isset( $records[ $id ] ) && is_array( $records[ $id ] ) ? $records[ $id ] : null;
 	}
 
 	/**
@@ -58,12 +57,30 @@ class OPEX_Destinations {
 	 * @return array|WP_Error The saved record.
 	 */
 	public static function save( array $raw, string $id = '' ) {
-		$list     = self::all();
-		$existing = '' !== $id ? ( $list[ $id ] ?? null ) : null;
+		// Built under the registry lock from the list as stored now, so a host
+		// key pinned or a test recorded a moment ago is kept.
+		return OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$records ) use ( $raw, $id ) {
+				return self::build( $records, $raw, $id );
+			}
+		);
+	}
+
+	/**
+	 * Validates a destination and adds it to the list.
+	 *
+	 * @param array  $records Stored destinations, changed in place on success.
+	 * @param array  $raw  Raw input.
+	 * @param string $id   Existing id to update, or blank to create.
+	 * @return array|WP_Error The saved record.
+	 */
+	private static function build( array &$records, array $raw, string $id ) {
+		$existing = '' !== $id ? ( $records[ $id ] ?? null ) : null;
 		if ( '' !== $id && ! is_array( $existing ) ) {
 			return new WP_Error( 'opex_destination_missing', __( 'That destination does not exist.', 'open-export' ) );
 		}
-		if ( null === $existing && count( $list ) >= self::MAX ) {
+		if ( null === $existing && count( $records ) >= self::MAX ) {
 			return new WP_Error( 'opex_destination_limit', __( 'You can save at most 20 destinations.', 'open-export' ) );
 		}
 
@@ -123,12 +140,12 @@ class OPEX_Destinations {
 			'updated'  => $now,
 		);
 		// The last test speaks for the connection it tried, so a change to it drops the result.
-		if ( null !== $existing && isset( $existing['last_test'] ) && self::same_connection( $existing, $record, '' !== (string) ( $raw['secret'] ?? '' ) ) ) {
+		$new_secret = '' !== (string) ( $raw['secret'] ?? '' );
+		if ( null !== $existing && isset( $existing['last_test'] ) && self::same_connection( $existing, $record, $new_secret ) ) {
 			$record['last_test'] = self::clean_test( $existing['last_test'] );
 		}
 
-		$list[ $id ] = $record;
-		update_option( self::OPTION, $list, false );
+		$records[ $id ] = $record;
 		return $record;
 	}
 
@@ -139,11 +156,12 @@ class OPEX_Destinations {
 	 * @return void
 	 */
 	public static function delete( string $id ): void {
-		$list = self::all();
-		if ( isset( $list[ $id ] ) ) {
-			unset( $list[ $id ] );
-			update_option( self::OPTION, $list, false );
-		}
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$records ) use ( $id ): void {
+				unset( $records[ $id ] );
+			}
+		);
 	}
 
 	/**
@@ -188,15 +206,18 @@ class OPEX_Destinations {
 	 * @return void
 	 */
 	public static function pin_host_key( string $id, string $fingerprint ): void {
-		$list = self::all();
-		if ( ! isset( $list[ $id ] ) || ! is_array( $list[ $id ] ) || '' !== (string) ( $list[ $id ]['host_key'] ?? '' ) ) {
-			return;
-		}
 		if ( 1 !== preg_match( '/^SHA256:[A-Za-z0-9+\/]{43}$/', $fingerprint ) ) {
 			return;
 		}
-		$list[ $id ]['host_key'] = $fingerprint;
-		update_option( self::OPTION, $list, false );
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$records ) use ( $id, $fingerprint ): void {
+				if ( ! isset( $records[ $id ] ) || ! is_array( $records[ $id ] ) || '' !== (string) ( $records[ $id ]['host_key'] ?? '' ) ) {
+					return;
+				}
+				$records[ $id ]['host_key'] = $fingerprint;
+			}
+		);
 	}
 
 	/**
@@ -227,18 +248,21 @@ class OPEX_Destinations {
 	 * @return void
 	 */
 	public static function record_test( string $id, bool $ok, string $message ): void {
-		$list = self::all();
-		if ( ! isset( $list[ $id ] ) || ! is_array( $list[ $id ] ) ) {
-			return;
-		}
-		$list[ $id ]['last_test'] = self::clean_test(
+		$result = self::clean_test(
 			array(
 				'time'    => time(),
 				'ok'      => $ok,
 				'message' => $message,
 			)
 		);
-		update_option( self::OPTION, $list, false );
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$records ) use ( $id, $result ): void {
+				if ( isset( $records[ $id ] ) && is_array( $records[ $id ] ) ) {
+					$records[ $id ]['last_test'] = $result;
+				}
+			}
+		);
 	}
 
 	/**
@@ -261,12 +285,12 @@ class OPEX_Destinations {
 	 * Whether a save left the connection as it was tested.
 	 *
 	 * @param array $old        Stored record.
-	 * @param array $new        Record about to be saved.
+	 * @param array $next       Record about to be saved.
 	 * @param bool  $new_secret True when a new password or key was given.
 	 */
-	private static function same_connection( array $old, array $new, bool $new_secret ): bool {
+	private static function same_connection( array $old, array $next, bool $new_secret ): bool {
 		foreach ( array( 'type', 'host', 'port', 'username', 'auth', 'path', 'passive', 'host_key' ) as $key ) {
-			if ( ( $old[ $key ] ?? null ) != $new[ $key ] ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- an old record may hold the port as text.
+			if ( ( $old[ $key ] ?? null ) != $next[ $key ] ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- an old record may hold the port as text.
 				return false;
 			}
 		}

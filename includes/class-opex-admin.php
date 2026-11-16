@@ -2,10 +2,15 @@
 /**
  * Admin screen: a single page that boots the JS app in assets/app/. All
  * data flows through the REST API, so this stays a thin shell.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Adds the Tools screen and loads its scripts. The screen itself is the script app.
+ */
 class OPEX_Admin {
 
 	private const SLUG = 'open-export';
@@ -42,7 +47,7 @@ class OPEX_Admin {
 		'opex-app-builder-format'     => array( 'builder-format.js', array( 'opex-app-builder' ) ),
 		'opex-app-builder-preview'    => array( 'builder-preview.js', array( 'opex-app-builder', 'opex-app-ui-widgets' ) ),
 		'opex-app-delivery'           => array( 'delivery.js', array( 'opex-app-ui', 'opex-app-api' ) ),
-		'opex-app-export-recipe'      => array( 'export-recipe.js', array( 'opex-app-ui', 'opex-app-api' ) ),
+		'opex-app-export-recipe'      => array( 'export-recipe.js', array( 'opex-app-ui', 'opex-app-api', 'opex-app-builder-parts' ) ),
 		'opex-app-export-start'       => array( 'export-start.js', array( 'opex-app-ui-widgets', 'opex-app-api' ) ),
 		'opex-app-export-run-view'    => array( 'export-run-view.js', array( 'opex-app-history-view' ) ),
 		'opex-app-export-run'         => array( 'export-run.js', array( 'opex-app-jobs', 'opex-app-delivery', 'opex-app-export-run-view' ) ),
@@ -71,6 +76,9 @@ class OPEX_Admin {
 		'opex-app-builder' => array( 'builder.css', array( 'opex-app' ) ),
 	);
 
+	/**
+	 * Adds the screen under Tools.
+	 */
 	public static function register_menu(): void {
 		add_management_page(
 			__( 'Open Export', 'open-export' ),
@@ -134,6 +142,9 @@ class OPEX_Admin {
 		return array_keys( self::STYLES );
 	}
 
+	/**
+	 * Prints the mount point the script app fills.
+	 */
 	public static function render(): void {
 		if ( ! current_user_can( opex_capability() ) ) {
 			wp_die( esc_html__( 'You do not have permission to use Open Export.', 'open-export' ) );

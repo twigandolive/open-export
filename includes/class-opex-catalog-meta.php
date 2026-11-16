@@ -4,12 +4,17 @@
  * the ones ACF owns, and sorts them into groups by the plugin that wrote them.
  *
  * Part of the catalog compartment. Other code reaches it through OPEX_Catalog.
+ *
+ * @package Open_Export
  */
 
 // No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Samples meta keys and groups them by the plugin that wrote them.
+ */
 class OPEX_Catalog_Meta {
 
 	/**
@@ -242,6 +247,12 @@ class OPEX_Catalog_Meta {
 		return $groups;
 	}
 
+	/**
+	 * The group a meta key belongs in: ACF, a known plugin by prefix, hidden or custom.
+	 *
+	 * @param string   $key      Meta key.
+	 * @param string[] $acf_keys Keys ACF owns on this source.
+	 */
 	private static function classify_key( string $key, array $acf_keys ): string {
 		if ( isset( $acf_keys[ $key ] ) ) {
 			return 'ACF';

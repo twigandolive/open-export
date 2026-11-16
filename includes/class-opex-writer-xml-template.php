@@ -20,8 +20,25 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	/** Matches {id} and {id|cdata}. */
 	const PLACEHOLDER = '/\{([^{}|\r\n]+)(\|cdata)?\}/';
 
+	/**
+	 * Written once, before the first row.
+	 *
+	 * @var string
+	 */
 	private string $header;
+
+	/**
+	 * Written once per record, with its placeholders filled.
+	 *
+	 * @var string
+	 */
 	private string $row;
+
+	/**
+	 * Written once, after the last row.
+	 *
+	 * @var string
+	 */
 	private string $footer;
 
 	/**
@@ -170,7 +187,10 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 		}
 		$parser = xml_parser_create( 'UTF-8' );
 		$ok     = 1 === xml_parse( $parser, $xml, true );
-		xml_parser_free( $parser );
+		// PHP 8 frees the parser by itself, and PHP 8.5 deprecates the call.
+		if ( PHP_VERSION_ID < 80000 ) {
+			xml_parser_free( $parser ); // phpcs:ignore Generic.PHP.DeprecatedFunctions.Deprecated -- runs only before PHP 8.0, where it is still needed.
+		}
 		return $ok;
 	}
 
@@ -178,6 +198,7 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	 * Appends text to the output file.
 	 *
 	 * @param string $text Text.
+	 * @throws RuntimeException When the file cannot be written.
 	 */
 	private function write( string $text ): void {
 		$handle = $this->open();

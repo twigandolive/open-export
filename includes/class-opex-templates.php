@@ -1,20 +1,33 @@
 <?php
 /**
  * Saved export templates: named configs users can reload or re-run.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Stores named export configs in one option and keeps the newest when the list is full.
+ */
 class OPEX_Templates {
 
 	private const OPTION = 'opex_templates';
 	private const MAX    = 100;
 
+	/**
+	 * Every saved template, by id.
+	 */
 	public static function all(): array {
 		$templates = get_option( self::OPTION, array() );
 		return is_array( $templates ) ? $templates : array();
 	}
 
+	/**
+	 * One template, or null.
+	 *
+	 * @param string $id Template id.
+	 */
 	public static function get( string $id ): ?array {
 		$templates = self::all();
 		return $templates[ $id ] ?? null;
@@ -63,9 +76,8 @@ class OPEX_Templates {
 					return $a['updated'] <=> $b['updated'];
 				}
 			);
-			while ( count( $templates ) > self::MAX ) {
-				unset( $templates[ array_key_first( $templates ) ] );
-			}
+			// Oldest first, so the newest MAX stay.
+			$templates = array_slice( $templates, -self::MAX, null, true );
 		}
 
 		update_option( self::OPTION, $templates, false );
@@ -73,6 +85,11 @@ class OPEX_Templates {
 		return self::expose( $template );
 	}
 
+	/**
+	 * Removes a template.
+	 *
+	 * @param string $id Template id.
+	 */
 	public static function delete( string $id ): void {
 		$templates = self::all();
 		if ( isset( $templates[ $id ] ) ) {

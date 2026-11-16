@@ -69,6 +69,15 @@ class SchedulesTest extends TestCase {
 		$this->assertSame( 'opex_missing', OPEX_Schedules::save( $this->raw(), 'sdoesnotexist' )->get_error_code() );
 	}
 
+	/** An ACF field is never a date field, so incremental runs refuse it with the usual message. */
+	public function test_incremental_field_refuses_acf() {
+		$res = OPEX_Schedules::save( $this->raw( array( 'incremental' => array( 'enabled' => true, 'field' => 'acf:event_dates' ) ) ) );
+		$this->assertWPError( $res );
+		$this->assertSame( 'opex_invalid', $res->get_error_code() );
+		$this->assertSame( __( 'Unknown date field for incremental exports.', 'open-export' ), $res->get_error_message() );
+		$this->assertSame( array(), OPEX_Schedules::all() );
+	}
+
 	private function assertWPError( $v, string $msg = '' ): void {
 		$this->assertInstanceOf( WP_Error::class, $v, $msg );
 	}

@@ -18,18 +18,27 @@ class RestDeliveryTest extends TestCase {
 	/** @var mixed */
 	private $settings_before;
 
+	/** Whether setUp added the route hook, so tearDown leaves the plugin's own hook in place. */
+	private bool $added_hook = false;
+
 	protected function setUp(): void {
 		delete_option( 'opex_destinations' );
 		$this->settings_before = get_option( 'opex_settings', null );
 		$GLOBALS['wp_rest_server'] = null;
-		add_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+		// The plugin hooks this itself. Add it only when missing, and take away only what was added here.
+		$this->added_hook = false === has_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+		if ( $this->added_hook ) {
+			add_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+		}
 		rest_get_server();
 		wp_set_current_user( 1 );
 	}
 
 	protected function tearDown(): void {
 		wp_set_current_user( 1 );
-		remove_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+		if ( $this->added_hook ) {
+			remove_action( 'rest_api_init', array( 'OPEX_Rest_Delivery', 'register_routes' ) );
+		}
 		$GLOBALS['wp_rest_server'] = null;
 		delete_option( 'opex_destinations' );
 		if ( null === $this->settings_before ) {
@@ -38,8 +47,12 @@ class RestDeliveryTest extends TestCase {
 			update_option( 'opex_settings', $this->settings_before, false );
 		}
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+		// On a network wp_delete_user only removes the user from this site, so the user would stay.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 		foreach ( $this->users as $uid ) {
-			wp_delete_user( $uid );
+			is_multisite() ? wpmu_delete_user( $uid ) : wp_delete_user( $uid );
 		}
 	}
 

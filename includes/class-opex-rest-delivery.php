@@ -430,7 +430,7 @@ class OPEX_Rest_Delivery {
 						'woocommerce'   => class_exists( 'WooCommerce' ),
 						'ftp'           => extension_loaded( 'ftp' ),
 						'sodium'        => function_exists( 'sodium_crypto_secretbox' ),
-						'zip'           => class_exists( 'ZipArchive' ),
+						'zip'           => OPEX_Compress::available(),
 						'cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 						'background'    => (bool) OPEX_Settings::get( 'background' ),
 					),

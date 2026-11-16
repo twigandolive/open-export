@@ -1,8 +1,7 @@
 /*
  * Open Export admin screen: the export builder, the Export tab and the
- * delivery block. Taken from the approved v0 blueprint
- * (.handoff/v0/open-export.html) with the review notes applied. Loads after
- * app.css and uses only the color tokens defined on .opex-wrap there.
+ * delivery block. Loads after app.css and uses only the color tokens
+ * defined on .opex-wrap there.
  */
 
 /* Numbered builder cards */

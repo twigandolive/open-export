@@ -57,6 +57,8 @@ class OPEX_Field_Types {
 				// `type` shipped in 1.3.1 on the fields that carry it, so it stays as it is.
 				$known               = (string) ( $field['type'] ?? '' );
 				$field['value_type'] = isset( $dates[ (string) $field['id'] ] ) ? 'date' : self::ui_type( $src, (string) $field['id'], $known );
+				// The screen leaves fields a rule cannot use out of the filter picker.
+				$field['filterable'] = OPEX_Query::is_filterable_field( $src, (string) $field['id'] );
 				$fields[]            = $field;
 			}
 			$out[] = array_merge( array( 'id' => $id ), $group, array( 'fields' => $fields ) );

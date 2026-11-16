@@ -12,10 +12,15 @@
  * Everything here works in whole calendar days as the user perceives them, in
  * the site's timezone, and emits a half-open interval [from, before) so the last
  * day of a range is never clipped.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Date presets and their boundaries in the right time zone for each column.
+ */
 class OPEX_Dates {
 
 	/** A date column is stored either in site-local time or in UTC. */
@@ -93,7 +98,7 @@ class OPEX_Dates {
 	/**
 	 * Re-express a site-local datetime string in a column's own timezone.
 	 * Values a user types, and the datetimes relative tokens resolve to, are
-	 * always site-local; a *_gmt column needs them shifted.
+	 * always site-local. A *_gmt column needs them shifted.
 	 */
 	public static function to_column( string $local_datetime, string $tz_mode ): string {
 		$local_datetime = trim( $local_datetime );
@@ -187,7 +192,7 @@ class OPEX_Dates {
 
 	/**
 	 * Resolve a preset to a pair of inclusive site-local calendar dates.
-	 * Returns array( from, to ); either may be '' for an open end, and
+	 * Returns array( from, to ). Either may be '' for an open end, and
 	 * 'all_time' returns two empty strings.
 	 */
 	public static function preset_range( string $preset ): array {
@@ -262,7 +267,7 @@ class OPEX_Dates {
 	}
 
 	/**
-	 * Start of the week containing $day, honouring the site's
+	 * Start of the week containing $day, honoring the site's
 	 * "Week Starts On" setting rather than assuming Monday.
 	 */
 	private static function week_start( DateTimeImmutable $day ): DateTimeImmutable {

@@ -9,7 +9,7 @@
  * Exposes opexApp.builder.pairs:
  *   rows( step, name )                     The editable rows of a map argument.
  *   editor( step, name, n, validate )      Returns { root, input }.
- *   MAX_LENGTH                             Longest value on either side.
+ *   maxLength()                            Longest value on either side.
  */
 ( function () {
 	'use strict';
@@ -21,8 +21,8 @@
 	const B = app.builder;
 	const pairRows = new WeakMap();
 
-	// OPEX_Transforms::MAX_PAIR_LEN. /options does not send it.
-	const MAX_LENGTH = 200;
+	// /options limits.map_pair_length (OPEX_Transforms::MAX_PAIR_LEN).
+	const maxLength = () => app.store.limit( 'map_pair_length', 200 );
 
 	function rows( step, name ) {
 		if ( ! pairRows.has( step ) ) {
@@ -84,5 +84,5 @@
 		return { root: el( 'div', { class: 'opex-w-full' }, [ table, addPair ] ), input: addPair };
 	}
 
-	B.pairs = { rows, editor, MAX_LENGTH };
+	B.pairs = { rows, editor, maxLength };
 }() );

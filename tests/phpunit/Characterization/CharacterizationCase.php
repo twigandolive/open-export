@@ -226,6 +226,19 @@ abstract class CharacterizationCase extends TestCase {
 	}
 
 	/**
+	 * Skips a test whose golden output was recorded on a single site. On a
+	 * multisite network the same code sees network-wide users, every site's
+	 * tables and other seed data, so the output differs without a defect.
+	 *
+	 * @param string $why What differs on a network.
+	 */
+	protected function single_site_only( string $why ): void {
+		if ( is_multisite() ) {
+			$this->markTestSkipped( 'Single-site golden: ' . $why );
+		}
+	}
+
+	/**
 	 * Database flavor: sqlite or mariadb. Variants live in golden/<flavor>/.
 	 *
 	 * @return string

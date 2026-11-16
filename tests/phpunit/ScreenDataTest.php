@@ -111,6 +111,56 @@ class ScreenDataTest extends TestCase {
 		$this->assertSame( is_multisite() && is_super_admin(), $o['is_super_admin'] );
 	}
 
+	/** The screen reads the server's own limits and the reasons a format or zip is unavailable. */
+	public function test_options_send_limits_and_reasons(): void {
+		$o = $this->call( 'GET', '/options' )->get_data();
+		$this->assertSame(
+			array(
+				'history'           => OPEX_Jobs::MAX_HISTORY,
+				'map_pair_length'   => OPEX_Transforms::MAX_PAIR_LEN,
+				'email_recipients'  => OPEX_Delivery::MAX_RECIPIENTS,
+				'email_subject'     => OPEX_Delivery::MAX_SUBJECT,
+				'webhook_secret'    => OPEX_Delivery::MAX_SECRET,
+				'schedules'         => OPEX_Schedules::MAX,
+				'destinations'      => OPEX_Destinations::MAX,
+				'delivery_attempts' => OPEX_Delivery::MAX_ATTEMPTS,
+				'stall_seconds'     => OPEX_Runner::STALL_AFTER,
+			),
+			array_intersect_key( $o['limits'], OPEX_Rest_Screen::count_limits() )
+		);
+		$this->assertSame( array( 10, 200, 256, 50, 20, 3, 600 ), array( $o['limits']['email_recipients'], $o['limits']['email_subject'], $o['limits']['webhook_secret'], $o['limits']['schedules'], $o['limits']['destinations'], $o['limits']['delivery_attempts'], $o['limits']['stall_seconds'] ) );
+		foreach ( $o['formats'] as $id => $format ) {
+			$this->assertArrayHasKey( 'reason', $format, $id );
+			$this->assertSame( $format['available'], '' === $format['reason'], $id . ': a reason exactly when unavailable' );
+		}
+		$this->assertSame( OPEX_Compress::available(), $o['compression']['available'] );
+		$this->assertSame( $o['compression']['available'], '' === $o['compression']['reason'] );
+	}
+
+	/** Each field says whether a filter rule can use it, the same answer the engine gives. */
+	public function test_fields_say_whether_they_can_be_filtered(): void {
+		$users = $this->fields( 'users' );
+		$this->assertTrue( $users['core:ID']['filterable'] );
+		$this->assertTrue( $users['computed:roles']['filterable'], 'roles is the one computed field rules can use' );
+		$src     = OPEX_Query::parse_source( 'users' );
+		$differs = array();
+		foreach ( $users as $id => $field ) {
+			if ( OPEX_Query::is_filterable_field( $src, $id ) !== $field['filterable'] ) {
+				$differs[] = $id;
+			}
+		}
+		$this->assertSame( array(), $differs );
+		$computed = array_filter(
+			$this->fields( 'posts:post' ),
+			static function ( $field, $id ) {
+				return 0 === strpos( $id, 'computed:' ) && 'computed:roles' !== $id;
+			},
+			ARRAY_FILTER_USE_BOTH
+		);
+		$this->assertNotEmpty( $computed );
+		$this->assertSame( array(), array_keys( array_filter( array_column( $computed, 'filterable' ) ) ), 'other computed fields cannot be filtered' );
+	}
+
 	public function test_fields_carry_types_and_groups_carry_stable_ids(): void {
 		$res    = $this->call( 'GET', '/fields?source=posts:post' )->get_data();
 		$ids    = array_column( $res['groups'], 'id' );

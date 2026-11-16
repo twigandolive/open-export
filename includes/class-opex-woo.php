@@ -7,17 +7,22 @@
  * Sites on High-Performance Order Storage keep them in wp_wc_orders with
  * addresses and operational data in sibling tables, and wp_posts holds nothing.
  * That is why picking "Orders" from the post-type list on an HPOS store exports
- * an empty file: the rows simply are not there any more.
+ * an empty file: the rows are not there any more.
  *
  * This class hides that split. Both storage modes present the same friendly
  * field names, so a saved template keeps working if a store migrates.
  *
  * Refunds (shop_order_refund) are excluded from both modes: an order report
  * that silently interleaved refund rows with order rows would misreport totals.
+ *
+ * @package Open_Export
  */
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * WooCommerce orders, on either storage, and the helpers the other WooCommerce sources share.
+ */
 class OPEX_Woo {
 
 	/** The source id the UI and saved configs use. */
@@ -249,7 +254,7 @@ class OPEX_Woo {
 	/**
 	 * Date columns for orders stored as posts.
 	 *
-	 * post_date is a real column. _date_paid and _date_completed are postmeta
+	 * The post_date field is a real column. _date_paid and _date_completed are postmeta
 	 * holding a UNIX timestamp, so they compare as integers against epochs
 	 * computed in PHP, never against a datetime literal, and never through
 	 * MySQL's UNIX_TIMESTAMP(), whose result depends on the session timezone.
@@ -407,7 +412,7 @@ class OPEX_Woo {
 
 	/**
 	 * Order meta keys, sampled and cached like every other source's keys.
-	 * HPOS keeps them in wc_orders_meta; legacy keeps them in postmeta.
+	 * HPOS keeps them in wc_orders_meta. Legacy storage keeps them in postmeta.
 	 */
 	private static function meta_groups(): array {
 		global $wpdb;
@@ -429,7 +434,7 @@ class OPEX_Woo {
 			}
 
 			$safe = str_replace( '`', '', $table );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- identifier validated against SHOW TABLE STATUS; key sampling cached below.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a table name cannot be a placeholder; it is checked against SHOW TABLE STATUS, and the sample is cached below.
 			$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM `{$safe}` LIMIT 800" );
 			$keys = array_values( array_filter( array_map( 'strval', (array) $keys ) ) );
 			sort( $keys, SORT_NATURAL | SORT_FLAG_CASE );
@@ -468,13 +473,13 @@ class OPEX_Woo {
 		if ( self::use_hpos() ) {
 			$table = self::table( 'orders' );
 			$safe  = str_replace( '`', '', $table );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- identifier validated above; one cheap COUNT for the picker.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the table name comes from $wpdb->prefix and the status list is a class constant; the type is bound. One cheap COUNT for the picker.
 			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN (" . self::DRAFT_STATUS_SQL . ')', 'shop_order' ) );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one cheap COUNT for the picker.
 			$count = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN (" . self::DRAFT_STATUS_SQL . ')',
+					"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN (" . self::DRAFT_STATUS_SQL . ')', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- the status list is a class constant of quoted literals.
 					self::LEGACY_POST_TYPE
 				)
 			);

@@ -16,8 +16,8 @@
 	const ui = app.ui;
 	const api = app.api;
 	const store = app.store;
-	// The server keeps at most 20 destinations (class-opex-destinations.php).
-	const MAX = 20;
+	// The most destinations the server keeps (/options limits.destinations).
+	const max = () => app.store.limit( 'destinations', 20 );
 
 	function mount( panel ) {
 		const options = store.get( 'options' ) || {};
@@ -26,7 +26,7 @@
 		const messages = el( 'div', { class: 'opex-messages', 'aria-live': 'polite' } );
 		const limitHelp = el( 'p', { class: 'opex-help', id: app.uid( 'opex-limit' ), hidden: true },
 			/* translators: %d: most destinations allowed. */
-			sprintf( __( 'You can save at most %d destinations.', 'open-export' ), MAX ) );
+			sprintf( __( 'You can save at most %d destinations.', 'open-export' ), max() ) );
 		const addButton = ui.button( { label: __( 'Add destination', 'open-export' ), icon: 'plus', action: 'add', describedBy: limitHelp.id, onClick: () => openForm( null, addButton ) } );
 		const listBox = el( 'div', {} );
 		const formBox = el( 'div', { class: 'opex-mt-lg' } );
@@ -98,7 +98,7 @@
 				addButton.disabled = true;
 				return;
 			}
-			const full = items.length >= MAX;
+			const full = items.length >= max();
 			addButton.disabled = full;
 			limitHelp.hidden = ! full;
 			if ( ! items.length ) {
@@ -115,7 +115,7 @@
 		}
 
 		function table( items ) {
-			// The Last test column needs last_test from spec 3.5. Without it the column is left out.
+			// The Last test column needs last_test, which an older server does not send. Without it the column is left out.
 			const withTest = items.some( ( item ) => Object.prototype.hasOwnProperty.call( item, 'last_test' ) );
 			const columns = [
 				{ label: __( 'Name', 'open-export' ) },

@@ -79,6 +79,34 @@ class DeliveryFtpTest extends TestCase {
 		$this->assertTrue( OPEX_Delivery_Ftp::send( $job, $rec, OPEX_Jobs::file_path( $job ) ) );
 	}
 
+	public function test_the_passive_address_the_server_names_is_ignored() {
+		// A second server whose passive replies name 127.0.0.2, where nothing
+		// listens. The upload must still reach the server it logged in to.
+		$s       = new OpexTestServer();
+		$s->dir  = OpexTestServer::temp_dir();
+		$s->port = OpexTestServer::free_port();
+		mkdir( $s->dir . '/in' );
+		$script = dirname( __DIR__ ) . '/servers/ftp_server.py';
+		$code   = 'import sys, runpy; from pyftpdlib.handlers import FTPHandler; FTPHandler.masquerade_address = "127.0.0.2"; '
+			. 'sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name="__main__")';
+		$ok     = $s->start( array( OpexTestServer::python(), '-c', $code, $script, $s->dir, (string) $s->port, 'tester', 'pw-good' ) );
+		try {
+			if ( ! $ok ) {
+				$this->markTestSkipped( 'Could not start the second FTP server.' );
+			}
+			$job = $this->make_job();
+			$rec = $this->dest( array( 'port' => $s->port ) );
+			$res = OPEX_Delivery_Ftp::send( $job, $rec, OPEX_Jobs::file_path( $job ) );
+			$this->assertTrue( $res, is_wp_error( $res ) ? $res->get_error_code() : '' );
+			$this->assertFileExists( $s->dir . '/in/Orders-May.csv' );
+		} finally {
+			$s->stop();
+			foreach ( (array) glob( $s->dir . '/in/{,.}*', GLOB_BRACE ) as $f ) {
+				is_file( $f ) && unlink( $f );
+			}
+		}
+	}
+
 	public function test_process_through_delivery() {
 		$job      = $this->make_job();
 		$rec      = $this->dest();

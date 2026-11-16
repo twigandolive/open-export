@@ -204,6 +204,43 @@ class UninstallTest extends TestCase {
 		$this->assertSame( array( 'x' => 1 ), get_option( 'opex_jobs' ), 'this site keeps its data' );
 	}
 
+	/** A network deactivation clears the plugin's cron events on every site, not only the current one. */
+	public function test_network_deactivation_clears_cron_on_every_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Needs a multisite network.' );
+		}
+		$sites = array_map( 'intval', get_sites( array( 'fields' => 'ids', 'number' => 0 ) ) );
+		if ( count( $sites ) < 2 ) {
+			$this->markTestSkipped( 'Needs a second site.' );
+		}
+		// Each site's cron list is put back exactly afterwards.
+		$saved = array();
+		foreach ( $sites as $site ) {
+			switch_to_blog( $site );
+			$saved[ $site ] = _get_cron_array();
+			wp_schedule_single_event( time() + 3600, 'opex_maintenance_probe' );
+			wp_schedule_single_event( time() + 3600, 'other_plugin_probe' );
+			restore_current_blog();
+		}
+		try {
+			opex_deactivate( true );
+			foreach ( $sites as $site ) {
+				switch_to_blog( $site );
+				$opex  = wp_next_scheduled( 'opex_maintenance_probe' );
+				$other = wp_next_scheduled( 'other_plugin_probe' );
+				restore_current_blog();
+				$this->assertFalse( $opex, "site {$site} keeps no opex_ event" );
+				$this->assertNotFalse( $other, "site {$site} keeps other plugins' events" );
+			}
+		} finally {
+			foreach ( $saved as $site => $cron ) {
+				switch_to_blog( $site );
+				_set_cron_array( is_array( $cron ) ? $cron : array() );
+				restore_current_blog();
+			}
+		}
+	}
+
 	public function test_missing_folder_is_fine() {
 		opex_uninstall_site( $this->dir . '-absent' );
 		$this->assertDirectoryExists( $this->dir );

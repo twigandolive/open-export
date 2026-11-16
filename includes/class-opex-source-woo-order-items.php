@@ -52,37 +52,37 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function src_type(): string {
 		return 'woo_order_items';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function src(): array {
 		// The storage engine is part of the source, so memoized date columns
 		// can never be shared between the two.
 		return parent::src() + array( 'storage' => OPEX_Woo::use_hpos() ? 'hpos' : 'legacy' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function defs_key(): string {
 		global $wpdb;
 		return $wpdb->prefix . ( OPEX_Woo::use_hpos() ? '|hpos' : '|legacy' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function is_available(): bool {
 		global $wpdb;
 		return OPEX_Catalog::table_exists( $wpdb->prefix . 'woocommerce_order_items' )
 			&& OPEX_Catalog::table_exists( $wpdb->prefix . 'woocommerce_order_itemmeta' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function from(): string {
 		global $wpdb;
 		$items = "{$wpdb->prefix}woocommerce_order_items oi";
@@ -92,7 +92,7 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		return "{$items} INNER JOIN {$wpdb->posts} op ON op.ID = oi.order_id";
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function base_where(): array {
 		// The same orders the orders source exports: no refunds, no carts.
 		if ( OPEX_Woo::use_hpos() ) {
@@ -101,27 +101,27 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		return array( array( "op.post_type = 'shop_order'", 'op.post_status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' ), array() );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function primary_key(): string {
 		return 'oi.order_item_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function id_prop(): string {
 		return 'order_item_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function base_select(): string {
 		return 'oi.order_item_id';
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function label(): string {
 		return __( 'WooCommerce Order Items', 'open-export' );
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -131,7 +131,7 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function date_fields(): array {
 		$hpos = OPEX_Woo::use_hpos();
 		return array(
@@ -144,13 +144,13 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		);
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	public function prepare_filter_value( string $field, string $op, string $value ): string {
 		// The order status takes "completed" or "wc-completed", as on the orders source.
 		return 'woo:order_status' === $field ? OPEX_Source_Woo_Orders_Rules::filter_value( 'woo:status', $op, $value ) : $value;
 	}
 
-	/** @inheritDoc */
+	/** {@inheritDoc} */
 	protected function field_defs(): array {
 		global $wpdb;
 		$item  = __( 'Item', 'open-export' );

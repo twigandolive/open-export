@@ -17,6 +17,9 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Site_Health {
 
+	/** A background job with no batch for this long counts as stuck. */
+	private const STUCK_AFTER = HOUR_IN_SECONDS;
+
 	/**
 	 * Adds the hooks.
 	 *
@@ -64,7 +67,7 @@ class OPEX_Site_Health {
 				'private' => true,
 			),
 			'writable'      => self::yes_no( __( 'Export folder is writable', 'open-export' ), $disk['writable'] ),
-			'protected'     => self::yes_no( __( 'Export folder is protected', 'open-export' ), $disk['protected'] ),
+			'protected'     => self::protection_field( $disk['rules'] ),
 			'files'         => array(
 				'label' => __( 'Stored export files', 'open-export' ),
 				'value' => $disk['files'],
@@ -128,11 +131,63 @@ class OPEX_Site_Health {
 	public static function add_test( $tests ): array {
 		$tests = is_array( $tests ) ? $tests : array();
 
-		$tests['direct']['open_export_cron'] = array(
+		$tests['direct']['open_export_cron']  = array(
 			'label' => __( 'Open Export can run scheduled exports', 'open-export' ),
 			'test'  => array( __CLASS__, 'test_cron' ),
 		);
+		$tests['direct']['open_export_stuck'] = array(
+			'label' => __( 'Open Export background exports are moving', 'open-export' ),
+			'test'  => array( __CLASS__, 'test_stuck_jobs' ),
+		);
 		return $tests;
+	}
+
+	/**
+	 * Warns about background exports that show "running" but have not
+	 * finished a batch for over an hour. The hourly maintenance restarts a
+	 * stalled job after ten minutes, so an hour means the restarts are not
+	 * helping, often because WP-Cron does not run.
+	 *
+	 * @return array
+	 */
+	public static function test_stuck_jobs(): array {
+		$stuck = 0;
+		foreach ( OPEX_Jobs::all() as $job ) {
+			if ( 'background' !== $job['mode'] || 'running' !== $job['status'] ) {
+				continue;
+			}
+			$last   = (int) $job['heartbeat'] > 0 ? (int) $job['heartbeat'] : (int) $job['created'];
+			$stuck += time() - $last > self::STUCK_AFTER ? 1 : 0;
+		}
+
+		$result = array(
+			'label'       => __( 'Open Export background exports are moving', 'open-export' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => __( 'Open Export', 'open-export' ),
+				'color' => 'blue',
+			),
+			'description' => '<p>' . esc_html__( 'No background export has been waiting for more than an hour.', 'open-export' ) . '</p>',
+			'actions'     => '',
+			'test'        => 'open_export_stuck',
+		);
+		if ( $stuck > 0 ) {
+			$result['status']      = 'recommended';
+			$result['label']       = __( 'An Open Export background export is stuck', 'open-export' );
+			$result['description'] = '<p>' . esc_html(
+				sprintf(
+					/* translators: %d: number of exports. */
+					_n(
+						'%d background export has not moved for over an hour.',
+						'%d background exports have not moved for over an hour.',
+						$stuck,
+						'open-export'
+					),
+					$stuck
+				)
+			) . '</p><p>' . esc_html__( 'Background exports run on WP-Cron. Check that WP-Cron runs on this site, then pause and resume the export from the History screen, or start it again.', 'open-export' ) . '</p>';
+		}
+		return $result;
 	}
 
 	/**
@@ -178,30 +233,58 @@ class OPEX_Site_Health {
 	}
 
 	/**
-	 * Reads the folder: writable, guarded, file count and total size.
+	 * Reads the folder: writable, which deny rules are in it, file count and total size.
 	 *
 	 * @param string $dir Folder path.
 	 * @return array
 	 */
 	private static function folder_stats( string $dir ): array {
 		$stats = array(
-			'writable'  => false,
-			'protected' => false,
-			'files'     => 0,
-			'bytes'     => 0,
+			'writable' => false,
+			'rules'    => array(),
+			'files'    => 0,
+			'bytes'    => 0,
 		);
 		if ( ! is_dir( $dir ) ) {
 			return $stats;
 		}
-		$stats['writable']  = wp_is_writable( $dir );
-		$stats['protected'] = is_file( $dir . '/.htaccess' ) && is_file( $dir . '/index.php' );
+		$stats['writable'] = wp_is_writable( $dir );
+		foreach ( array_keys( opex_export_dir_rules() ) as $name ) {
+			if ( is_file( $dir . '/' . $name ) ) {
+				$stats['rules'][] = $name;
+			}
+		}
 		foreach ( (array) glob( $dir . '/*' ) as $file ) {
-			if ( is_file( $file ) && 'index.php' !== basename( $file ) ) {
+			if ( is_file( $file ) && ! in_array( basename( $file ), array( 'index.php', 'web.config' ), true ) ) {
 				++$stats['files'];
 				$stats['bytes'] += (int) filesize( $file );
 			}
 		}
 		return $stats;
+	}
+
+	/**
+	 * What protects the folder, said plainly. The rule files only work on
+	 * the servers that read them, so this never claims more than that.
+	 *
+	 * @param string[] $rules Rule files found in the folder.
+	 * @return array
+	 */
+	private static function protection_field( array $rules ): array {
+		if ( ! $rules ) {
+			$value = __( 'No deny rule is written yet. Files are guarded only by their random names.', 'open-export' );
+		} else {
+			$value = sprintf(
+				/* translators: %s: file names, such as ".htaccess, web.config". */
+				__( 'Deny rules written (%s) for Apache, LiteSpeed and IIS. nginx ignores these files and needs its own rule to block the folder.', 'open-export' ),
+				implode( ', ', $rules )
+			);
+		}
+		return array(
+			'label' => __( 'Export folder protection', 'open-export' ),
+			'value' => $value,
+			'debug' => $rules ? implode( ',', $rules ) : 'none',
+		);
 	}
 
 	/**

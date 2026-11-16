@@ -93,8 +93,12 @@ class AcfFieldsTest extends TestCase {
 		}
 		if ( $this->users ) {
 			require_once ABSPATH . 'wp-admin/includes/user.php';
+			// On a network wp_delete_user only removes the user from this site, so the user would stay.
+			if ( is_multisite() ) {
+				require_once ABSPATH . 'wp-admin/includes/ms.php';
+			}
 			foreach ( $this->users as $id ) {
-				wp_delete_user( $id );
+				is_multisite() ? wpmu_delete_user( $id ) : wp_delete_user( $id );
 			}
 		}
 		if ( OPEX_Acf::available() ) {
