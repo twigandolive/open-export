@@ -31,19 +31,13 @@ class OPEX_Query_Dates {
 
 	/** @see date_fields() - split out so the memo above wraps every branch. */
 	private static function build_date_fields( array $src ): array {
-		switch ( $src['type'] ) {
-			case 'woo_orders':
-				return OPEX_Woo::hpos_date_fields();
+		$provider = OPEX_Sources::for_src( $src );
+		if ( $provider ) {
+			return $provider->date_fields();
+		}
 
+		switch ( $src['type'] ) {
 			case 'posts':
-				if ( ! empty( $src['woo'] ) ) {
-					// Orders name their dates by what they mean, plus the raw
-					// post columns for anyone who wants them.
-					return OPEX_Woo::legacy_date_fields() + array(
-						'core:post_date'     => array( 'label' => __( 'Order date (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
-						'core:post_date_gmt' => array( 'label' => __( 'Order date (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),
-					);
-				}
 				return array(
 					'core:post_date'         => array( 'label' => __( 'Date published (site time)', 'open-export' ), 'tz' => OPEX_Dates::TZ_LOCAL, 'sql' => 'p.post_date' ),
 					'core:post_date_gmt'     => array( 'label' => __( 'Date published (UTC)', 'open-export' ), 'tz' => OPEX_Dates::TZ_UTC, 'sql' => 'p.post_date_gmt' ),

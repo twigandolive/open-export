@@ -295,7 +295,8 @@ class OPEX_Schema {
 	/** Coarse type hint so an assistant knows what a field holds. */
 	private static function field_type( array $src, string $field ): string {
 		if ( 0 === strpos( $field, 'woo:' ) ) {
-			return OPEX_Woo::field_type( $field );
+			$provider = OPEX_Sources::for_src( $src );
+			return $provider ? $provider->field_type( $field ) : 'text';
 		}
 		if ( 0 === strpos( $field, 'tax:' ) ) {
 			return 'enum';
@@ -363,9 +364,11 @@ class OPEX_Schema {
 	 */
 	private static function field_values( array $src, string $field ): array {
 		// Order status, on either storage engine.
-		if ( ( 'woo:status' === $field || 'core:post_status' === $field ) && self::is_order_source( $src ) ) {
-			if ( function_exists( 'wc_get_order_statuses' ) ) {
-				return array_keys( wc_get_order_statuses() );
+		$provider = OPEX_Sources::for_values( $src );
+		if ( $provider ) {
+			$values = $provider->field_values( $field );
+			if ( $values ) {
+				return $values;
 			}
 		}
 
@@ -394,13 +397,6 @@ class OPEX_Schema {
 		}
 
 		return array();
-	}
-
-	private static function is_order_source( array $src ): bool {
-		if ( 'woo_orders' === $src['type'] ) {
-			return true;
-		}
-		return 'posts' === $src['type'] && OPEX_Woo::LEGACY_POST_TYPE === ( $src['post_type'] ?? '' );
 	}
 
 	/**

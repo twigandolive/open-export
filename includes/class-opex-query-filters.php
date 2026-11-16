@@ -47,21 +47,22 @@ class OPEX_Query_Filters {
 			}
 		}
 
-		$is_order_source = 'woo_orders' === $src['type'] || ( 'posts' === $src['type'] && ! empty( $src['woo'] ) );
-		if ( $is_order_source && 'woo:status' === $field ) {
-			$value = self::normalize_status( $op, $value );
-		}
-		if ( $is_order_source && 'woo:is_guest' === $field ) {
-			$guest = self::guest_clause( $src, $op, $value );
-			if ( null !== $guest ) {
-				return $guest;
+		$provider = OPEX_Sources::for_src( $src );
+		if ( $provider ) {
+			$value = $provider->prepare_filter_value( $field, $op, $value );
+			$flag  = $provider->flag_sql( $field );
+			if ( null !== $flag ) {
+				$clause = self::flag_clause( $flag, $op, $value );
+				if ( null !== $clause ) {
+					return $clause;
+				}
 			}
-		}
 
-		// Friendly WooCommerce field rule, e.g. woo:status.
-		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
-			$map = OPEX_Woo::field_map();
-			return self::value_condition( $map[ $field ]['expr'], $op, $value, $args );
+			// A friendly field the provider maps to a SQL expression, e.g. woo:status.
+			$expr = $provider->filter_expr( $field );
+			if ( null !== $expr ) {
+				return self::value_condition( $expr, $op, $value, $args );
+			}
 		}
 
 		// On a legacy store the same id is a post column or a meta key.
@@ -151,28 +152,12 @@ class OPEX_Query_Filters {
 	}
 
 	/**
-	 * Lets an order status filter name a status with or without the "wc-" prefix.
-	 * Only the exact-match operators change: "contains" still searches the stored text.
+	 * A yes or no flag takes yes or no. Returns null when the value is not one of
+	 * those, so the rule compares the stored value as before.
+	 *
+	 * @param string $flag_sql SQL that is true when the flag is yes.
 	 */
-	private static function normalize_status( string $op, string $value ): string {
-		if ( ! in_array( $op, array( 'eq', 'neq', 'in', 'not_in' ), true ) ) {
-			return $value;
-		}
-		$plain = array( 'trash', 'auto-draft', 'draft', 'publish', 'private', 'checkout-draft' );
-		$items = in_array( $op, array( 'in', 'not_in' ), true ) ? explode( ',', $value ) : array( $value );
-		$out   = array();
-		foreach ( $items as $item ) {
-			$item  = trim( $item );
-			$out[] = ( '' === $item || 0 === strpos( $item, 'wc-' ) || in_array( $item, $plain, true ) ) ? $item : 'wc-' . $item;
-		}
-		return implode( ',', $out );
-	}
-
-	/**
-	 * The guest flag takes yes or no. Returns null when the value is not one of
-	 * those, so the rule compares the stored customer id as before.
-	 */
-	private static function guest_clause( array $src, string $op, string $value ): ?string {
+	private static function flag_clause( string $flag_sql, string $op, string $value ): ?string {
 		if ( ! in_array( $op, array( 'eq', 'neq', 'in', 'not_in' ), true ) ) {
 			return null;
 		}
@@ -198,14 +183,8 @@ class OPEX_Query_Filters {
 			return $positive ? self::MATCH_ALL : self::MATCH_NOTHING;
 		}
 
-		if ( 'woo_orders' === $src['type'] ) {
-			$guest = '(o.customer_id = 0 OR o.customer_id IS NULL)';
-		} else {
-			global $wpdb;
-			$guest = "NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} gm WHERE gm.post_id = p.ID AND gm.meta_key = '_customer_user' AND gm.meta_value NOT IN ('', '0'))";
-		}
-		// "eq yes" and "neq no" both mean guest.
-		return isset( $flags['yes'] ) === $positive ? $guest : "NOT ({$guest})";
+		// "eq yes" and "neq no" both mean yes.
+		return isset( $flags['yes'] ) === $positive ? $flag_sql : "NOT ({$flag_sql})";
 	}
 
 	/**
@@ -343,16 +322,17 @@ class OPEX_Query_Filters {
 		global $wpdb;
 
 		$map = array(
-			'posts'      => array( $wpdb->postmeta, 'post_id', 'p.ID' ),
-			'users'      => array( $wpdb->usermeta, 'user_id', 'u.ID' ),
-			'comments'   => array( $wpdb->commentmeta, 'comment_id', 'c.comment_ID' ),
-			'terms'      => array( $wpdb->termmeta, 'term_id', 't.term_id' ),
-			'woo_orders' => array( OPEX_Woo::table( 'meta' ), 'order_id', 'o.id' ),
+			'posts'    => array( $wpdb->postmeta, 'post_id', 'p.ID' ),
+			'users'    => array( $wpdb->usermeta, 'user_id', 'u.ID' ),
+			'comments' => array( $wpdb->commentmeta, 'comment_id', 'c.comment_ID' ),
+			'terms'    => array( $wpdb->termmeta, 'term_id', 't.term_id' ),
 		);
-		if ( ! isset( $map[ $src['type'] ] ) ) {
+		$provider = OPEX_Sources::for_src( $src );
+		$found    = $provider ? $provider->meta_table() : ( $map[ $src['type'] ] ?? null );
+		if ( null === $found ) {
 			return '';
 		}
-		list( $table, $fk, $outer ) = $map[ $src['type'] ];
+		list( $table, $fk, $outer ) = $found;
 
 		// A missing key and an empty value both read as empty, like a NULL column.
 		if ( '' === $value && 'eq' === $op ) {

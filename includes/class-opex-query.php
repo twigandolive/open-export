@@ -128,11 +128,8 @@ class OPEX_Query {
 		if ( 0 !== strpos( $field, 'woo:' ) ) {
 			return $field;
 		}
-		if ( 'posts' === $src['type'] && ! empty( $src['woo'] ) ) {
-			$legacy = OPEX_Woo::legacy_field( $field );
-			return '' !== $legacy ? $legacy : $field;
-		}
-		return $field;
+		$provider = OPEX_Sources::for_src( $src );
+		return $provider ? $provider->resolve_field( $field ) : $field;
 	}
 
 	/**
@@ -149,6 +146,10 @@ class OPEX_Query {
 		$field = self::resolve_field( $src, $field );
 
 		if ( 0 === strpos( $field, 'meta:' ) ) {
+			$provider = OPEX_Sources::for_src( $src );
+			if ( $provider && null === $provider->meta_table() ) {
+				return false;
+			}
 			return 'table' !== $src['type'] && '' !== substr( $field, 5 ) && ! self::is_credential_meta( substr( $field, 5 ) );
 		}
 
@@ -165,7 +166,8 @@ class OPEX_Query {
 		}
 
 		if ( 0 === strpos( $field, 'woo:' ) ) {
-			return 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field );
+			$provider = OPEX_Sources::for_src( $src );
+			return $provider && $provider->has_field( $field );
 		}
 
 		if ( 0 === strpos( $field, 'computed:' ) ) {
@@ -202,16 +204,12 @@ class OPEX_Query {
 	 * Returns null for unknown sources; downstream code never trusts raw input.
 	 */
 	public static function parse_source( string $source_id ): ?array {
-		if ( OPEX_Woo::SOURCE === $source_id ) {
-			if ( ! OPEX_Woo::is_active() ) {
-				return null;
-			}
-			// One source id, two storage engines. Under HPOS it becomes a
-			// joined query over the custom order tables; otherwise it is just
-			// the shop_order post type, so every existing code path applies.
-			return OPEX_Woo::use_hpos()
-				? array( 'type' => 'woo_orders' )
-				: array( 'type' => 'posts', 'post_type' => OPEX_Woo::LEGACY_POST_TYPE, 'woo' => true );
+		// A registered provider serves its own ids. The order provider keeps
+		// one source id over two storage engines: under HPOS a joined query
+		// over the custom order tables, otherwise the shop_order post type.
+		$provided = OPEX_Sources::parse( $source_id );
+		if ( $provided ) {
+			return $provided;
 		}
 		if ( 'users' === $source_id ) {
 			return array( 'type' => 'users' );
@@ -341,22 +339,17 @@ class OPEX_Query {
 
 		$filters = (array) ( $config['filters'] ?? array() );
 
-		switch ( $src['type'] ) {
-			case 'woo_orders':
-				$from = OPEX_Woo::from_clause();
-				// Refunds share the orders table; excluding them keeps one row
-				// per order and stops refund rows corrupting reported totals.
-				// Auto-drafts and checkout drafts are carts, not orders.
-				$base = array( "o.type = 'shop_order'", "o.status NOT IN ('auto-draft', 'checkout-draft')" );
-				$args = array();
-				$pk   = 'o.id';
+		$provider = OPEX_Sources::for_src( $src );
+		$type     = $provider ? 'provider' : $src['type'];
+		switch ( $type ) {
+			case 'provider':
+				$from = $provider->from();
+				list( $base, $args ) = $provider->base_where();
+				$pk   = $provider->primary_key();
 				break;
 			case 'posts':
 				$from  = "{$wpdb->posts} p";
 				$base  = array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" );
-				if ( ! empty( $src['woo'] ) ) {
-					$base[] = "p.post_status <> 'checkout-draft'";
-				}
 				$args  = array( $src['post_type'] );
 				$pk    = 'p.ID';
 				break;
@@ -427,7 +420,7 @@ class OPEX_Query {
 	 * Internal to the query compartment: other code calls OPEX_Query.
 	 */
 	public static function alias( string $type ): string {
-		return array( 'posts' => 'p', 'users' => 'u', 'comments' => 'c', 'terms' => 't', 'woo_orders' => 'o' )[ $type ] ?? 'p';
+		return array( 'posts' => 'p', 'users' => 'u', 'comments' => 'c', 'terms' => 't' )[ $type ] ?? 'p';
 	}
 
 	/**
@@ -530,8 +523,9 @@ class OPEX_Query {
 
 	/** SELECT list: raw tables fetch only requested columns plus the PK. */
 	private static function select_list( array $src, array $fields ): string {
-		if ( 'woo_orders' === $src['type'] ) {
-			return OPEX_Woo::select_list();
+		$provider = OPEX_Sources::for_src( $src );
+		if ( $provider ) {
+			return $provider->select_list( $fields );
 		}
 		if ( 'table' !== $src['type'] ) {
 			$alias = self::alias( $src['type'] );

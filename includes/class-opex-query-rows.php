@@ -22,7 +22,8 @@ class OPEX_Query_Rows {
 			return array();
 		}
 
-		$id_prop = array( 'posts' => 'ID', 'users' => 'ID', 'comments' => 'comment_ID', 'terms' => 'term_id', 'woo_orders' => 'id' )[ $src['type'] ] ?? '';
+		$provider = OPEX_Sources::for_src( $src );
+		$id_prop  = $provider ? $provider->id_prop() : ( array( 'posts' => 'ID', 'users' => 'ID', 'comments' => 'comment_ID', 'terms' => 'term_id' )[ $src['type'] ] ?? '' );
 		$ids     = array();
 		if ( $id_prop ) {
 			foreach ( $rows as $row ) {
@@ -41,7 +42,7 @@ class OPEX_Query_Rows {
 			}
 		}
 
-		$meta = $meta_keys && $ids ? self::prefetch_meta( $src['type'], $ids, $meta_keys ) : array();
+		$meta = $meta_keys && $ids ? self::prefetch_meta( $src, $ids, $meta_keys ) : array();
 		$tax  = array();
 		foreach ( $tax_names as $tax_name ) {
 			$tax[ $tax_name ] = self::prefetch_terms( $ids, $tax_name );
@@ -68,32 +69,28 @@ class OPEX_Query_Rows {
 	 * One cell. Order money, dates and flags get the same text on both storage engines.
 	 */
 	private static function field_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
-		$value = self::raw_value( $src, $row, $field, $id, $meta, $tax );
-		if ( 0 === strpos( $field, 'woo:' ) && ( 'woo_orders' === $src['type'] || ! empty( $src['woo'] ) ) ) {
-			return OPEX_Woo_Format::value( $field, $value, 'woo_orders' === $src['type'] );
-		}
-		return $value;
+		$value    = self::raw_value( $src, $row, $field, $id, $meta, $tax );
+		$provider = OPEX_Sources::for_src( $src );
+		return $provider ? $provider->format_value( $field, $value ) : $value;
 	}
 
 	private static function raw_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
-		$is_guest_field = 'woo:is_guest' === $field;
+		$provider = OPEX_Sources::for_src( $src );
 
-		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
-			$alias = OPEX_Woo::field_map()[ $field ]['alias'];
-			$value = self::flatten( $row->{$alias} ?? '' );
-			return $is_guest_field ? self::guest_flag( $value ) : $value;
+		// A field the provider keeps under its own row property.
+		$alias = $provider ? $provider->row_alias( $field ) : null;
+		if ( null !== $alias ) {
+			return $provider->derive_value( $field, self::flatten( $row->{$alias} ?? '' ) );
 		}
 
-		// A woo: id on a legacy store reads from the post column or meta key
-		// that actually holds it.
-		$field = OPEX_Query::resolve_field( $src, $field );
-		if ( $is_guest_field ) {
-			$raw = 0 === strpos( $field, 'meta:' )
-				? ( isset( $meta[ $id ][ substr( $field, 5 ) ] ) ? self::flatten_many( $meta[ $id ][ substr( $field, 5 ) ] ) : '' )
-				: '';
-			return self::guest_flag( $raw );
-		}
-		if ( 0 === strpos( $field, 'core:' ) ) {
+		// A friendly id reads from the post column or meta key that actually
+		// holds it.
+		$value = self::resolved_value( $src, $row, OPEX_Query::resolve_field( $src, $field ), $id, $meta, $tax );
+		return $provider ? $provider->derive_value( $field, $value ) : $value;
+	}
+
+	/** One cell read by its storage id (core, col, meta, tax or computed). */
+	private static function resolved_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			return OPEX_Query::is_forbidden_column( $col ) ? '' : self::flatten( $row->{$col} ?? '' );
 		}
@@ -113,12 +110,6 @@ class OPEX_Query_Rows {
 			return self::computed_value( $src, $row, substr( $field, 9 ), $id );
 		}
 		return '';
-	}
-
-	/** WooCommerce writes customer id 0 (or nothing) for a guest checkout. */
-	private static function guest_flag( string $customer_id ): string {
-		$customer_id = trim( $customer_id );
-		return ( '' === $customer_id || '0' === $customer_id ) ? 'yes' : 'no';
 	}
 
 	private static function computed_value( array $src, object $row, string $what, int $id ): string {
@@ -145,20 +136,21 @@ class OPEX_Query_Rows {
 	}
 
 	/** One query fetches every requested meta value for the whole batch. */
-	private static function prefetch_meta( string $type, array $ids, array $keys ): array {
+	private static function prefetch_meta( array $src, array $ids, array $keys ): array {
 		global $wpdb;
 
 		$map = array(
-			'posts'      => array( $wpdb->postmeta, 'post_id' ),
-			'users'      => array( $wpdb->usermeta, 'user_id' ),
-			'comments'   => array( $wpdb->commentmeta, 'comment_id' ),
-			'terms'      => array( $wpdb->termmeta, 'term_id' ),
-			'woo_orders' => array( OPEX_Woo::table( 'meta' ), 'order_id' ),
+			'posts'    => array( $wpdb->postmeta, 'post_id' ),
+			'users'    => array( $wpdb->usermeta, 'user_id' ),
+			'comments' => array( $wpdb->commentmeta, 'comment_id' ),
+			'terms'    => array( $wpdb->termmeta, 'term_id' ),
 		);
-		if ( ! isset( $map[ $type ] ) ) {
+		$provider = OPEX_Sources::for_src( $src );
+		$found    = $provider ? $provider->meta_table() : ( $map[ $src['type'] ] ?? null );
+		if ( null === $found ) {
 			return array();
 		}
-		list( $table, $fk ) = $map[ $type ];
+		list( $table, $fk ) = $found;
 
 		$keys = array_values( array_diff( array_unique( $keys ), OPEX_Query::FORBIDDEN, OPEX_Query::CREDENTIAL_META_KEYS ) );
 		if ( ! $keys ) {

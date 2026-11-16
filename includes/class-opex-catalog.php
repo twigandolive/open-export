@@ -89,23 +89,31 @@ class OPEX_Catalog {
 		// type moves out of it: two tiles with identical row counts, one of them
 		// empty under HPOS, is a trap rather than a choice. The raw post type
 		// stays available under Advanced for anyone who wants it.
-		$woo         = OPEX_Woo::source_item();
-		$raw_orders  = array();
-		if ( $woo ) {
-			foreach ( $content as $i => $item ) {
-				if ( 'posts:' . OPEX_Woo::LEGACY_POST_TYPE === $item['id'] ) {
-					$item['label'] = sprintf(
-						/* translators: %s: the post type name, e.g. "Orders". */
-						__( '%s (raw post type)', 'open-export' ),
-						$item['label']
-					);
-					$raw_orders[] = $item;
-					unset( $content[ $i ] );
-				}
+		$lead       = array();
+		$raw_orders = array();
+		foreach ( OPEX_Sources::all() as $provider ) {
+			$entry = $provider->picker_item();
+			if ( ! $entry ) {
+				continue;
 			}
-			$content = array_values( $content );
-			array_unshift( $content, $woo );
+			$replaces = $provider->raw_post_type();
+			if ( '' !== $replaces ) {
+				foreach ( $content as $i => $item ) {
+					if ( 'posts:' . $replaces === $item['id'] ) {
+						$item['label'] = sprintf(
+							/* translators: %s: the post type name, e.g. "Orders". */
+							__( '%s (raw post type)', 'open-export' ),
+							$item['label']
+						);
+						$raw_orders[] = $item;
+						unset( $content[ $i ] );
+					}
+				}
+				$content = array_values( $content );
+			}
+			$lead[] = $entry;
 		}
+		$content = array_merge( $lead, $content );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- cheap COUNTs for the picker UI.
 		$user_count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
@@ -272,8 +280,9 @@ class OPEX_Catalog {
 			return array();
 		}
 
-		if ( OPEX_Woo::SOURCE === $source_id ) {
-			return OPEX_Woo::fields();
+		$provider = OPEX_Sources::for_src( $src );
+		if ( $provider ) {
+			return $provider->field_groups();
 		}
 
 		switch ( $src['type'] ) {
