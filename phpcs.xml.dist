@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<ruleset name="Open Export">
+	<description>Code style and compatibility checks for Open Export. Run tests/bin/lint.sh.</description>
+
+	<file>open-export.php</file>
+	<file>uninstall.php</file>
+	<file>includes</file>
+
+	<exclude-pattern>*/lib/*</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/dist/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg name="parallel" value="8"/>
+	<arg value="ps"/>
+
+	<!-- PHP 7.4 and up. -->
+	<config name="testVersion" value="7.4-"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- The plugin header says "Requires at least: 7.0". -->
+	<config name="minimum_wp_version" value="7.0"/>
+
+	<rule ref="WordPress"/>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="open-export"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="opex"/>
+				<element value="OPEX"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

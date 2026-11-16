@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
 # Build a throwaway local WordPress site for testing the Open Export plugin.
-# Usage: setup-site.sh [--mariadb] <target-dir>
+# Usage: setup-site.sh [--mariadb | --multisite] <target-dir>
 # Database: SQLite (SQLite Database Integration plugin), no server needed.
 # With --mariadb it starts a private MariaDB 10.11 (its own data directory, pid file and
 # 127.0.0.1 port inside the target folder), builds the same seeded site on it, then stops it.
 # tests/bin/test.sh --site <target> starts and stops that server around a test run.
+# With --multisite (SQLite only) it builds a subdirectory network: the main site plus /second/
+# and /third/, Open Export network-activated, WooCommerce on the main site only, and a few
+# posts and one extra user on each sub-site. The admin is a super admin.
 # Safe to rerun: it only wipes a directory that holds the marker file it wrote.
 set -euo pipefail
 
 MARIA=0
-if [ "${1:-}" = "--mariadb" ]; then MARIA=1; shift; fi
+MULTI=0
+while [ "${1:-}" = "--mariadb" ] || [ "${1:-}" = "--multisite" ]; do
+	if [ "$1" = "--mariadb" ]; then MARIA=1; else MULTI=1; fi
+	shift
+done
 TARGET="${1:-}"
-[ -n "$TARGET" ] || { echo "Usage: $0 [--mariadb] <target-dir>" >&2; exit 2; }
+[ -n "$TARGET" ] || { echo "Usage: $0 [--mariadb | --multisite] <target-dir>" >&2; exit 2; }
+if [ "$MARIA" = 1 ] && [ "$MULTI" = 1 ]; then
+	echo "--multisite works with SQLite only. Do not combine it with --mariadb." >&2
+	exit 2
+fi
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -75,13 +86,25 @@ else
 fi
 
 echo "3/6 Installing WordPress"
-"${WP[@]}" core install --url="$SITE_URL" --title="Open Export Test" \
-	--admin_user="$ADMIN_USER" --admin_password="$ADMIN_PASS" \
-	--admin_email="admin@example.test" --skip-email
+if [ "$MULTI" = 1 ]; then
+	"${WP[@]}" core multisite-install --url="$SITE_URL" --title="Open Export Test" \
+		--admin_user="$ADMIN_USER" --admin_password="$ADMIN_PASS" \
+		--admin_email="admin@example.test" --skip-email
+	"${WP[@]}" site create --slug=second --title="Second Site" --email="admin@example.test"
+	"${WP[@]}" site create --slug=third --title="Third Site" --email="admin@example.test"
+else
+	"${WP[@]}" core install --url="$SITE_URL" --title="Open Export Test" \
+		--admin_user="$ADMIN_USER" --admin_password="$ADMIN_PASS" \
+		--admin_email="admin@example.test" --skip-email
+fi
 
 echo "4/6 Linking and activating the plugin"
 ln -s "$REPO" "$WPC/plugins/open-export"
-"${WP[@]}" plugin activate open-export
+if [ "$MULTI" = 1 ]; then
+	"${WP[@]}" plugin activate open-export --network
+else
+	"${WP[@]}" plugin activate open-export
+fi
 
 echo "5/6 Installing WooCommerce"
 "${WP[@]}" plugin install woocommerce --activate
@@ -89,6 +112,11 @@ echo "5/6 Installing WooCommerce"
 
 echo "6/6 Seeding data"
 "${WP[@]}" eval-file "$HERE/seed.php"
+if [ "$MULTI" = 1 ]; then
+	for SLUG in second third; do
+		"${WP[@]}" --url="$SITE_URL/$SLUG/" eval-file "$HERE/seed-subsite.php" "$SLUG"
+	done
+fi
 
 echo "Done. Site: $TARGET/wordpress  (admin / $ADMIN_PASS)"
 echo "Use: wp --path='$TARGET/wordpress' plugin list"
