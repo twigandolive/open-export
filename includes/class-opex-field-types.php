@@ -139,6 +139,7 @@ class OPEX_Field_Types {
 			'description'             => __( 'Description', 'open-export' ),
 			'categories-attributes'   => __( 'Categories and attributes', 'open-export' ),
 			'images-links'            => __( 'Images and links', 'open-export' ),
+			'acf-repeaters'           => __( 'ACF repeaters and flexible content', 'open-export' ),
 		);
 	}
 }

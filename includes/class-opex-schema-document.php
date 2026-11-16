@@ -1,7 +1,8 @@
 <?php
 /**
  * The 2.0 parts of the capability document: formats and their options,
- * transforms, custom columns, nested filter groups and XML templates.
+ * transforms, custom columns, nested filter groups, XML templates and
+ * network exports.
  *
  * Everything here is added to the document OPEX_Schema builds. No key it
  * already had changes meaning, so opex_schema stays 1 and an assistant that
@@ -59,6 +60,12 @@ class OPEX_Schema_Document {
 			'max_part_length' => OPEX_Config::XML_PART_MAX,
 			'means'           => 'With format "xml" and a non-empty "row", the export writes "header" once, "row" once per record and "footer" once. In "row", {field id} becomes the XML-escaped value and {field id|cdata} becomes a CDATA section. Every placeholder must name a field listed in "fields" (a custom column id counts). The header and footer are written as they are, with no placeholders. Header, one row and footer together must be well-formed XML, and no DOCTYPE or entity declaration is allowed.',
 		);
+		$doc['network']        = array(
+			'available'   => OPEX_Network::may_request(),
+			'columns'     => array_keys( OPEX_Network::columns() ),
+			'not_sources' => array( 'users', 'table:*' ),
+			'means'       => 'On a multisite network, "network": true runs the same export on every public site that is not archived or deleted, in site id order, into one file. Every row then starts with the columns site_id and site_url, and an XML template may use {site_id} and {site_url}. Only a network super admin may ask for it, and it does not work with the users source or raw tables. A site without the source adds no rows and the job says so.',
+		);
 		return $doc;
 	}
 
@@ -71,7 +78,7 @@ class OPEX_Schema_Document {
 		return implode(
 			' ',
 			array(
-				'A recipe may also set: "transforms" (per-field steps from "transforms.types"), "custom_columns" (see "custom_columns"), "csv_encoding" and "csv_eol" for CSV files, and "xml_template" for XML files (see "xml_template").',
+				'A recipe may also set: "transforms" (per-field steps from "transforms.types"), "custom_columns" (see "custom_columns"), "csv_encoding" and "csv_eol" for CSV files, "xml_template" for XML files (see "xml_template"), and "network" on a multisite network (see "network").',
 				'Formats are listed under "formats", and "format_options" says which recipe keys each one reads.',
 				'Anything in a recipe that this site cannot honor is dropped and reported, never applied silently.',
 			)
@@ -115,6 +122,8 @@ class OPEX_Schema_Document {
 					'template' => 'string: literal text with {field id} placeholders',
 				),
 			),
+			'network'        => 'boolean: true to export from every site of a multisite network (see network), default false',
+			'acf_flatten'    => array( 'acf: field ids from fields, each spread into "<label> <n> <sub>" columns (at most 20 rows) instead of one JSON column' ),
 		);
 	}
 

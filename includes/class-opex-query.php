@@ -24,10 +24,10 @@ class OPEX_Query {
 	public const CREDENTIAL_META_KEYS = array( 'session_tokens', '_application_passwords' );
 
 	/** Pattern a field id must match: a known prefix, then at least one character. */
-	public const FIELD_ID_PATTERN = '/^(core|meta|tax|computed|col|woo):[\S]/';
+	public const FIELD_ID_PATTERN = '/^(core|meta|tax|computed|col|woo|acf):[\S]/';
 
 	/** Pattern that strips the prefix from a field id. */
-	private const FIELD_PREFIX_PATTERN = '/^(core|meta|tax|computed|col|woo):/';
+	private const FIELD_PREFIX_PATTERN = '/^(core|meta|tax|computed|col|woo|acf):/';
 
 	/** The filter operators this plugin understands. */
 	public static function ops(): array {
@@ -159,7 +159,7 @@ class OPEX_Query {
 			return in_array( $what, $known[ $src['type'] ] ?? array(), true );
 		}
 
-		return false;
+		return 0 === strpos( $field, 'acf:' ) && OPEX_Acf::is_field( $src, $field );
 	}
 
 	/**
@@ -175,7 +175,7 @@ class OPEX_Query {
 			return false;
 		}
 		$resolved = self::resolve_field( $src, $field );
-		return 0 !== strpos( $resolved, 'computed:' ) || 'computed:roles' === $resolved;
+		return ( 0 !== strpos( $resolved, 'computed:' ) || 'computed:roles' === $resolved ) && 0 !== strpos( $resolved, 'acf:' );
 	}
 
 	/** Whether a column name is blocked from every export path (core, col, filters). */

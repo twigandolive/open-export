@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Recipe {
 
 	/** Keys a 1.3.1 recipe never had. */
-	const NEW_KEYS = array( 'transforms', 'custom_columns', 'csv_encoding', 'csv_eol', 'xml_template' );
+	const NEW_KEYS = array( 'transforms', 'custom_columns', 'csv_encoding', 'csv_eol', 'xml_template', 'network', 'acf_flatten' );
 
 	/** Entries the 1.3.1 resolver reads at the top level of the filters. */
 	const MAX_TOP_RULES = 20;
@@ -115,7 +115,7 @@ class OPEX_Recipe {
 			'column_labels'  => (array) ( $recipe['column_labels'] ?? array() ),
 			'custom_columns' => $custom,
 		);
-		foreach ( array( 'batch_size', 'transforms', 'csv_encoding', 'csv_eol', 'xml_template' ) as $key ) {
+		foreach ( array( 'batch_size', 'transforms', 'csv_encoding', 'csv_eol', 'xml_template', 'network', 'acf_flatten' ) as $key ) {
 			if ( isset( $recipe[ $key ] ) ) {
 				$raw[ $key ] = $recipe[ $key ];
 			}
@@ -277,8 +277,9 @@ class OPEX_Recipe {
 	}
 
 	/**
-	 * Cleans the config. A broken XML template or an Excel request on a server
-	 * without zip is dropped with a note instead of failing the whole recipe.
+	 * Cleans the config. A broken XML template, an Excel request on a server
+	 * without zip, or a network export this caller or source cannot have is
+	 * dropped with a note instead of failing the whole recipe.
 	 *
 	 * @param array    $raw   Raw config.
 	 * @param string[] $notes Receives notes.
@@ -297,6 +298,12 @@ class OPEX_Recipe {
 				/* translators: %s: why the template was refused. */
 				$notes[] = sprintf( __( 'The XML template was dropped: %s', 'open-export' ), $config->get_error_message() );
 				unset( $raw['xml_template'] );
+				continue;
+			}
+			if ( 'opex_bad_network' === $code && isset( $raw['network'] ) ) {
+				/* translators: %s: why a network export is not possible. */
+				$notes[] = sprintf( __( 'The export runs on this site only: %s', 'open-export' ), $config->get_error_message() );
+				unset( $raw['network'] );
 				continue;
 			}
 			if ( 'opex_no_zip' === $code ) {

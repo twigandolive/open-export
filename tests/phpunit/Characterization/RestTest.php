@@ -168,7 +168,7 @@ class RestTest extends CharacterizationCase {
 
 		$jobs = $this->call( 'GET', '/open-export/v1/jobs', null );
 		$this->assertSame( 200, $jobs->get_status() );
-		$this->assertSame( array( 'id', 'label', 'format', 'status', 'total', 'processed', 'created', 'filename', 'filesize', 'error', 'mode', 'origin', 'schedule_id', 'deliveries', 'notes', 'delivery_name', 'finished', 'heartbeat', 'schedule_name', 'source', 'source_label' ), array_keys( $jobs->get_data()[0] ) );
+		$this->assertSame( array( 'id', 'label', 'format', 'status', 'total', 'processed', 'created', 'filename', 'filesize', 'error', 'mode', 'origin', 'schedule_id', 'deliveries', 'notes', 'delivery_name', 'finished', 'heartbeat', 'schedule_name', 'source', 'source_label', 'sites', 'site_index' ), array_keys( $jobs->get_data()[0] ) );
 
 		$job = $this->call( 'GET', '/open-export/v1/jobs/{job}', null );
 		$this->assertSame( 200, $job->get_status() );

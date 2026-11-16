@@ -30,8 +30,12 @@ class OPEX_Config {
 
 		// A network export reads every site, so only a super admin of a network may ask for one.
 		$network = ! empty( $raw['network'] ) && rest_sanitize_boolean( $raw['network'] );
-		if ( $network && ! ( is_multisite() && is_super_admin() ) ) {
+		if ( $network && ! OPEX_Network::may_request() ) {
 			return new WP_Error( 'opex_bad_network', __( 'Only a network super admin can export from every site, and only on a multisite network.', 'open-export' ), array( 'status' => 400 ) );
+		}
+		$refusal = $network ? OPEX_Network::source_refusal( $src ) : null;
+		if ( $refusal ) {
+			return $refusal;
 		}
 
 		$fields = array();
@@ -138,13 +142,14 @@ class OPEX_Config {
 
 		$template = self::sanitize_xml_template( $raw['xml_template'] ?? array() );
 		if ( 'xml' === $format && '' !== $template['row'] ) {
-			$checked = OPEX_Writer_XML_Template::validate( $template, $fields );
+			$checked = OPEX_Writer_XML_Template::validate( $template, array_merge( $network ? array_keys( OPEX_Network::columns() ) : array(), $fields ) );
 			if ( is_wp_error( $checked ) ) {
 				return new WP_Error( $checked->get_error_code(), $checked->get_error_message(), array( 'status' => 400 ) );
 			}
 		}
 
 		$transforms = OPEX_Transforms::sanitize( $raw['transforms'] ?? array(), $fields, $notes );
+		$flatten    = OPEX_Acf_Spread::sanitize( $raw['acf_flatten'] ?? array(), $fields );
 
 		$labels = array();
 		foreach ( (array) ( $raw['column_labels'] ?? array() ) as $field_id => $label ) {
@@ -178,6 +183,7 @@ class OPEX_Config {
 			'transforms'     => $transforms,
 			'custom_columns' => $custom,
 			'network'        => $network,
+			'acf_flatten'    => $flatten,
 		);
 		foreach ( $optional as $key => $value ) {
 			if ( OPEX_Jobs::CONFIG_DEFAULTS[ $key ] !== $value ) {

@@ -66,6 +66,7 @@ class OPEX_Jobs {
 		'transforms'     => array(),
 		'custom_columns' => array(),
 		'network'        => false,
+		'acf_flatten'    => array(),
 	);
 
 	/** The stored registry, exactly as saved. */
@@ -179,6 +180,9 @@ class OPEX_Jobs {
 			'schedule_name' => self::schedule_name( (string) ( $job['schedule_id'] ?? '' ) ),
 			'source'        => (string) ( $job['config']['source'] ?? '' ),
 			'source_label'  => class_exists( 'OPEX_Source_Labels' ) ? OPEX_Source_Labels::of( (string) ( $job['config']['source'] ?? '' ) ) : '',
+			// A network job shows how many sites it reads, never the list itself.
+			'sites'         => count( (array) ( $job['sites'] ?? array() ) ),
+			'site_index'    => (int) ( $job['site_index'] ?? 0 ),
 		);
 	}
 

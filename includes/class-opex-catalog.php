@@ -177,11 +177,10 @@ class OPEX_Catalog {
 
 	/**
 	 * Flat map of field id => label for a source, for validating a config
-	 * against what the source actually offers.
-	 *
-	 * Meta keys are sampled with a LIMIT, so this list is complete for core,
-	 * computed, taxonomy and column fields but NOT for meta. Callers must treat
-	 * a missing meta: id as "unknown", never as "invalid".
+	 * against what the source actually offers. Meta keys are sampled with a
+	 * LIMIT, so this list is complete for core, computed, taxonomy and column
+	 * fields but NOT for meta. Callers must treat a missing meta: id as
+	 * "unknown", never as "invalid".
 	 */
 	public static function field_ids( string $source_id ): array {
 		$out = array();
@@ -221,15 +220,16 @@ class OPEX_Catalog {
 
 	/** Per-request memo of table names (name => true). Null until first use. */
 	private static $table_names = null;
-
 	/** Per-request memo of column definitions, by table name. */
 	private static $column_memo = array();
 
-	/** Forget the table list and every column list, in memory and in the transient. */
-	public static function reset_cache(): void {
+	/** Forget the table list and every column list. A site switch keeps the per-site transient. */
+	public static function reset_cache( bool $memory_only = false ): void {
 		self::$table_names = null;
 		self::$column_memo = array();
-		delete_transient( 'opex_table_status' );
+		if ( ! $memory_only ) {
+			delete_transient( 'opex_table_status' );
+		}
 	}
 
 	/** True when the named table actually exists in this database. */
@@ -287,13 +287,13 @@ class OPEX_Catalog {
 
 		switch ( $src['type'] ) {
 			case 'posts':
-				return self::post_fields( $src['post_type'] );
+				return OPEX_Acf::add_group( $src, self::post_fields( $src['post_type'] ) );
 			case 'users':
-				return self::user_fields();
+				return OPEX_Acf::add_group( $src, self::user_fields() );
 			case 'comments':
 				return self::comment_fields();
 			case 'terms':
-				return self::term_fields( $src['taxonomy'] );
+				return OPEX_Acf::add_group( $src, self::term_fields( $src['taxonomy'] ) );
 			case 'table':
 				return self::table_fields( $src['table'] );
 		}

@@ -20,7 +20,8 @@ class OPEX_Query_Dates {
 	 */
 	public static function date_fields( array $src ): array {
 		static $memo = array();
-		$key = md5( (string) wp_json_encode( $src ) );
+		// Keyed by site too: some entries name a site's own meta table.
+		$key = md5( (string) wp_json_encode( $src ) . '|' . get_current_blog_id() );
 		if ( isset( $memo[ $key ] ) ) {
 			return $memo[ $key ];
 		}

@@ -17,7 +17,12 @@ class SmokeTest extends TestCase {
 	 */
 	public function test_plugin_is_loaded() {
 		$this->assertTrue( defined( 'OPEX_VERSION' ) );
-		$this->assertContains( 'open-export/open-export.php', (array) get_option( 'active_plugins' ) );
+		// A network-activated plugin is listed in the network's own option, not the site's.
+		$active = (array) get_option( 'active_plugins' );
+		if ( is_multisite() ) {
+			$active = array_merge( $active, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+		}
+		$this->assertContains( 'open-export/open-export.php', $active );
 	}
 
 	/**

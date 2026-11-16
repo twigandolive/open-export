@@ -25,12 +25,12 @@ class OPEX_Custom_Columns {
 	/**
 	 * Matches a placeholder. Custom ids are matched too so they can be reported.
 	 */
-	const PLACEHOLDER = '/\{((?:core|meta|tax|computed|col|woo|custom):[^\s{}]+)\}/';
+	const PLACEHOLDER = '/\{((?:core|meta|tax|computed|col|woo|acf|custom):[^\s{}]+)\}/';
 
 	/**
 	 * Matches a placeholder that may be filled (never a custom column).
 	 */
-	const FILLABLE = '/\{((?:core|meta|tax|computed|col|woo):[^\s{}]+)\}/';
+	const FILLABLE = '/\{((?:core|meta|tax|computed|col|woo|acf):[^\s{}]+)\}/';
 
 	/**
 	 * Clean the saved list of custom columns.

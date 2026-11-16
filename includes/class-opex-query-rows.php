@@ -47,6 +47,8 @@ class OPEX_Query_Rows {
 		}
 
 		$meta = $meta_keys && $ids ? self::prefetch_meta( $src, $ids, $meta_keys ) : array();
+		// ACF repeaters and flexible content come assembled, one JSON value per record.
+		$acf = $ids ? OPEX_Acf::prefetch( $src, $ids, $fields ) : array();
 		$tax  = array();
 		foreach ( $tax_names as $tax_name ) {
 			$tax[ $tax_name ] = self::prefetch_terms( $ids, $tax_name );
@@ -62,7 +64,7 @@ class OPEX_Query_Rows {
 			$id   = $id_prop ? (int) $row->{$id_prop} : 0;
 			$item = array();
 			foreach ( $fields as $field ) {
-				$item[ $field ] = self::field_value( $src, $row, $field, $id, $meta, $tax );
+				$item[ $field ] = isset( $acf[ $field ] ) ? (string) ( $acf[ $field ][ $id ] ?? '' ) : self::field_value( $src, $row, $field, $id, $meta, $tax );
 			}
 			$items[] = $item;
 		}

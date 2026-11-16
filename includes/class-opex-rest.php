@@ -215,7 +215,7 @@ class OPEX_Rest {
 		$result = OPEX_Exporter::preview( $config );
 		if ( is_array( $result ) ) {
 			// The same notes a job would carry, so the screen can say what was ignored before anything runs.
-			$result['notes'] = array_values( array_unique( array_map( 'strval', array_merge( OPEX_Query::export_notes( $config ), $notes ) ) ) );
+			$result['notes'] = array_values( array_unique( array_map( 'strval', array_merge( OPEX_Query::export_notes( $config ), $notes, (array) ( $result['notes'] ?? array() ) ) ) ) );
 		}
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}

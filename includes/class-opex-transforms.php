@@ -22,7 +22,7 @@ class OPEX_Transforms {
 	const MAX_PAIRS    = 200;
 	const MAX_PAIR_LEN = 200;
 	const MAX_DATE_FMT = 40;
-	const FIELD_ID     = '/^(core|meta|tax|computed|col|woo|custom):\S/';
+	const FIELD_ID     = '/^(core|meta|tax|computed|col|woo|acf|custom):\S/';
 
 	/**
 	 * Step types, for the UI and the schema document.

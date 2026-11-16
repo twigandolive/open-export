@@ -18,13 +18,13 @@ class SchemaTest extends CharacterizationCase {
 	public function test_build_shape(): void {
 		$doc = OPEX_Schema::build();
 		$this->assertSame(
-			array( 'opex_schema', 'plugin', 'plugin_version', 'generated', 'site', 'how_to_use', 'recipe_format', 'operators', 'date_presets', 'formats', 'csv_delimiters', 'all_sources', 'sources', 'format_options', 'csv_encodings', 'csv_eols', 'transforms', 'custom_columns', 'filter_groups', 'xml_template' ),
+			array( 'opex_schema', 'plugin', 'plugin_version', 'generated', 'site', 'how_to_use', 'recipe_format', 'operators', 'date_presets', 'formats', 'csv_delimiters', 'all_sources', 'sources', 'format_options', 'csv_encodings', 'csv_eols', 'transforms', 'custom_columns', 'filter_groups', 'xml_template', 'network' ),
 			array_keys( $doc )
 		);
 		$this->assertSame( 1, $doc['opex_schema'] );
 		$this->assertSame( 'Open Export', $doc['plugin'] );
 		$this->assertSame( array( 'timezone', 'wordpress', 'locale', 'woocommerce' ), array_keys( $doc['site'] ) );
-		$this->assertSame( array( 'opex_recipe', 'name', 'source', 'fields', 'filters', 'date_range', 'format', 'csv_delimiter', 'column_labels', 'csv_encoding', 'csv_eol', 'xml_template', 'transforms', 'custom_columns' ), array_keys( $doc['recipe_format'] ) );
+		$this->assertSame( array( 'opex_recipe', 'name', 'source', 'fields', 'filters', 'date_range', 'format', 'csv_delimiter', 'column_labels', 'csv_encoding', 'csv_eol', 'xml_template', 'transforms', 'custom_columns', 'network', 'acf_flatten' ), array_keys( $doc['recipe_format'] ) );
 		$this->assertCount( 14, $doc['operators'] );
 		$this->assertCount( 15, $doc['date_presets'] );
 		$this->assertCount( class_exists( 'ZipArchive' ) ? 4 : 3, $doc['formats'], 'xlsx is listed when the server can write it' );

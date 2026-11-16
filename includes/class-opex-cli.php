@@ -204,6 +204,11 @@ class OPEX_CLI {
 	 * first date field of the template's source, and the export keeps only
 	 * rows whose date is after it. Not allowed for a schedule, which keeps its own watermark.
 	 *
+	 * [--network]
+	 * : On a multisite network, export the template from every public site
+	 * into one file, with site_id and site_url columns first. A template saved
+	 * as a network export already runs that way. Not allowed for a schedule.
+	 *
 	 * [--porcelain]
 	 * : Print only the final file path.
 	 *
@@ -213,6 +218,7 @@ class OPEX_CLI {
 	 *     wp opex run t1a2b3c4d5e6f --format=xlsx --output=/tmp/orders.xlsx --force
 	 *     wp opex run "Nightly posts" --porcelain
 	 *     wp opex run "Weekly orders" --since="2026-11-01 00:00:00"
+	 *     wp opex run "All posts" --network
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Named arguments.
@@ -223,7 +229,7 @@ class OPEX_CLI {
 		$dest      = OPEX_CLI_Runner::check_output( $assoc_args );
 
 		if ( 'schedule' === $target['kind'] ) {
-			foreach ( array( 'format', 'since' ) as $flag ) {
+			foreach ( array( 'format', 'since', 'network' ) as $flag ) {
 				if ( isset( $assoc_args[ $flag ] ) ) {
 					WP_CLI::error( sprintf( 'The --%s option works with templates only. A schedule keeps its own settings.', $flag ) );
 				}
@@ -239,6 +245,10 @@ class OPEX_CLI {
 				if ( $wanted !== $config['format'] ) {
 					WP_CLI::error( sprintf( 'The export engine does not accept the %s format on this site.', $wanted ) );
 				}
+			}
+			if ( ! empty( $assoc_args['network'] ) ) {
+				$config['network'] = true;
+				$config            = $this->sanitized( $config );
 			}
 			$extra = array( 'origin' => 'cli' );
 			if ( isset( $assoc_args['since'] ) ) {

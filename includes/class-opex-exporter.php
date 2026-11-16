@@ -53,8 +53,22 @@ class OPEX_Exporter {
 		if ( is_wp_error( $since ) ) {
 			return $since;
 		}
+		$origin  = in_array( $extra['origin'] ?? '', array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? (string) $extra['origin'] : 'manual';
+		$network = OPEX_Network::is_network( $config );
+		$refused = $network ? OPEX_Network::check_create( $config, $origin ) : null;
+		if ( $refused ) {
+			return $refused;
+		}
+		$plan = array( 'sites' => array(), 'total' => 0, 'notes' => array() );
 		try {
-			$total = OPEX_Query::count( self::query_config( $config, $since ) );
+			if ( $network ) {
+				$plan = OPEX_Network::plan( self::query_config( $config, $since ) );
+			} else {
+				$plan['total'] = OPEX_Query::count( self::query_config( $config, $since ) );
+			}
+			$total = $plan['total'];
+			// Spread ACF columns are counted now, so every batch writes the same columns.
+			$headers = self::headers( $config, $plan['notes'] );
 		} catch ( Throwable $e ) {
 			self::log_exception( $e );
 			return new WP_Error( 'opex_db', self::public_error_message( $e ), array( 'status' => 500 ) );
@@ -66,14 +80,14 @@ class OPEX_Exporter {
 		$filename = $slug . '-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 12, false ) . '.' . $config['format'];
 
 		$mode     = 'background' === ( $extra['mode'] ?? '' ) ? 'background' : 'browser';
-		$notes    = array_merge( OPEX_Query::export_notes( $config ), array_map( 'strval', array_values( (array) ( $extra['notes'] ?? array() ) ) ) );
+		$notes    = array_merge( OPEX_Query::export_notes( $config ), array_map( 'strval', array_values( (array) ( $extra['notes'] ?? array() ) ) ), $plan['notes'] );
 		$delivery = self::clean_delivery( $extra['delivery'] ?? array(), $notes );
 
 		$job = array(
 			'id'            => $id,
 			'label'         => $label,
 			'config'        => $config,
-			'headers'       => self::header_map( $config['fields'], OPEX_Config::label_map( $config ) ),
+			'headers'       => $headers,
 			'status'        => 'running',
 			'total'         => $total,
 			'processed'     => 0,
@@ -85,12 +99,14 @@ class OPEX_Exporter {
 			'checkpoint'    => array(),
 			'notes'         => $notes,
 			'mode'          => $mode,
-			'origin'        => in_array( $extra['origin'] ?? '', array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? (string) $extra['origin'] : 'manual',
+			'origin'        => $origin,
 			'schedule_id'   => preg_match( '/^s[a-f0-9]{12}$/', (string) ( $extra['schedule_id'] ?? '' ) ) ? (string) $extra['schedule_id'] : '',
 			'heartbeat'     => 'background' === $mode ? time() : 0,
 			'delivery_name' => mb_substr( sanitize_text_field( (string) ( $extra['delivery_name'] ?? '' ) ), 0, 150 ),
 			'delivery'      => $delivery,
 			'since'         => $since,
+			'sites'         => $plan['sites'],
+			'site_index'    => 0,
 		);
 
 		try {
@@ -113,6 +129,19 @@ class OPEX_Exporter {
 		}
 
 		return OPEX_Jobs::expose( OPEX_Jobs::get( $id ) );
+	}
+
+	/**
+	 * Column headers for a config: spread ACF columns in place of their field,
+	 * and the site columns first on a network export.
+	 *
+	 * @param array    $config Export config.
+	 * @param string[] $notes  Receives notes.
+	 * @throws RuntimeException When the database reports an error.
+	 */
+	private static function headers( array $config, array &$notes = array() ): array {
+		$headers = OPEX_Acf_Spread::headers( $config, self::header_map( $config['fields'], OPEX_Config::label_map( $config ) ), $notes );
+		return OPEX_Network::is_network( $config ) ? OPEX_Network::with_columns( $headers ) : $headers;
 	}
 
 	/**
@@ -248,22 +277,38 @@ class OPEX_Exporter {
 			if ( $job['checkpoint'] ) {
 				$writer->restore( (array) $job['checkpoint'] );
 			}
-			$batch = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $guard );
+			if ( OPEX_Network::is_network( $config ) ) {
+				// Read from the site the job is on. The rows come back transformed, with the site columns.
+				$batch = OPEX_Network::batch( $job, $query, $guard );
+				$rows  = $batch['items'];
+			} else {
+				$batch = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $guard );
+				$rows  = OPEX_Acf_Spread::output( $batch['items'], $config, $job['headers'] );
+			}
 			$guard();
-			$writer->append( OPEX_Transforms::apply( $batch['items'], $config ), 0 === (int) $job['processed'] );
+			$writer->append( $rows, 0 === (int) $job['processed'] );
 			$guard();
 
 			// Save the cursor and the file checkpoint together, before anything else can fail.
-			$saved = self::save_progress( $id, $job, array(
+			// Moving to the next site lands in the same write, so a replay reads the same rows again.
+			$changes = array(
 				'cursor'     => $batch['cursor'],
-				'processed'  => (int) $job['processed'] + count( $batch['items'] ),
+				'processed'  => (int) $job['processed'] + count( $rows ),
 				'checkpoint' => $writer->checkpoint(),
-			) );
+			);
+			if ( ! empty( $batch['next_site'] ) ) {
+				$changes['cursor']     = 0;
+				$changes['site_index'] = (int) $job['site_index'] + 1;
+			}
+			if ( ! empty( $batch['note'] ) && ! in_array( $batch['note'], (array) $job['notes'], true ) ) {
+				$changes['notes'] = array_merge( (array) $job['notes'], array( $batch['note'] ) );
+			}
+			$saved = self::save_progress( $id, $job, $changes );
 			if ( ! $saved ) {
 				return self::missing();
 			}
 
-			if ( $batch['done'] ) {
+			if ( $batch['done'] && empty( $batch['next_site'] ) ) {
 				$guard();
 				$writer->finish();
 				$guard();
@@ -384,17 +429,22 @@ class OPEX_Exporter {
 
 	/** First rows and total count for the preview step. */
 	public static function preview( array $config ) {
-		$headers = self::header_map( $config['fields'], OPEX_Config::label_map( $config ) );
+		$notes = array();
 		try {
-			$batch = OPEX_Query::batch( self::query_config( $config ), 0, 5 );
-			$total = OPEX_Query::count( $config );
+			$headers = self::headers( $config, $notes );
+			$batch   = OPEX_Query::batch( self::query_config( $config ), 0, 5 );
+			$total   = OPEX_Query::count( $config );
 		} catch ( Throwable $e ) {
 			self::log_exception( $e );
 			return new WP_Error( 'opex_db', self::public_error_message( $e ), array( 'status' => 500 ) );
 		}
 
-		$rows = array();
-		foreach ( OPEX_Transforms::apply( $batch['items'], $config ) as $item ) {
+		// A network preview reads this site only, and says so.
+		$network = OPEX_Network::is_network( $config );
+		$items   = OPEX_Acf_Spread::output( $batch['items'], $config, $headers );
+		$items   = $network ? OPEX_Network::with_site_columns( $items, get_current_blog_id() ) : $items;
+		$rows    = array();
+		foreach ( $items as $item ) {
 			$row = array();
 			foreach ( array_keys( $headers ) as $field ) {
 				$value = (string) ( $item[ $field ] ?? '' );
@@ -408,10 +458,17 @@ class OPEX_Exporter {
 			$rows[] = $row;
 		}
 
-		return array(
+		$out = array(
 			'headers' => array_values( $headers ),
 			'rows'    => $rows,
 			'total'   => $total,
 		);
+		if ( $network ) {
+			$notes[] = OPEX_Network::preview_note();
+		}
+		if ( $notes ) {
+			$out['notes'] = $notes;
+		}
+		return $out;
 	}
 }
