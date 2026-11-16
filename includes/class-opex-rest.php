@@ -197,6 +197,8 @@ class OPEX_Rest {
 		);
 
 		OPEX_Rest_Screen::register_routes();
+		// Every route of the plugin, these and the other classes' ones, answers a throw with a WP_Error.
+		OPEX_Rest_Guard::register();
 	}
 
 	/**

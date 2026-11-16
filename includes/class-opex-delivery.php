@@ -40,6 +40,13 @@ class OPEX_Delivery {
 	private static $keep_alive = null;
 
 	/**
+	 * Seconds between two lock renewals during one transfer. Only tests change it, through reflection.
+	 *
+	 * @var float
+	 */
+	private static $beat = 5.0;
+
+	/**
 	 * Cleans delivery settings from the browser or a schedule.
 	 *
 	 * A blank webhook secret keeps the one in $previous. The webhook input
@@ -245,6 +252,34 @@ class OPEX_Delivery {
 	 */
 	public static function keep_alive(): bool {
 		return null === self::$keep_alive || (bool) ( self::$keep_alive )();
+	}
+
+	/**
+	 * Calls keep_alive() from a transfer loop that turns many times a second. It
+	 * renews at most once every few seconds, because each renewal is a
+	 * database write.
+	 *
+	 * @param float $last When this transfer last renewed, as microtime( true ). Updated when it renews.
+	 * @return bool False when the delivery run lost its lock.
+	 */
+	public static function transfer_alive( float &$last ): bool {
+		$now = microtime( true );
+		if ( $now - $last < self::$beat ) {
+			return true;
+		}
+		$last = $now;
+		return self::keep_alive();
+	}
+
+	/**
+	 * The error a channel returns when it stopped a transfer because the
+	 * delivery run lost its lock. Another worker owns the delivery now.
+	 *
+	 * @param string $code Error code of the channel.
+	 * @return WP_Error The error.
+	 */
+	public static function lost_error( string $code ): WP_Error {
+		return new WP_Error( $code, __( 'The upload stopped because another background run took over this delivery. The partial upload was removed.', 'open-export' ) );
 	}
 
 	/**

@@ -27,6 +27,20 @@ class OPEX_CLI_Runner {
 	}
 
 	/**
+	 * Stop with exit code 1 after something a command called threw. A
+	 * message written for people (such as the busy error of the store) is
+	 * printed as it is. Anything else prints a plain message, and the detail
+	 * goes to the debug log, as it does for the screen.
+	 *
+	 * @param Throwable $e What was thrown.
+	 * @return void
+	 */
+	public static function fail_on_exception( Throwable $e ): void {
+		OPEX_Exporter::log_exception( $e );
+		WP_CLI::error( $e instanceof OPEX_User_Error ? $e->getMessage() : 'Open Export could not finish. Turn on WP_DEBUG_LOG for details.' );
+	}
+
+	/**
 	 * Check an export format against what this server can write.
 	 *
 	 * @param string $format Format id given on the command line.
@@ -201,7 +215,7 @@ class OPEX_CLI_Runner {
 			WP_CLI::error( '' !== (string) $job['error'] ? (string) $job['error'] : sprintf( 'The export ended with status "%s".', (string) $job['status'] ) );
 		}
 
-		OPEX_Runner::deliver( $id );
+		OPEX_Runner::deliver_pending( $id );
 		$record = OPEX_Jobs::get( $id );
 		$path   = $record ? OPEX_Jobs::file_path( $record ) : '';
 		if ( '' === $path || ! is_file( $path ) ) {

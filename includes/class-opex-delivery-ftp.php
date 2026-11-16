@@ -20,6 +20,13 @@ class OPEX_Delivery_Ftp {
 	private const IO_TIMEOUT      = 60;
 
 	/**
+	 * Seconds an upload may make no progress before it is given up. Only tests change it, through reflection.
+	 *
+	 * @var int|float
+	 */
+	private static $stall = self::IO_TIMEOUT;
+
+	/**
 	 * Uploads the export.
 	 *
 	 * @param array  $job         Job record.
@@ -141,8 +148,16 @@ class OPEX_Delivery_Ftp {
 	private static function upload( $conn, string $local, string $name ) {
 		$tag  = bin2hex( random_bytes( 4 ) );
 		$temp = '.' . $name . '.' . $tag . '.part';
-		if ( ! @ftp_put( $conn, $temp, $local, FTP_BINARY ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		$sent = self::put( $conn, $temp, $local );
+		if ( 'lost' === $sent ) {
 			@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			return OPEX_Delivery::lost_error( 'opex_ftp_lost' );
+		}
+		if ( 'sent' !== $sent ) {
+			// A stalled transfer still holds the connection, so a delete there would only wait.
+			if ( 'failed' === $sent ) {
+				@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			}
 			return new WP_Error( 'opex_ftp_put', __( 'The upload failed. Check that the folder is writable.', 'open-export' ) );
 		}
 		if ( @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
@@ -161,6 +176,52 @@ class OPEX_Delivery_Ftp {
 		$restored = @ftp_rename( $conn, $backup, $name ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		return self::rename_failed( 'opex_ftp_rename', $restored, $backup );
+	}
+
+	/**
+	 * Sends the file without blocking, so the delivery lock can be renewed
+	 * while a long upload runs. When the lock is lost, the read position
+	 * jumps to the end of the file: the upload then ends at once but
+	 * cleanly, and the connection stays usable to remove the partial file.
+	 *
+	 * @param resource|object $conn  Connection, with passive mode and FTPS already set by open().
+	 * @param string          $temp  Remote temporary name.
+	 * @param string          $local Local file.
+	 * @return string 'sent', 'failed', 'stalled' (no progress for too long) or 'lost' (the lock was lost).
+	 */
+	private static function put( $conn, string $temp, string $local ): string {
+		$fp = @fopen( $local, 'rb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- the export file, streamed to the FTP data connection.
+		if ( false === $fp ) {
+			return 'failed';
+		}
+		try {
+			$state = 'sent';
+			$beat  = microtime( true );
+			$moved = $beat;
+			$at    = 0;
+			$ret   = @ftp_nb_fput( $conn, $temp, $fp, FTP_BINARY ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			while ( FTP_MOREDATA === $ret ) {
+				$pos = (int) ftell( $fp );
+				if ( $pos !== $at ) {
+					$at    = $pos;
+					$moved = microtime( true );
+				} elseif ( microtime( true ) - $moved > self::$stall ) {
+					// ftp_put gave up after the timeout. The loop must too.
+					return 'stalled';
+				}
+				if ( 'sent' === $state && ! OPEX_Delivery::transfer_alive( $beat ) ) {
+					$state = 'lost';
+					fseek( $fp, 0, SEEK_END );
+				}
+				$ret = @ftp_nb_continue( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			}
+			if ( FTP_FINISHED !== $ret ) {
+				return 'lost' === $state ? 'lost' : 'failed';
+			}
+			return $state;
+		} finally {
+			fclose( $fp ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		}
 	}
 
 	/**

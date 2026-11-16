@@ -255,12 +255,36 @@ class OPEX_Site_Health {
 			}
 		}
 		foreach ( (array) glob( $dir . '/*' ) as $file ) {
-			if ( is_file( $file ) && ! in_array( basename( $file ), array( 'index.php', 'web.config' ), true ) ) {
+			if ( is_file( $file ) && self::is_export_file( basename( $file ) ) ) {
 				++$stats['files'];
 				$stats['bytes'] += (int) filesize( $file );
 			}
 		}
 		return $stats;
+	}
+
+	/**
+	 * Whether a file in the export folder is an export: its name ends in the
+	 * extension of a format, maybe followed by ".zip". A running job's lock
+	 * file, the Excel writer's row files, a half-built zip and the folder's
+	 * own rule files are not exports.
+	 *
+	 * @param string $name File name.
+	 * @return bool True for an export file.
+	 */
+	private static function is_export_file( string $name ): bool {
+		$name = strtolower( $name );
+		$zip  = strtolower( OPEX_Compress::SUFFIX );
+		if ( strlen( $name ) > strlen( $zip ) && substr( $name, -strlen( $zip ) ) === $zip ) {
+			$name = substr( $name, 0, -strlen( $zip ) );
+		}
+		$ext = (string) pathinfo( $name, PATHINFO_EXTENSION );
+		foreach ( OPEX_Writer::formats() as $format ) {
+			if ( '' !== $ext && strtolower( (string) $format['extension'] ) === $ext ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

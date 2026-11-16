@@ -17,6 +17,7 @@ class OPEX_Runner {
 
 	public const STALL_AFTER   = 600;
 	private const DELIVER_LOCK = 300;
+	private const RETRY_AFTER  = 60;
 	private const HOOKS        = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
 
 	/** Add the cron callbacks and the hourly maintenance event. */
@@ -47,12 +48,34 @@ class OPEX_Runner {
 	}
 
 	/**
-	 * Cron entry for a schedule event.
+	 * Cron entry for a schedule event. A start that throws (the store was
+	 * busy) is logged and tried again in a minute, so the run is not lost.
 	 *
 	 * @param string $id Schedule id from the cron event.
+	 * @return void
 	 */
 	public static function on_schedule( $id ): void {
-		OPEX_Schedules::start( (string) $id, 'cron' );
+		$id = (string) $id;
+		try {
+			OPEX_Schedules::start( $id, 'cron' );
+		} catch ( Throwable $e ) {
+			OPEX_Exporter::log_exception( $e );
+			self::later( 'opex_run_schedule', $id );
+		}
+	}
+
+	/**
+	 * Queues a cron event a minute from now, unless one is queued already.
+	 * Cron callbacks use it to try again after a throw.
+	 *
+	 * @param string $hook Cron hook.
+	 * @param string $id   The one argument of the event.
+	 * @return void
+	 */
+	private static function later( string $hook, string $id ): void {
+		if ( ! wp_next_scheduled( $hook, array( $id ) ) ) {
+			wp_schedule_single_event( time() + self::RETRY_AFTER, $hook, array( $id ) );
+		}
 	}
 
 	/**
@@ -116,9 +139,12 @@ class OPEX_Runner {
 	}
 
 	/**
-	 * Cron entry for a job. Only background jobs run here.
+	 * Cron entry for a job. Only background jobs run here. A batch that
+	 * throws (the store was busy) is logged and the job runs again in a
+	 * minute. Its saved cursor and file checkpoint let it carry on.
 	 *
 	 * @param string $job_id Job id from the cron event.
+	 * @return void
 	 */
 	public static function on_cron( $job_id ): void {
 		$job_id = (string) $job_id;
@@ -126,7 +152,13 @@ class OPEX_Runner {
 		if ( ! $job || 'background' !== ( $job['mode'] ?? 'browser' ) ) {
 			return;
 		}
-		$result = self::work( $job_id );
+		try {
+			$result = self::work( $job_id );
+		} catch ( Throwable $e ) {
+			OPEX_Exporter::log_exception( $e );
+			self::later( 'opex_run_job', $job_id );
+			return;
+		}
 		if ( is_wp_error( $result ) ) {
 			return;
 		}
@@ -137,12 +169,28 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Hourly housekeeping. */
+	/** Hourly housekeeping. Each step that throws is logged, and the next step still runs. */
 	public static function maintenance(): void {
-		self::sweep_jobs();
-		self::restart_stalled();
-		self::rearm_schedules();
-		self::process_deliveries();
+		self::housekeeping();
+	}
+
+	/**
+	 * Runs every housekeeping step. One that throws (the store was busy)
+	 * does not stop the others. The next hourly run tries it again.
+	 *
+	 * @return Throwable[] What the steps threw, already logged. Empty when all went well.
+	 */
+	public static function housekeeping(): array {
+		$errors = array();
+		foreach ( array( 'sweep_jobs', 'restart_stalled', 'rearm_schedules', 'process_deliveries' ) as $step ) {
+			try {
+				self::$step();
+			} catch ( Throwable $e ) {
+				OPEX_Exporter::log_exception( $e );
+				$errors[] = $e;
+			}
+		}
+		return $errors;
 	}
 
 	/** Remove old jobs and their files. */
@@ -216,14 +264,33 @@ class OPEX_Runner {
 	}
 
 	/**
-	 * Cron entry: run the pending deliveries of one job. A lock keeps cron and
-	 * the command line from both sending. The job is read again under the lock,
-	 * and the next try is queued for when the earliest failed item is due.
+	 * Cron entry: run the pending deliveries of one job. See deliver_pending().
+	 * A throw (the store was busy) is logged and the deliveries are tried
+	 * again in a minute. Items already saved as sent are never sent again.
 	 *
 	 * @param string $job_id Job id from the cron event.
+	 * @return void
 	 */
 	public static function deliver( $job_id ): void {
 		$job_id = (string) $job_id;
+		try {
+			self::deliver_pending( $job_id );
+		} catch ( Throwable $e ) {
+			OPEX_Exporter::log_exception( $e );
+			self::later( 'opex_deliver', $job_id );
+		}
+	}
+
+	/**
+	 * Runs the pending deliveries of one job. A lock keeps cron and the
+	 * command line from both sending. The job is read again under the lock,
+	 * and the next try is queued for when the earliest failed item is due.
+	 *
+	 * @param string $job_id Job id.
+	 * @return void
+	 * @throws OPEX_User_Error When a result could not be saved because the store was busy.
+	 */
+	public static function deliver_pending( string $job_id ): void {
 		if ( ! class_exists( 'OPEX_Delivery' ) || ! self::has_pending( OPEX_Jobs::get( $job_id ) ) ) {
 			return;
 		}

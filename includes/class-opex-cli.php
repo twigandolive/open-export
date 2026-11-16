@@ -229,41 +229,45 @@ class OPEX_CLI {
 	 * @param array $assoc_args Named arguments.
 	 */
 	public function run( $args, $assoc_args ): void {
-		$porcelain = ! empty( $assoc_args['porcelain'] );
-		$target    = OPEX_CLI_Runner::find_target( (string) ( $args[0] ?? '' ) );
-		$dest      = OPEX_CLI_Runner::check_output( $assoc_args );
+		try {
+			$porcelain = ! empty( $assoc_args['porcelain'] );
+			$target    = OPEX_CLI_Runner::find_target( (string) ( $args[0] ?? '' ) );
+			$dest      = OPEX_CLI_Runner::check_output( $assoc_args );
 
-		if ( 'schedule' === $target['kind'] ) {
-			foreach ( array( 'format', 'since', 'network' ) as $flag ) {
-				if ( isset( $assoc_args[ $flag ] ) ) {
-					WP_CLI::error( sprintf( 'The --%s option works with templates only. A schedule keeps its own settings.', $flag ) );
+			if ( 'schedule' === $target['kind'] ) {
+				foreach ( array( 'format', 'since', 'network' ) as $flag ) {
+					if ( isset( $assoc_args[ $flag ] ) ) {
+						WP_CLI::error( sprintf( 'The --%s option works with templates only. A schedule keeps its own settings.', $flag ) );
+					}
 				}
-			}
-			$job = OPEX_Schedules::start( $target['id'], 'cli' );
-			OPEX_CLI_Runner::fail_on_error( $job );
-		} else {
-			$config = $target['config'];
-			if ( isset( $assoc_args['format'] ) ) {
-				$wanted           = OPEX_CLI_Runner::check_format( (string) $assoc_args['format'] );
-				$config['format'] = $wanted;
-				$config           = $this->sanitized( $config );
-				if ( $wanted !== $config['format'] ) {
-					WP_CLI::error( sprintf( 'The export engine does not accept the %s format on this site.', $wanted ) );
+				$job = OPEX_Schedules::start( $target['id'], 'cli' );
+				OPEX_CLI_Runner::fail_on_error( $job );
+			} else {
+				$config = $target['config'];
+				if ( isset( $assoc_args['format'] ) ) {
+					$wanted           = OPEX_CLI_Runner::check_format( (string) $assoc_args['format'] );
+					$config['format'] = $wanted;
+					$config           = $this->sanitized( $config );
+					if ( $wanted !== $config['format'] ) {
+						WP_CLI::error( sprintf( 'The export engine does not accept the %s format on this site.', $wanted ) );
+					}
 				}
+				if ( ! empty( $assoc_args['network'] ) ) {
+					$config['network'] = true;
+					$config            = $this->sanitized( $config );
+				}
+				$extra = array( 'origin' => 'cli' );
+				if ( isset( $assoc_args['since'] ) ) {
+					$extra['since'] = OPEX_CLI_Runner::since( (string) $assoc_args['since'], $config );
+				}
+				$job = OPEX_Exporter::create( $config, $target['name'], $extra );
+				OPEX_CLI_Runner::fail_on_error( $job );
 			}
-			if ( ! empty( $assoc_args['network'] ) ) {
-				$config['network'] = true;
-				$config            = $this->sanitized( $config );
-			}
-			$extra = array( 'origin' => 'cli' );
-			if ( isset( $assoc_args['since'] ) ) {
-				$extra['since'] = OPEX_CLI_Runner::since( (string) $assoc_args['since'], $config );
-			}
-			$job = OPEX_Exporter::create( $config, $target['name'], $extra );
-			OPEX_CLI_Runner::fail_on_error( $job );
+
+			OPEX_CLI_Runner::finish_job( $job, $dest, $assoc_args );
+		} catch ( OPEX_User_Error $e ) {
+			OPEX_CLI_Runner::fail_on_exception( $e );
 		}
-
-		OPEX_CLI_Runner::finish_job( $job, $dest, $assoc_args );
 	}
 
 	/**
@@ -298,40 +302,44 @@ class OPEX_CLI {
 	 * @param array $assoc_args Named arguments.
 	 */
 	public function export( $args, $assoc_args ): void {
-		$dest = OPEX_CLI_Runner::check_output( $assoc_args );
-		$path = (string) ( $assoc_args['config'] ?? '' );
-		if ( '' === $path ) {
-			WP_CLI::error( 'Pass --config=<file>, or --config=- to read STDIN.' );
-		}
-		$json = '-' === $path ? stream_get_contents( STDIN ) : ( is_readable( $path ) ? file_get_contents( $path ) : false ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file the shell user named.
-		if ( ! is_string( $json ) ) {
-			WP_CLI::error( 'Could not read the config.' );
-		}
-		$data = json_decode( $json, true );
-		if ( ! is_array( $data ) ) {
-			WP_CLI::error( 'The config is not valid JSON.' );
-		}
-
-		$label = 'CLI export';
-		if ( isset( $data['opex_recipe'] ) ) {
-			$notes  = array();
-			$result = OPEX_Recipe::to_config( $data, $notes );
-			OPEX_CLI_Runner::fail_on_error( $result );
-			foreach ( array_merge( $notes, (array) ( $result['notes'] ?? array() ) ) as $note ) {
-				WP_CLI::warning( (string) $note );
+		try {
+			$dest = OPEX_CLI_Runner::check_output( $assoc_args );
+			$path = (string) ( $assoc_args['config'] ?? '' );
+			if ( '' === $path ) {
+				WP_CLI::error( 'Pass --config=<file>, or --config=- to read STDIN.' );
 			}
-			if ( empty( $result['ok'] ) ) {
-				WP_CLI::error( (string) ( $result['report']['reason'] ?? 'The recipe could not be turned into an export.' ) );
+			$json = '-' === $path ? stream_get_contents( STDIN ) : ( is_readable( $path ) ? file_get_contents( $path ) : false ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file the shell user named.
+			if ( ! is_string( $json ) ) {
+				WP_CLI::error( 'Could not read the config.' );
 			}
-			$config = $result['config'];
-			$label  = '' !== (string) $result['name'] ? (string) $result['name'] : $label;
-		} else {
-			$config = $this->sanitized( $data );
-		}
+			$data = json_decode( $json, true );
+			if ( ! is_array( $data ) ) {
+				WP_CLI::error( 'The config is not valid JSON.' );
+			}
 
-		$job = OPEX_Exporter::create( $config, $label, array( 'origin' => 'cli' ) );
-		OPEX_CLI_Runner::fail_on_error( $job );
-		OPEX_CLI_Runner::finish_job( $job, $dest, $assoc_args );
+			$label = 'CLI export';
+			if ( isset( $data['opex_recipe'] ) ) {
+				$notes  = array();
+				$result = OPEX_Recipe::to_config( $data, $notes );
+				OPEX_CLI_Runner::fail_on_error( $result );
+				foreach ( array_merge( $notes, (array) ( $result['notes'] ?? array() ) ) as $note ) {
+					WP_CLI::warning( (string) $note );
+				}
+				if ( empty( $result['ok'] ) ) {
+					WP_CLI::error( (string) ( $result['report']['reason'] ?? 'The recipe could not be turned into an export.' ) );
+				}
+				$config = $result['config'];
+				$label  = '' !== (string) $result['name'] ? (string) $result['name'] : $label;
+			} else {
+				$config = $this->sanitized( $data );
+			}
+
+			$job = OPEX_Exporter::create( $config, $label, array( 'origin' => 'cli' ) );
+			OPEX_CLI_Runner::fail_on_error( $job );
+			OPEX_CLI_Runner::finish_job( $job, $dest, $assoc_args );
+		} catch ( OPEX_User_Error $e ) {
+			OPEX_CLI_Runner::fail_on_exception( $e );
+		}
 	}
 
 	/**
@@ -372,9 +380,13 @@ class OPEX_CLI {
 	 * @param array $assoc_args Named arguments.
 	 */
 	public function clean( $args, $assoc_args ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WP-CLI passes both; this command takes none.
-		$before = array_keys( OPEX_Jobs::all() );
-		OPEX_Runner::maintenance();
+		$before  = array_keys( OPEX_Jobs::all() );
+		$errors  = OPEX_Runner::housekeeping();
 		$removed = count( array_diff( $before, array_keys( OPEX_Jobs::all() ) ) );
+		if ( $errors ) {
+			// The other steps still ran. The first error says what stopped one of them.
+			OPEX_CLI_Runner::fail_on_exception( $errors[0] );
+		}
 		WP_CLI::success( sprintf( 'Maintenance finished. Removed %d expired job(s).', $removed ) );
 	}
 

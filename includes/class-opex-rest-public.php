@@ -41,6 +41,7 @@ class OPEX_Rest_Public {
 	 * @return void
 	 */
 	public static function register_routes(): void {
+		OPEX_Rest_Guard::register(); // A throw in any route below becomes a WP_Error.
 		register_rest_route(
 			self::NS,
 			'/schedules/(?P<id>s[a-f0-9]{12})/trigger',

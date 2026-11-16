@@ -430,9 +430,10 @@ class OPEX_Exporter {
 	 * Writes the exception detail to the PHP error log, only when WP_DEBUG and
 	 * WP_DEBUG_LOG are both on.
 	 *
-	 * @internal Shared with OPEX_Export_Run only.
+	 * @internal Shared with OPEX_Export_Run, OPEX_Rest_Guard and OPEX_Runner only.
 	 *
 	 * @param Throwable $e What stopped the export.
+	 * @return void
 	 */
 	public static function log_exception( Throwable $e ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {

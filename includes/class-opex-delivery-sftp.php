@@ -228,9 +228,10 @@ class OPEX_Delivery_Sftp {
 	private static function upload( $sftp, string $local, string $name ) {
 		$tag  = bin2hex( random_bytes( 4 ) );
 		$temp = '.' . $name . '.' . $tag . '.part';
-		if ( ! $sftp->put( $temp, $local, \phpseclib3\Net\SFTP::SOURCE_LOCAL_FILE ) ) {
+		$sent = self::put( $sftp, $temp, $local );
+		if ( 'sent' !== $sent ) {
 			$sftp->delete( $temp );
-			return new WP_Error( 'opex_sftp_put', __( 'The upload failed. Check that the folder is writable.', 'open-export' ) );
+			return 'lost' === $sent ? OPEX_Delivery::lost_error( 'opex_sftp_lost' ) : new WP_Error( 'opex_sftp_put', __( 'The upload failed. Check that the folder is writable.', 'open-export' ) );
 		}
 		if ( self::posix_rename( $sftp, $temp, $name ) || $sftp->rename( $temp, $name ) ) {
 			return true;
@@ -248,6 +249,50 @@ class OPEX_Delivery_Sftp {
 		$restored = $sftp->rename( $backup, $name );
 		$sftp->delete( $temp );
 		return OPEX_Delivery_Ftp::rename_failed( 'opex_sftp_rename', $restored, $backup );
+	}
+
+	/**
+	 * Sends the file one packet at a time through a data callback, so the
+	 * delivery lock can be renewed while a long upload runs. When the lock is
+	 * lost, the callback ends the data. phpseclib then closes the remote file
+	 * normally, and the same connection can remove the partial upload.
+	 * phpseclib's progress callback cannot stop an upload without a throw,
+	 * which would leave unread replies on the connection.
+	 *
+	 * @param object $sftp  Connected SFTP object.
+	 * @param string $temp  Remote temporary name.
+	 * @param string $local Local file.
+	 * @return string 'sent', 'failed' or 'lost' (the lock was lost).
+	 */
+	private static function put( $sftp, string $temp, string $local ): string {
+		$fp = @fopen( $local, 'rb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- the export file, read packet by packet.
+		if ( false === $fp ) {
+			return 'failed';
+		}
+		$state = 'sent';
+		$beat  = microtime( true );
+		$read  = static function ( $length ) use ( $fp, &$state, &$beat ) {
+			if ( 'sent' !== $state ) {
+				return null;
+			}
+			if ( ! OPEX_Delivery::transfer_alive( $beat ) ) {
+				$state = 'lost';
+				return null;
+			}
+			$chunk = fread( $fp, max( 1, (int) $length ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
+			if ( false === $chunk ) {
+				$state = 'failed';
+				return null;
+			}
+			// Null, not an empty string, is what tells phpseclib the data ended.
+			return '' === $chunk ? null : $chunk;
+		};
+		try {
+			$ok = $sftp->put( $temp, $read, \phpseclib3\Net\SFTP::SOURCE_CALLBACK );
+		} finally {
+			fclose( $fp ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		}
+		return $ok ? $state : ( 'lost' === $state ? 'lost' : 'failed' );
 	}
 
 	/**

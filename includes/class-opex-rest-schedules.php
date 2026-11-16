@@ -25,6 +25,7 @@ class OPEX_Rest_Schedules {
 	 * @return void
 	 */
 	public static function register_routes(): void {
+		OPEX_Rest_Guard::register(); // A throw in any route below becomes a WP_Error.
 		$can = array( __CLASS__, 'can' );
 
 		register_rest_route(
