@@ -7,32 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - Unreleased
 
-Open Export now runs exports on a schedule, sends the file where you need it, and covers more of a WooCommerce store. Read "Changed" before you upgrade: WooCommerce order files look different, and a few loose inputs that 1.3.1 ignored are now errors.
+Open Export now runs exports on a schedule, sends the file where you need it, and covers more of a WooCommerce store. It also closes a multisite data gap: see "Security". Read "Changed" before you upgrade: WooCommerce order files look different, and a few loose inputs that 1.3.1 ignored are now errors.
 
 ### Added
 
 - **A new admin screen with five tabs:** Export, History, Schedules, Destinations and Settings. You build an export in one place and set up repeat exports in another, with the same builder in both.
-- **Excel (XLSX) files.** The plugin writes them itself, with no extra library. Ids with leading zeros and long numbers stay text, so Excel does not change them. XLSX needs the PHP zip extension.
+- **Excel (XLSX) files.** The plugin writes them itself, with no extra library. Ids with leading zeros and long numbers stay text, so Excel does not change them. Other numbers are real numbers, so Excel shows 82.50 as 82.5 unless you format the column. Text that looks like a formula stays text. An export with more rows than one Excel sheet holds (1,048,576, header included) stops with an error, so use CSV for those. XLSX needs the PHP zip extension.
 - **CSV options:** choose the encoding (UTF-8 with BOM, UTF-8, Windows-1252 or UTF-16 LE) and the line endings (LF or CRLF), so the file opens cleanly in the program that reads it.
 - **Custom XML templates.** Write a header, a row and a footer with `{field id}` placeholders. Values are escaped for you, and `{field id|cdata}` wraps a value in CDATA. The plugin checks that the result is well-formed XML before it runs.
-- **Column transforms.** Up to 8 steps per column: trim, change case, add text before or after, find and replace, format a date, format a number, map values, fill in when empty, remove HTML and shorten. Steps are plain settings, never code.
+- **Column transforms.** Up to 8 steps per column: trim, change case, add text before or after, find and replace, format a date, format a number, map values, fill in when empty, remove HTML and shorten. Steps are plain settings, never code. Format a number rounds with exact decimal math, never floating point.
 - **Custom columns** that combine fields and text, such as `{woo:billing_first_name} {woo:billing_last_name}`.
 - **Nested filter groups**, such as (A and B) or C, up to 3 levels deep and 50 rules in total.
-- **New WooCommerce sources:** products and variations, coupons, order line items (one row per item, with the order's number, date, status and billing email beside it) and customers (with order count, total spent and average order, guests included). Money is exact decimal math, never floating point.
-- **Feed presets** for Google Merchant Center, Meta catalogs and Pinterest catalogs. Each one fills in a complete product export that you can change before you run it.
-- **Schedules.** Run an export hourly, daily, weekly, monthly or only when asked, at a time in your site's timezone. Name the file with tokens such as `{label}` and `{date}`.
-- **Incremental schedules** export only rows that are new or changed since the last successful run.
-- **Reset watermark** on a schedule makes its next incremental run export every row again.
-- **A trigger URL for each schedule**, so a real server cron job can start it. The URL holds a secret key. You can replace the key at any time, and the URL stops answering after 10 wrong keys in 10 minutes.
-- **Background exports** that keep going after you close the browser tab. They run on WP-Cron.
-- **Delivery when an export finishes:** email (a download link, or the file attached up to 10 MB), a signed webhook, or upload to a saved FTP, FTPS or SFTP destination. A failed delivery is tried up to 3 times in all, 5 and then 30 minutes apart.
-- **Retry delivery** on a finished export sends its failed or waiting deliveries again now. A delivery that already worked is never sent twice.
-- **Destinations** with a Test button. SFTP remembers the server's host key and refuses to send if it changes.
+- **New WooCommerce sources:** products and variations, coupons, order line items (one row per item, with the order's number, date, status and billing email beside it) and customers (with order count, total spent and average order, guests included). Shipping, fee, coupon and tax lines show their own amounts. Money is exact decimal math, never floating point.
+- **Feed presets** for Google Merchant Center, Meta catalogs and Pinterest catalogs. Choose one under Feed preset on the Export tab and press Load. It fills in a complete product export that you can change before you run it.
+- **Schedules.** Run an export hourly, daily, weekly, monthly or only when asked, at a time in your site's timezone. Name the file with tokens such as `{label}` and `{date}`. Run now, Duplicate and an On or Off switch sit on each schedule.
+- **Changes only** on a schedule exports only rows that are new or changed since the last successful run. **Start over** makes the next run export every row again.
+- **A trigger URL for each schedule**, so a real server cron job can start it. The URL holds a secret key. Make a new URL replaces the key at any time, and the URL stops answering after 10 wrong keys in 10 minutes.
+- **Background exports** that keep going after you close the browser tab. They run on WP-Cron. Resume restarts a paused or failed background export at once.
+- **Delivery when an export finishes:** email (a download link, or the file attached up to 10 MB), a signed webhook, or upload to a saved FTP, FTPS or SFTP destination. A failed delivery is tried up to 3 times in all, 5 and then 30 minutes apart. A webhook must use https unless it points at your own site, checked when you save it and again when it sends.
+- **Send again now** in an export's details on the History tab tries its unsent deliveries at once instead of waiting. It uses one of the 3 tries, and a delivery that already worked is never sent twice.
+- **Destinations** with Save and test. SFTP remembers the server's fingerprint and refuses to send if it changes. Reset saved fingerprint clears it after a planned server rebuild.
 - **Download links that expire**, for email and webhook deliveries. You set how many days they last.
-- **Settings:** how long to keep finished exports (1 to 365 days, default 30), how long download links last (1 to 30 days, default 7) and whether exports run in the background by default.
-- **Network exports on multisite.** A super admin can run one export across every site in the network, with the site id and URL on each row.
-- **ACF repeater and flexible content fields** export as JSON, or flattened into numbered columns such as "name 1 sub" (up to 20 rows).
-- **WP-CLI:** `wp opex` lists sources, templates, schedules and jobs, runs a template or schedule, runs a one-off export from a JSON file, prints the capability document and runs the cleanup.
+- **Settings:** how long to keep finished exports (1 to 365 days, default 30, counted from when each export finished), how long download links last (1 to 30 days, default 7) and whether exports run in the background by default.
+- **Network exports on multisite.** A super admin can turn on "All sites in the network" to run one export across every public site, with Site ID and Site URL columns first. Not offered for users or raw tables. The preview shows rows from the current site only.
+- **ACF repeater and flexible content fields** on posts, terms and users, with ACF or Secure Custom Fields. Each one exports as one JSON column, or choose "Spread into columns" to get numbered columns such as "team 1 name", up to 20 rows. These fields cannot be filtered.
+- **WP-CLI:** `wp opex` lists sources, templates, schedules and jobs, runs a template or schedule, runs a one-off export from a JSON file, prints the capability document and runs the cleanup. `wp opex run <template> --network` runs a template across every site.
 - **Site Health:** an Open Export section under Info, and a status test that tells you when scheduled exports need a real cron job.
 - **Suggested privacy policy text** under Settings, Privacy.
 - **Two abilities** for the WordPress Abilities API, `open-export/get-schema` and `open-export/list-sources`, when your WordPress has that API.
@@ -56,7 +55,7 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
 - A batch size that is not a number falls back to 500.
 - A raw table with no whole-number primary key is ordered by its primary key columns. A table with no key at all gets a note that row order is not guaranteed.
 - The field picker lists post type and MIME type for every post type, and the comment GMT date and karma for comments.
-- Old exports are removed by an hourly cleanup that follows the retention setting, instead of when you open the job list.
+- Old exports are removed by an hourly cleanup that follows the retention setting and counts from when each export finished. Before, an export was removed 30 days after it started, when you opened the job list.
 - Deactivating the plugin clears its scheduled events. Uninstalling also removes schedules, destinations, settings, lock rows and every scheduled event, on every site of a network.
 
 ### Fixed
@@ -77,6 +76,10 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
 ### Removed
 
 - The old one-page export screen and its script and style (`assets/admin.js`, `assets/admin.css`). The five-tab screen replaces them.
+
+### Security
+
+- **On a multisite network, a site administrator who is not a super admin now reaches only their own site's data.** The Users source holds only the site's members, the raw table list shows only the site's own tables, and other sites' user meta is neither offered nor exported. In 1.3.1 and earlier, such an administrator could export every user of the network and any table, including the tables the network shares. Single sites, super admins and WP-CLI are unchanged. A schedule a super admin saved keeps its reach when cron or its trigger URL runs it.
 
 ## [1.3.1] - 2026-09-02
 

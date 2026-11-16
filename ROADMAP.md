@@ -5,7 +5,7 @@ Ideas for after Open Export 2.0.0. None of these has a date, and plans may chang
 ## Ideas
 
 - **SFTP keys with a passphrase.** Today a private key must have no passphrase. Support for an encrypted key would let you use the key you already have.
-- **Reuse a schedule's saved webhook secret for a one-off export.** Today a one-off export that sends a signed webhook needs the secret typed again.
+- **Reuse a saved webhook secret.** Today a one-off export that sends a signed webhook needs the secret typed again, and so does a schedule made with Duplicate.
 - **"Last used" on saved templates**, so you can tell which templates are still in use.
 
 ## Excluded

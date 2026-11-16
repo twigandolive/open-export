@@ -18,6 +18,10 @@
 /lib/composer.json    export-ignore
 /lib/composer.lock    export-ignore
 
+# WordPress.org listing screenshots. The plugin directory reads them from its own
+# assets folder, so they stay out of the zip.
+/.wordpress-org       export-ignore
+
 # Developer files inside the bundled SFTP library. The library runs without them.
 /lib/vendor/paragonie/random_compat/build-phar.sh         export-ignore
 /lib/vendor/paragonie/random_compat/other                 export-ignore

@@ -16,10 +16,11 @@ Open Export is a free WordPress plugin. Pick a source, choose fields, filter, an
 
 - Any post type, users, comments, and terms from any taxonomy.
 - Any database table (Advanced). Raw tables offer only their own columns.
-- WooCommerce: orders, order line items (one row per item), customers (order count, total spent, average order, guests included), products and variations, and coupons.
+- WooCommerce: orders, order items (one row per item, with shipping, fee, coupon and tax lines showing their own amounts), customers (order count, total spent, average order, guests included), products and variations, and coupons.
 - Custom fields grouped by the plugin that owns them (WooCommerce, ACF, Yoast SEO, Rank Math, Elementor and more). Serialized values become JSON.
-- ACF repeater and flexible content fields, as JSON or as numbered columns (up to 20 rows).
-- Network exports on multisite: a super admin can run one export across every site, with `site_id` and `site_url` columns. Not offered for raw tables or users.
+- ACF repeater and flexible content fields on posts, terms and users, with ACF or Secure Custom Fields. Each is one JSON column, or "Spread into columns" for numbered columns such as `team 1 name` (up to 20 rows, fixed when the export starts). They cannot be filtered.
+- Network exports on multisite: a super admin turns on "All sites in the network" to run one export across every public site, with Site ID and Site URL columns first. Not offered for users or raw tables. The preview reads the current site only.
+- On multisite, a site administrator who is not a super admin reaches only that site's members, its own tables, and user meta that belongs to no other site.
 
 ### Filters and columns
 
@@ -31,7 +32,7 @@ Open Export is a free WordPress plugin. Pick a source, choose fields, filter, an
 ### Formats
 
 - CSV: comma, semicolon or tab, four encodings (UTF-8 with BOM by default), LF or CRLF. Cells that start like a formula get a leading apostrophe.
-- Excel (XLSX), from the plugin's own streaming writer. Needs the PHP zip extension.
+- Excel (XLSX), from the plugin's own streaming writer. Needs the PHP zip extension. Numbers with up to 15 digits before the decimal point become real number cells, so Excel shows 82.50 as 82.5 unless the column is formatted. Leading-zero ids, longer numbers and text that looks like a formula stay text. More than 1,048,576 rows (one sheet) stops the export with an error.
 - JSON.
 - XML, in the default layout or a template with `{field id}` and `{field id|cdata}` placeholders.
 - Feed presets for Google Merchant Center, Meta catalogs and Pinterest catalogs, built on WooCommerce products.
@@ -39,10 +40,11 @@ Open Export is a free WordPress plugin. Pick a source, choose fields, filter, an
 ### Schedules and delivery
 
 - Schedules: manual, hourly, daily, weekly or monthly, at a time in the site's timezone, with a file name pattern (`{label} {source} {date} {time} {datetime} {id} {site}`).
-- Incremental schedules export only rows newer than the start of the last successful run. You can reset that watermark.
+- "Changes only" schedules export only rows whose chosen date is after the start of the last successful run. "Start over" clears that watermark, so the next run exports every row.
 - A trigger URL per schedule for a real server cron job. Rate limited, and the key can be replaced.
-- Background exports driven by WP-Cron, so the browser can close.
-- Delivery by email (link or attachment up to 10 MB), signed webhook, or FTP, FTPS and SFTP destinations. Up to 3 attempts, 5 and then 30 minutes apart, plus a manual retry.
+- Background exports driven by WP-Cron, so the browser can close. Resume restarts a paused or failed background export at once.
+- Delivery by email (link or attachment up to 10 MB), signed webhook, or FTP, FTPS and SFTP destinations. Up to 3 attempts, 5 and then 30 minutes apart. "Send again now" in History uses the next attempt at once.
+- A webhook must use https unless it points at this site or a loopback address. The rule is checked on save and again on send.
 - Download links in emails and webhooks expire after 1 to 30 days (7 by default).
 
 ### Work with an AI assistant
@@ -52,7 +54,7 @@ The capability document (`GET /schema`, or `wp opex schema`) describes every sou
 ### Built in
 
 - Batched, resumable exports for shared hosting.
-- Retention: finished exports are removed after 1 to 365 days (30 by default) by an hourly cleanup.
+- Retention: finished exports are removed 1 to 365 days (30 by default) after they finish, by an hourly cleanup.
 - Site Health section and a cron test, suggested privacy policy text, and two Abilities API abilities (`open-export/get-schema`, `open-export/list-sources`).
 
 ## Requirements
@@ -70,11 +72,13 @@ The capability document (`GET /schema`, or `wp opex schema`) describes every sou
 
 ## A short tour of the screen
 
-- **Export:** pick a source, choose and order fields, add filters and a date range, pick a format and its options, add transforms and custom columns, preview, save as a template, and start. A delivery can be attached to a one-off export. The assistant panel and feed presets live here.
-- **History:** every export with its progress, notes, deliveries and download. Pause, resume, rerun, retry delivery, load into the builder, or delete.
-- **Schedules:** the same builder, plus frequency, incremental runs, file name pattern, delivery, run now, trigger URL, new key and reset watermark.
-- **Destinations:** saved FTP, FTPS and SFTP servers with a Test button. Shows the SFTP host key fingerprint and lets you reset it.
-- **Settings:** retention, link lifetime, background by default, and a status list (zip, ftp, sodium, cron, WooCommerce, multisite).
+The screen has five tabs. Names in quotes are the words on the screen.
+
+- **Export:** "Start from" a saved template or a "Feed preset", or open "Use an AI recipe". Then five steps: Source, Columns (with Transform and "Add a custom column"), Filters and a date range, Format, and Preview. The Run step has "Send the result when it is finished", "Run in the background", "Save as template" and "Start export".
+- **History:** every export with its source, format, status, progress, size and who started it. Actions: Download, Pause, Resume, "Run again", "Open in builder" and Delete. The details show the notes and each delivery, with "Send again now" when one is unsent.
+- **Schedules:** one card per schedule with "Run now", Edit, Duplicate, Delete and an On or Off switch. The form has the same builder ("Edit export setup"), Frequency, "Changes only" with "Start over", "File name pattern", delivery, and the trigger URL with Copy and "Make a new URL".
+- **Destinations:** saved FTP, FTPS and SFTP servers. The form saves with "Save and test". For SFTP it shows the "Server fingerprint" and "Reset saved fingerprint".
+- **Settings:** "Keep finished exports", "Download links work for", "Run exports in the background by default", and a "This server" list (Excel export, FTP and FTPS, encrypted secrets, WP-Cron, WooCommerce, multisite).
 
 ## WP-CLI
 
@@ -86,7 +90,7 @@ Every command runs as `wp opex <command>`. List commands take `--format=<table|j
 | `templates` | Lists saved templates. |
 | `schedules` | Lists schedules with next run (site time) and last run status. |
 | `jobs [--status=<status>]` | Lists exports, newest first. Status is `running`, `paused`, `done` or `error`. |
-| `run <name-or-id> [--format=<csv\|json\|xml\|xlsx>] [--output=<file>] [--force] [--since=<datetime>] [--porcelain]` | Runs a template or schedule to the end in this process. Matches the id first, then the exact name. `--format` and `--since` work with templates only. `--since` takes `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` in site time. Exits 1 on any failure. |
+| `run <name-or-id> [--format=<csv\|json\|xml\|xlsx>] [--output=<file>] [--force] [--since=<datetime>] [--network] [--porcelain]` | Runs a template or schedule to the end in this process. Matches the id first, then the exact name. `--format`, `--since` and `--network` work with templates only. `--since` takes `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` in site time. `--network` exports from every public site of a multisite network into one file. Exits 1 on any failure. |
 | `export --config=<file\|-> [--output=<file>] [--force] [--porcelain]` | Runs a one-off export from a JSON config or recipe file, or from STDIN with `-`. |
 | `schema [--source=<id>] [--all]` | Prints the capability document as JSON. |
 | `clean` | Runs the maintenance sweep: removes expired exports, restarts stalled background jobs, re-arms schedules and sends pending deliveries. |
@@ -113,6 +117,14 @@ Namespace `open-export/v1`. Every route except the two public ones needs the cap
 | Schedule trigger | `GET` or `POST /schedules/<id>/trigger?key=` | Anyone with the schedule's key |
 | File download | `GET /file/<id>?token=` | Anyone with a valid, unexpired token |
 
+Routes added for the 2.0.0 screen:
+
+- `POST /jobs/<id>/deliver` sends a finished job's pending or failed deliveries now, skipping the wait. It never resends one that worked. It answers 409 when the job is not done or its deliveries are being sent.
+- `POST /schedules/<id>/reset-watermark` clears the watermark, so the next "Changes only" run exports every row.
+- `GET /presets` lists the feed presets, each with a ready config. It returns an empty list without WooCommerce.
+
+On a network, a config with `network: true` is refused with `opex_bad_network` unless the caller is a super admin (or WP-CLI), and for users or raw tables.
+
 ## Hooks
 
 | Hook | Type | Arguments | Use |
@@ -137,7 +149,7 @@ To check it, compute `hash_hmac( 'sha256', $raw_body, $secret )` over the raw bo
 
 ## Development
 
-There is no build step. The PHP and the scripts in `assets/app/` ship as written.
+There is no build step. The PHP and the scripts and styles in `assets/app/` ship as written. The scripts are classic scripts on one namespace, `window.opexApp`, and `includes/class-opex-admin.php` loads them in order.
 
 One-time setup:
 
@@ -147,13 +159,17 @@ composer install --working-dir=tests/php74    # PHPUnit 9.6 for the PHP 7.4 lane
 composer install --working-dir=tests/lint     # PHP_CodeSniffer
 ```
 
-Make a throwaway test site (SQLite by default):
+Make a throwaway test site (SQLite by default). Usage: `setup-site.sh [--mariadb | --multisite] <target-dir>`.
 
 ```sh
-tests/bin/setup-site.sh [--mariadb | --multisite] <target-dir>
+tests/bin/setup-site.sh <dir>                  # single site on SQLite
+tests/bin/setup-site.sh --mariadb <dir>        # single site on a private MariaDB
+tests/bin/setup-site.sh --multisite <dir>      # network: main site plus /second/ and /third/
 ```
 
-Run the tests. Usage: `tests/bin/test.sh [--site <dir>] [--legacy-orders] [--php <bin dir>] [phpunit args...]`. The four lanes:
+`--multisite` works with SQLite only. It builds a subdirectory network with Open Export network-activated, WooCommerce on the main site only, and a super admin.
+
+Run the tests. Usage: `tests/bin/test.sh [--site <dir>] [--legacy-orders] [--php <bin dir>] [phpunit args...]`. The four lanes every change must pass:
 
 ```sh
 OPEX_TEST_SITE=<dir> tests/bin/test.sh                   # SQLite
@@ -161,6 +177,15 @@ tests/bin/test.sh --site <mariadb-dir>                   # MariaDB (starts and s
 tests/bin/test.sh --site <dir> --legacy-orders           # classic WooCommerce order storage
 tests/bin/test.sh --site <dir> --php /opt/homebrew/opt/php@7.4/bin   # PHP 7.4 floor
 ```
+
+Two more lanes cover multisite and ACF. On a single site their tests skip.
+
+```sh
+OPEX_TEST_SITE=<multisite-dir> tests/bin/test.sh --filter 'NetworkExportTest|NetworkAccessTest|SmokeTest'
+OPEX_TEST_SITE=<acf-dir> tests/bin/test.sh --filter AcfFieldsTest
+```
+
+The multisite lane needs a site from `setup-site.sh --multisite`. Run only those tests there: 13 older tests assume a single site (user counts, permalinks, the table list) and fail on a network. The ACF lane needs a test site with the Secure Custom Fields plugin installed and active. No script sets that up.
 
 The script fails when zero tests run. FTP, FTPS and SFTP tests need `OPEX_TEST_TOOLS` set to a folder with a `venv/` holding `pyftpdlib`, `asyncssh` and `pyopenssl`, and skip without it.
 
