@@ -58,6 +58,7 @@
 			list.appendChild( buttons[ item.id ] );
 		} );
 
+		// Moves between tabs with the arrow, Home and End keys.
 		function onKey( event, id ) {
 			const i = ids.indexOf( id );
 			let next = null;
@@ -76,6 +77,7 @@
 			}
 		}
 
+		// Shows a tab and marks its button as selected.
 		function select( id, focus ) {
 			if ( ! buttons[ id ] ) {
 				return;

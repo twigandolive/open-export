@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R3-1.1: on a filesystem without hard links, two runs that publish
+ * On a filesystem without hard links, two runs that publish
  * --output to the same path without --force can never both succeed. The
  * first claims the name with an exclusive create, the second then fails
  * with the usual "use --force" error, and the first file stays whole.
@@ -8,7 +8,7 @@
  * Two seams: OPEX_CLI_Runner::$link fails the way link() does on such a
  * filesystem, and OPEX_CLI_Runner::$rename lets the test run the second
  * publish at the moment before the first one renames its copy into place,
- * which is the window the reviewer described. It can also fail the rename.
+ * which is the moment a second run could slip in. It can also fail the rename.
  *
  * @package Open_Export
  */

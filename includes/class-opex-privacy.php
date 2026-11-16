@@ -61,15 +61,15 @@ class OPEX_Privacy {
 			sprintf(
 				/* translators: %d: number of days. */
 				_n(
-					'Export files are stored in a protected folder under the uploads folder of this site. They are deleted automatically after %d day.',
-					'Export files are stored in a protected folder under the uploads folder of this site. They are deleted automatically after %d days.',
+					'Open Export stores export files in a protected folder under the uploads folder of this site. It deletes them automatically after %d day.',
+					'Open Export stores export files in a protected folder under the uploads folder of this site. It deletes them automatically after %d days.',
 					$days,
 					'open-export'
 				),
 				$days
 			),
-			__( 'An administrator can also delete any export at any time from the History screen.', 'open-export' ),
-			__( 'Nothing leaves this site unless an administrator turns on a delivery (email, webhook, FTP or SFTP) for an export or downloads a file. When a delivery is on, the export file or a download link is sent to the address or server the administrator chose.', 'open-export' ),
+			__( 'An administrator can also delete any export at any time on the History tab of Open Export.', 'open-export' ),
+			__( 'Nothing leaves this site unless an administrator turns on a delivery (email, webhook, FTP or SFTP) for an export or downloads a file. When a delivery is on, Open Export sends the export file or a download link to the address or server the administrator chose.', 'open-export' ),
 			__( 'Open Export does not send usage data to its author or to any other service.', 'open-export' ),
 		);
 

@@ -107,7 +107,7 @@ class RestScreenTest extends TestCase {
 				'name'        => 'Nightly users',
 				'config'      => array( 'source' => 'users', 'fields' => array( 'core:ID' ) ),
 				'incremental' => array( 'enabled' => true, 'field' => 'core:user_registered' ),
-				'delivery'    => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'HOOK-SECRET-998877' ) ),
+				'delivery'    => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => 'HOOK-SECRET-998877' ) ),
 			)
 		);
 		$this->assertIsArray( $saved );

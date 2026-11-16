@@ -30,6 +30,7 @@
 	app.historyActions = function ( ctx ) {
 		const { say, fail, rows, body, hintId } = ctx;
 
+		// Builds the action links that fit the export's status.
 		function build( row ) {
 			const job = row.job;
 			const items = [];
@@ -46,7 +47,7 @@
 			if ( 'done' === job.status || 'error' === job.status ) {
 				items.push( act( 'rerun', __( 'Run again', 'open-export' ), () => rerun( job ) ) );
 			}
-			items.push( act( 'builder', __( 'Open in builder', 'open-export' ), () => openInBuilder( job ), { describedBy: hintId } ) );
+			items.push( act( 'builder', __( 'Edit and run again', 'open-export' ), () => openInBuilder( job ), { describedBy: hintId } ) );
 			items.push( act( 'delete', __( 'Delete', 'open-export' ), () => remove( row ), { danger: true } ) );
 			return el( 'span', { class: 'opex-actions' }, items );
 		}
@@ -62,10 +63,12 @@
 			} );
 		}
 
+		// Pauses the export.
 		function pause( job ) {
 			return jobs.pause( job.id ).then( () => say( 'success', __( 'Export paused.', 'open-export' ) ) );
 		}
 
+		// Resumes the export and reports when it ends.
 		function resume( job ) {
 			say( '', '' );
 			// Driving takes as long as the export. Free the row at once and
@@ -78,6 +81,7 @@
 			} ).catch( fail );
 		}
 
+		// Starts a new export with the same setup.
 		function rerun( job ) {
 			return jobs.rerun( job.id ).then( ( fresh ) => {
 				/* translators: %s: export name. */
@@ -116,12 +120,13 @@
 			} ).catch( fail );
 		}
 
+		// Asks first, then deletes the export and its file.
 		function remove( row ) {
 			const job = row.job;
 			return ui.confirm( {
 				title: __( 'Delete this export?', 'open-export' ),
 				/* translators: %s: export name. */
-				message: sprintf( __( '%s and its file will be deleted. This cannot be undone.', 'open-export' ), job.label ),
+				message: sprintf( __( 'This deletes %s and its file. You cannot undo this.', 'open-export' ), job.label ),
 				confirmLabel: __( 'Delete', 'open-export' ),
 				danger: true,
 			} ).then( ( yes ) => {

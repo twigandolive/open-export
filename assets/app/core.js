@@ -19,7 +19,7 @@
  *   registerTab( id, def ) Adds a tab module. def.mount( panel ) builds the tab.
  *   tabModules            The registered tab modules by id.
  *
- * Strings are not wrapped in helpers here on purpose: `wp i18n make-pot` only
+ * Strings are not wrapped in shared functions here on purpose: `wp i18n make-pot` only
  * finds literal __( 'text', 'open-export' ) calls, so each file calls wp.i18n
  * itself.
  */

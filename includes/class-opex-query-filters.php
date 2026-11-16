@@ -7,7 +7,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -50,7 +50,7 @@ class OPEX_Query_Filters {
 			if ( null !== $clause ) {
 				return $clause;
 			}
-			// Not a date we could parse. Compare it as text anyway, so the
+			// Not a date Open Export can read. Compare it as text anyway, so the
 			// column is never cast down to a bare year.
 			if ( isset( $date_defs[ $field ]['sql'] ) ) {
 				return self::value_condition( $date_defs[ $field ]['sql'], $op, $value, $args, true );
@@ -75,7 +75,7 @@ class OPEX_Query_Filters {
 				}
 			}
 
-			// A friendly field the provider maps to a SQL expression, e.g. woo:status.
+			// A friendly field the provider maps to a SQL expression, for example woo:status.
 			$expr = $provider->filter_expr( $field );
 			if ( null !== $expr ) {
 				return self::value_condition( $expr, $op, $value, $args );
@@ -85,7 +85,7 @@ class OPEX_Query_Filters {
 		// On a legacy store the same id is a post column or a meta key.
 		$field = OPEX_Query::resolve_field( $src, $field );
 
-		// Core column rule, e.g. core:post_status.
+		// Core column rule, for example core:post_status.
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			if ( ! OPEX_Query::valid_core_col( $src['type'], $col ) ) {
@@ -96,7 +96,7 @@ class OPEX_Query_Filters {
 			return self::value_condition( $alias . '.' . $col, $op, $value, $args );
 		}
 
-		// Raw table column rule, e.g. col:option_name.
+		// Raw table column rule, for example col:option_name.
 		if ( 0 === strpos( $field, 'col:' ) && 'table' === $src['type'] ) {
 			$col = substr( $field, 4 );
 			if ( ! OPEX_Query::valid_table_col( $src['table'], $col ) ) {
@@ -124,7 +124,7 @@ class OPEX_Query_Filters {
 			return OPEX_Query_Relations::meta_clause( $src, $key, $op, $value, $args );
 		}
 
-		// Taxonomy rule, e.g. tax:product_cat (posts only).
+		// Taxonomy rule, for example tax:product_cat (posts only).
 		if ( 0 === strpos( $field, 'tax:' ) && 'posts' === $src['type'] ) {
 			$tax = substr( $field, 4 );
 			return taxonomy_exists( $tax ) ? OPEX_Query_Relations::tax_clause( $tax, $op, $value, $args ) : self::MATCH_NOTHING;
@@ -234,13 +234,13 @@ class OPEX_Query_Filters {
 	 * Turn relative date tokens into concrete datetimes for filter values.
 	 * Supports: last N days/weeks/months, today, yesterday, this/last month/year, -N days.
 	 *
-	 * These resolve in the SITE's timezone, matching post_date, comment_date and
-	 * post_modified. They used to resolve in UTC, which WordPress sets as the PHP
-	 * process timezone: on a UTC-8 site every evening after 4pm local, "today"
-	 * produced tomorrow's UTC date and the filter matched nothing at all.
+	 * These resolve in the site's timezone, matching post_date, comment_date and
+	 * post_modified. WordPress sets UTC as the PHP process timezone, so resolving
+	 * there would be wrong: on a UTC-8 site every evening after 4pm local time,
+	 * "today" would give tomorrow's UTC date and the filter would match nothing.
 	 *
-	 * For a *_gmt column, use the date-range control instead - it knows which
-	 * columns are UTC and converts accordingly.
+	 * For a *_gmt column, use the date-range control instead, because it knows
+	 * which columns are UTC and converts accordingly.
 	 *
 	 * @param string $value Filter value a person typed.
 	 * @return string The value with any relative date turned into a datetime.

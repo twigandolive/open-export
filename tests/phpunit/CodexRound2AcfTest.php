@@ -1,7 +1,7 @@
 <?php
 /**
- * Codex R2-2.2: a page_template rule with a template other than the default
- * one can apply to any post type, as ACF evaluates it. Codex R2-2.3: a group
+ * A page_template rule with a template other than the default one can
+ * apply to any post type, as ACF evaluates it. A group
  * whose only rule is "post is not X" applies to the posts source.
  *
  * The location checks need nothing. The field group checks register groups

@@ -9,7 +9,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 

@@ -55,6 +55,7 @@
 			step[ name ] = pairs;
 			validate();
 		};
+		// Draws the pair rows again and puts focus back on a row.
 		const draw = ( focusRow ) => {
 			app.clear( tbody );
 			rows.forEach( ( row, i ) => {

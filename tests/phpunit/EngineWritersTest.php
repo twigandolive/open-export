@@ -1,6 +1,6 @@
 <?php
 /**
- * Engine fixes for writers: S-2 checkpoint and restore, S-11 formula guard, S-12 fputcsv arguments.
+ * Writers: checkpoint and restore, the formula guard, and fputcsv arguments.
  *
  * @package Open_Export
  */
@@ -147,7 +147,7 @@ class EngineWritersTest extends TestCase {
 		$this->assertSame( $before, (string) file_get_contents( $path ) );
 	}
 
-	/** S-11: plain numbers are not formulas, anything else that starts with a formula character still is. */
+	/** Plain numbers are not formulas, anything else that starts with a formula character still is. */
 	public function test_formula_guard_leaves_plain_numbers_alone(): void {
 		$path   = $this->path();
 		$writer = OPEX_Writer::make( 'csv', $path, array( 'a' => 'A', 'b' => 'B' ) );
@@ -169,7 +169,7 @@ class EngineWritersTest extends TestCase {
 		$this->assertSame( $want, $rows );
 	}
 
-	/** S-11: the header row is guarded too, because labels come from users. */
+	/** The header row is guarded too, because labels come from users. */
 	public function test_header_row_is_guarded(): void {
 		$path   = $this->path();
 		$writer = OPEX_Writer::make( 'csv', $path, array( 'a' => '=HYPERLINK("x")', 'b' => '-5', 'c' => '@sum', 'd' => 'Plain' ) );
@@ -181,7 +181,7 @@ class EngineWritersTest extends TestCase {
 		$this->assertStringContainsString( 'Plain', $text );
 	}
 
-	/** S-12: fputcsv gets explicit enclosure and escape arguments, so PHP 8.4 raises no deprecation. */
+	/** Fputcsv gets explicit enclosure and escape arguments, so PHP 8.4 raises no deprecation. */
 	public function test_csv_raises_no_deprecation(): void {
 		$seen = array();
 		$old  = error_reporting( E_ALL );

@@ -57,7 +57,7 @@ class OPEX_Network {
 			return self::refused( __( 'A network export cannot use Users: every site shares the same users, so each user would repeat once per site. Export users from one site instead.', 'open-export' ) );
 		}
 		if ( 'table' === $type ) {
-			return self::refused( __( 'A network export cannot use a raw database table: each site has its own tables. Pick a content, comment, taxonomy or WooCommerce source instead.', 'open-export' ) );
+			return self::refused( __( 'A network export cannot use a raw database table: each site has its own tables. Choose a content, comment, taxonomy or WooCommerce source instead.', 'open-export' ) );
 		}
 		return null;
 	}

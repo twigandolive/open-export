@@ -170,8 +170,8 @@ class OPEX_Query {
 	/**
 	 * Whether a field id can actually resolve to a value for this source.
 	 *
-	 * This mirrors exactly what field_value() will do at read time, so it is the
-	 * authoritative answer - not the picker catalog, which samples meta keys
+	 * This mirrors exactly what field_value() does at read time, so it is the
+	 * authoritative answer, not the picker catalog, which samples meta keys
 	 * under a LIMIT and lists a slightly narrower set of core columns.
 	 *
 	 * Meta keys always pass: any key may exist on any row, and absence is a

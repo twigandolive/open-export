@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R2-1.1: the trigger URL's counters are read from the database under
+ * The trigger URL's counters are read from the database under
  * their lock, even when this request already cached them as missing.
  *
  * Two requests are played in one process. This one reads the counter first,

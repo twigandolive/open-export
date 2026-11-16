@@ -50,7 +50,7 @@
 			message = __( 'Could not reach the server. Check your connection and try again.', 'open-export' );
 		}
 		if ( 'invalid_json' === code ) {
-			message = __( 'The server sent an answer the screen could not read. Try again.', 'open-export' );
+			message = __( 'Open Export could not read the answer from the server. Try again.', 'open-export' );
 		}
 		// Some answers carry HTML, such as the WordPress critical error page.
 		// Show them as plain text.

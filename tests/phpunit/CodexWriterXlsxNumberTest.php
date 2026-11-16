@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-4.6: an XLSX number cell holds at most 15 significant digits,
+ * An XLSX number cell holds at most 15 significant digits,
  * counted over the whole number. Longer values stay text, so Excel never
  * rounds them.
  *

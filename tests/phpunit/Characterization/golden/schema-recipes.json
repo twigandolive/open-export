@@ -110,7 +110,7 @@
                 {
                     "id": "core:user_login",
                     "status": "dropped",
-                    "reason": "Listed more than once; the first one is kept."
+                    "reason": "Listed more than once. Open Export keeps the first one."
                 },
                 {
                     "id": "plain",
@@ -139,7 +139,7 @@
                     "field": "core:user_login",
                     "op": "bogus",
                     "status": "dropped",
-                    "reason": "Unsupported operator.",
+                    "reason": "Open Export does not know this operator.",
                     "suggestion": ""
                 },
                 {
@@ -221,7 +221,7 @@
                 "rules_matched": 0,
                 "rules_dropped": 0
             },
-            "reason": "None of the fields in this recipe exist on this source, so there is nothing to export. Give the assistant the capability document for this site and ask it to use only the field ids listed there."
+            "reason": "None of the fields in this recipe exist on this source, so there is nothing to export. Give your AI assistant the site schema of this site and ask it to use only the field ids listed there."
         },
         "config": null,
         "name": "",
@@ -290,7 +290,7 @@
         },
         "name": "",
         "notes": [
-            "This recipe declares format version 99 but this plugin understands version 1. Reading it anyway."
+            "This recipe uses format version 99, but Open Export reads version 1. Open Export reads the recipe anyway."
         ]
     },
     "posts with tax": {

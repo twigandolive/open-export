@@ -2,7 +2,7 @@
 /**
  * Exact sums, comparisons and averages of decimal strings.
  *
- * Money must never pass through a float. These helpers work on the digits:
+ * Money must never pass through a float. These functions work on the digits:
  * bcmath when it is loaded, a pure string routine otherwise, and both give
  * the same text. OPEX_Money still does the final rounding and padding.
  *

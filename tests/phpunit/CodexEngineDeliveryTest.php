@@ -1,9 +1,9 @@
 <?php
 /**
- * Delivery fixes from the Codex review: R1-4.10 (each channel's result is
- * saved as soon as it is known), R1-1.7 (a delivery run that lost its lock
- * stops and saves nothing) and R1-4.5 (a webhook whose secret cannot be
- * encrypted is turned off with a note, never sent unsigned).
+ * Deliveries: each channel's result is saved as soon as it is known, a
+ * delivery run that lost its lock stops and saves nothing, and a webhook
+ * whose secret cannot be encrypted is turned off with a note, never sent
+ * unsigned.
  *
  * @package Open_Export
  */
@@ -152,7 +152,7 @@ class CodexEngineDeliveryTest extends TestCase {
 			array(
 				'webhook' => array(
 					'enabled' => true,
-					'url'     => 'https://example.com/hook',
+					'url'     => 'https://93.184.216.34/hook',
 					'secret'  => 'sign me',
 				),
 			),
@@ -161,7 +161,7 @@ class CodexEngineDeliveryTest extends TestCase {
 		$this->assertFalse( $out['webhook']['enabled'], 'An unsigned webhook must not be sent.' );
 		$this->assertSame( '', $out['webhook']['secret'] );
 		$this->assertCount( 1, $notes );
-		$this->assertStringContainsString( 'signing secret could not be stored', $notes[0] );
+		$this->assertStringContainsString( 'could not store the signing secret securely', $notes[0] );
 	}
 
 	public function test_a_new_secret_that_cannot_be_encrypted_keeps_the_old_one_and_turns_off() {
@@ -170,7 +170,7 @@ class CodexEngineDeliveryTest extends TestCase {
 			array(
 				'webhook' => array(
 					'enabled' => true,
-					'url'     => 'https://example.com/hook',
+					'url'     => 'https://93.184.216.34/hook',
 					'secret'  => 'old secret',
 				),
 			),
@@ -183,7 +183,7 @@ class CodexEngineDeliveryTest extends TestCase {
 			array(
 				'webhook' => array(
 					'enabled' => true,
-					'url'     => 'https://example.com/hook',
+					'url'     => 'https://93.184.216.34/hook',
 					'secret'  => 'new secret',
 				),
 			),
@@ -201,7 +201,7 @@ class CodexEngineDeliveryTest extends TestCase {
 			array(
 				'webhook' => array(
 					'enabled' => true,
-					'url'     => 'https://example.com/hook',
+					'url'     => 'https://93.184.216.34/hook',
 				),
 			),
 			$notes,
@@ -217,7 +217,7 @@ class CodexEngineDeliveryTest extends TestCase {
 			array(
 				'webhook' => array(
 					'enabled' => true,
-					'url'     => 'https://example.com/hook',
+					'url'     => 'https://93.184.216.34/hook',
 				),
 			),
 			$notes

@@ -1,12 +1,12 @@
 <?php
 /**
- * The two order rulings of spec 3.6, on whichever order storage the run uses:
+ * Two rules for orders, on whichever order storage the run uses:
  * a real checkout draft (saved by WooCommerce as "wc-checkout-draft") is left
  * out of woo:orders, woo:order_items and their picker counts, and the item
  * line amounts read the meta key each item type keeps them in.
  *
  * Fixtures are made through the WooCommerce order API in setUp and removed in
- * tearDown. The classic order storage lane runs this file too (its name
+ * tearDown. The classic order storage test run covers this file too (its name
  * matches "Orders" and "Woo").
  *
  * @package Open_Export

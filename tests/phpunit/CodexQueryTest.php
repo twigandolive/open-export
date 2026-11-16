@@ -1,6 +1,7 @@
 <?php
 /**
- * Codex round 1 fixes in the query layer: R1-2.1, R1-2.2, R1-2.3, R1-2.4 and R1-2.7.
+ * The query layer: serialized objects, term rules, raw table keys and cursors,
+ * role rules and custom column ids.
  *
  * @package Open_Export
  */
@@ -132,7 +133,7 @@ class CodexQueryTest extends TestCase {
 		return array( $rec, (string) file_get_contents( OPEX_Jobs::file_path( $rec ) ) );
 	}
 
-	/** R1-2.1: serialized objects are never built, and arrays still read as JSON. */
+	/** Serialized objects are never built, and arrays still read as JSON. */
 	public function test_serialized_objects_are_never_built(): void {
 		global $wpdb;
 		$class  = 'Opex_B1_Wakeup_Probe';
@@ -162,7 +163,7 @@ class CodexQueryTest extends TestCase {
 		$this->assertSame( '{"a":1}', $rows[0]['meta:opex_b1_std'], 'a plain stdClass still reads as JSON' );
 	}
 
-	/** R1-2.2: term rules on description, parent and count read the term_taxonomy table. */
+	/** Term rules on description, parent and count read the term_taxonomy table. */
 	public function test_term_rules_on_term_taxonomy_columns(): void {
 		$parent = wp_insert_term( 'Opex B1 Parent', 'category', array( 'description' => 'opexb1 top' ) );
 		$this->assertIsArray( $parent );
@@ -184,7 +185,7 @@ class CodexQueryTest extends TestCase {
 		$this->assertSame( array( 'Opex B1 Child' ), $names( array( 'field' => 'core:term_id', 'op' => 'eq', 'value' => (string) $child['term_id'] ) ), 'term_id still reads the terms table' );
 	}
 
-	/** R1-2.3: keys of zero and below export, a key of zero can end a batch, and string cursors work. */
+	/** Keys of zero and below export, a key of zero can end a batch, and string cursors work. */
 	public function test_signed_integer_keys_export_every_row(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_b1_signed', 'id INT NOT NULL PRIMARY KEY, name VARCHAR(20)' );
@@ -199,7 +200,7 @@ class CodexQueryTest extends TestCase {
 		}
 		$this->assertSame( 5, OPEX_Query::count( $config ) );
 
-		// A cursor saved as text, or as a plain integer by the older code, resumes after that key.
+		// A cursor saved as text, or as a plain integer in the older format, resumes after that key.
 		$this->assertSame( array( '1', '2' ), array_column( OPEX_Query::batch( $config, '0', 5 )['items'], 'col:id' ) );
 		$this->assertSame( array( '2' ), array_column( OPEX_Query::batch( $config, 1, 5 )['items'], 'col:id' ) );
 		$this->assertSame( array( '0', '1', '2' ), array_column( OPEX_Query::batch( $config, '-1', 5 )['items'], 'col:id' ) );
@@ -210,7 +211,7 @@ class CodexQueryTest extends TestCase {
 		$this->assertSame( array( '-2', '-1', '0', '1', '2' ), array_map( 'strval', array_column( (array) json_decode( $text, true ), 'id' ) ) );
 	}
 
-	/** R1-2.3: a job saved by the older code with an integer cursor resumes after that key. */
+	/** A job saved in the older format, with an integer cursor, resumes after that key. */
 	public function test_old_integer_cursor_resumes(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_b1_resume', 'id INT NOT NULL PRIMARY KEY, name VARCHAR(20)' );
@@ -233,7 +234,7 @@ class CodexQueryTest extends TestCase {
 		$this->assertSame( 2, (int) $rec['processed'], 'only keys 5 and 6 are left after an old cursor of 4' );
 	}
 
-	/** R1-2.3: an unsigned key carries a cursor above PHP_INT_MAX as text, never as a cut-down integer. */
+	/** An unsigned key carries a cursor above PHP_INT_MAX as text, never as a cut-down integer. */
 	public function test_unsigned_big_keys_carry_a_text_cursor(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_b1_unsigned', 'id BIGINT UNSIGNED NOT NULL PRIMARY KEY, name VARCHAR(20)' );
@@ -256,7 +257,7 @@ class CodexQueryTest extends TestCase {
 		OPEX_Query::batch( $config, '5 OR 1=1', 5 );
 	}
 
-	/** R1-2.4: empty and not_empty on roles test whether a user has any role. */
+	/** The empty and not_empty on roles test whether a user has any role. */
 	public function test_role_emptiness_rules(): void {
 		$with = wp_insert_user( array( 'user_login' => 'opexb1with', 'user_pass' => wp_generate_password(), 'user_email' => 'opexb1with@example.test', 'role' => 'subscriber' ) );
 		$none = wp_insert_user( array( 'user_login' => 'opexb1none', 'user_pass' => wp_generate_password(), 'user_email' => 'opexb1none@example.test', 'role' => '' ) );
@@ -280,7 +281,7 @@ class CodexQueryTest extends TestCase {
 		$this->assertSame( array( 'opexb1with' ), $logins( 'eq', 'subscriber' ), 'a named role still works' );
 	}
 
-	/** R1-2.7: a new custom column never takes the id of a later existing column. */
+	/** A new custom column never takes the id of a later existing column. */
 	public function test_new_custom_column_does_not_take_an_existing_id(): void {
 		$notes = array();
 		$clean = OPEX_Custom_Columns::sanitize(

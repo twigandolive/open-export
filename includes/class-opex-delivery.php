@@ -69,7 +69,7 @@ class OPEX_Delivery {
 				continue;
 			}
 			if ( false === is_email( $address ) || 1 === preg_match( '/[\r\n]/', $address ) ) {
-				$notes[] = __( 'An invalid email address was removed.', 'open-export' );
+				$notes[] = __( 'Open Export removed an email address that is not valid.', 'open-export' );
 				continue;
 			}
 			$to[] = $address;
@@ -78,7 +78,7 @@ class OPEX_Delivery {
 		$on = ! empty( $email['enabled'] );
 		if ( $on && ! $to ) {
 			$on      = false;
-			$notes[] = __( 'Email delivery was turned off because it has no valid address.', 'open-export' );
+			$notes[] = __( 'Open Export turned email delivery off because it has no valid address.', 'open-export' );
 		}
 		$mode = ( $email['mode'] ?? 'link' );
 
@@ -87,14 +87,14 @@ class OPEX_Delivery {
 		$hon  = ! empty( $hook['enabled'] );
 		if ( '' !== $url && false === wp_http_validate_url( $url ) && $hon ) {
 			$hon     = false;
-			$notes[] = __( 'Webhook delivery was turned off because its URL is not allowed.', 'open-export' );
+			$notes[] = __( 'Open Export turned webhook delivery off because its URL is not allowed.', 'open-export' );
 		} elseif ( $hon && '' === $url ) {
 			$hon     = false;
-			$notes[] = __( 'Webhook delivery was turned off because it has no URL.', 'open-export' );
+			$notes[] = __( 'Open Export turned webhook delivery off because it has no URL.', 'open-export' );
 		}
 		if ( $hon && '' !== $url && ! OPEX_Delivery_Webhook::transport_allowed( $url ) ) {
 			$hon     = false;
-			$notes[] = __( 'Webhook delivery was turned off because its URL must use https unless it points at this site.', 'open-export' );
+			$notes[] = __( 'Open Export turned webhook delivery off because its URL must use https unless it points at this site.', 'open-export' );
 		}
 		$secret = (string) ( $hook['secret'] ?? '' );
 		$lost   = false;
@@ -114,7 +114,7 @@ class OPEX_Delivery {
 		// Without its secret the webhook would go out unsigned, so it stays off until the secret is saved.
 		if ( $lost && $hon ) {
 			$hon     = false;
-			$notes[] = __( 'Webhook delivery was turned off because its signing secret could not be stored securely. This server needs the sodium extension. Save the secret again once it is available.', 'open-export' );
+			$notes[] = __( 'Open Export turned webhook delivery off because it could not store the signing secret securely. This server needs the PHP sodium extension. Save the secret again once the extension is installed.', 'open-export' );
 		}
 
 		$dest = is_array( $raw['destination'] ?? null ) ? $raw['destination'] : array();
@@ -122,7 +122,7 @@ class OPEX_Delivery {
 		$don  = ! empty( $dest['enabled'] );
 		if ( $don && ( 1 !== preg_match( '/^d[0-9a-f]{12}$/', $did ) || null === OPEX_Destinations::get( $did ) ) ) {
 			$don     = false;
-			$notes[] = __( 'Destination delivery was turned off because the destination does not exist.', 'open-export' );
+			$notes[] = __( 'Open Export turned destination delivery off because the destination does not exist.', 'open-export' );
 		}
 
 		return array(
@@ -279,7 +279,7 @@ class OPEX_Delivery {
 	 * @return WP_Error The error.
 	 */
 	public static function lost_error( string $code ): WP_Error {
-		return new WP_Error( $code, __( 'The upload was stopped because another process took over this delivery. The partial file was removed, and the upload will be tried again.', 'open-export' ) );
+		return new WP_Error( $code, __( 'Open Export stopped the upload because another process took over this delivery. It removed the partial file and will try the upload again.', 'open-export' ) );
 	}
 
 	/**
@@ -364,7 +364,7 @@ class OPEX_Delivery {
 				}
 				return 'sftp' === $record['type'] ? OPEX_Delivery_Sftp::send( $job, $record, $path ) : OPEX_Delivery_Ftp::send( $job, $record, $path );
 			}
-			return new WP_Error( 'opex_delivery_channel', __( 'Unknown delivery channel.', 'open-export' ) );
+			return new WP_Error( 'opex_delivery_channel', __( 'Open Export does not know this delivery channel.', 'open-export' ) );
 		} catch ( Throwable $e ) {
 			return new WP_Error( 'opex_delivery_error', __( 'The delivery failed unexpectedly.', 'open-export' ) );
 		}

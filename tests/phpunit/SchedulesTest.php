@@ -74,7 +74,7 @@ class SchedulesTest extends TestCase {
 		$res = OPEX_Schedules::save( $this->raw( array( 'incremental' => array( 'enabled' => true, 'field' => 'acf:event_dates' ) ) ) );
 		$this->assertWPError( $res );
 		$this->assertSame( 'opex_invalid', $res->get_error_code() );
-		$this->assertSame( __( 'Unknown date field for incremental exports.', 'open-export' ), $res->get_error_message() );
+		$this->assertSame( __( 'The Changes only date field is not a field id Open Export knows.', 'open-export' ), $res->get_error_message() );
 		$this->assertSame( array(), OPEX_Schedules::all() );
 	}
 
@@ -183,7 +183,7 @@ class SchedulesTest extends TestCase {
 	}
 
 	private function hook( array $over = array() ): array {
-		return array( 'delivery' => array( 'webhook' => array_merge( array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'plain-secret' ), $over ) ) );
+		return array( 'delivery' => array( 'webhook' => array_merge( array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => 'plain-secret' ), $over ) ) );
 	}
 
 	public function test_webhook_secret_is_stored_encrypted_and_never_exposed() {
@@ -216,7 +216,7 @@ class SchedulesTest extends TestCase {
 	}
 
 	public function test_plain_http_webhook_to_another_host_is_stored_disabled() {
-		$rec = OPEX_Schedules::save( $this->raw( $this->hook( array( 'url' => 'http://example.com/hook' ) ) ) );
+		$rec = OPEX_Schedules::save( $this->raw( $this->hook( array( 'url' => 'http://93.184.216.34/hook' ) ) ) );
 		$this->assertFalse( $rec['delivery']['webhook']['enabled'] );
 	}
 }

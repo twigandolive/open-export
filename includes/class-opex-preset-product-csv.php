@@ -42,8 +42,8 @@ class OPEX_Preset_Product_Csv {
 		return array(
 			'id'          => self::ID,
 			'label'       => __( 'WooCommerce product CSV (importer columns)', 'open-export' ),
-			'description' => __( 'A CSV file that WooCommerce\'s own product importer (Products, Import) reads, with its column names: ID, Type, SKU, Name, Published, featured, catalog visibility, both descriptions, sale dates, tax, stock, weight and size, reviews, purchase note, prices, categories, tags, shipping class, images, parent, external URL, button text and position, for every product and variation that is not in the trash.', 'open-export' )
-				. ' ' . __( 'The GTIN, UPC, EAN or ISBN column is included, but the importer may not match it by itself: if it shows "Do not import", choose "GTIN, UPC, EAN, or ISBN" for it once.', 'open-export' )
+			'description' => __( 'A CSV file that WooCommerce\'s own product importer (Products > Import) reads, with its column names: ID, Type, SKU, Name, Published, featured, catalog visibility, both descriptions, sale dates, tax, stock, weight and size, reviews, purchase note, prices, categories, tags, shipping class, images, parent, external URL, button text and position, for every product and variation that is not in the trash.', 'open-export' )
+				. ' ' . __( 'The GTIN, UPC, EAN, or ISBN column is included, but the importer may not match it by itself. If the importer shows "Do not import" for that column, choose "GTIN, UPC, EAN, or ISBN" for it once.', 'open-export' )
 				. ' ' . __( 'Not included because the plugin has no field in the form the importer reads: attributes, the virtual and downloadable flags, downloads, upsells, cross-sells, grouped products, download limits and other meta. Categories are written by name, so a subcategory comes back as a top-level category of the same name.', 'open-export' ),
 			'config'      => self::config(),
 		);

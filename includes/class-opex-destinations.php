@@ -114,7 +114,7 @@ class OPEX_Destinations {
 		}
 		$host = self::clean_host( (string) ( $raw['host'] ?? '' ) );
 		if ( '' === $host ) {
-			return new WP_Error( 'opex_destination_host', __( 'Enter a host name or IP address only, without a scheme, path or credentials.', 'open-export' ) );
+			return new WP_Error( 'opex_destination_host', __( 'Enter only a host name or IP address, without ftp://, a folder or a user name.', 'open-export' ) );
 		}
 		$port = self::clean_port( $raw['port'] ?? '', $type );
 		if ( null === $port ) {
@@ -130,7 +130,7 @@ class OPEX_Destinations {
 		}
 		$auth = strtolower( (string) ( $raw['auth'] ?? 'password' ) );
 		if ( ! in_array( $auth, array( 'password', 'key' ), true ) || ( 'key' === $auth && 'sftp' !== $type ) ) {
-			return new WP_Error( 'opex_destination_auth', __( 'Key login works with SFTP only.', 'open-export' ) );
+			return new WP_Error( 'opex_destination_auth', __( 'A private key works with SFTP only.', 'open-export' ) );
 		}
 
 		$secret = self::clean_secret( $auth, (string) ( $raw['secret'] ?? '' ), $existing );
@@ -430,7 +430,7 @@ class OPEX_Destinations {
 		}
 		$encrypted = OPEX_Secrets::encrypt( $secret );
 		if ( '' === $encrypted ) {
-			return new WP_Error( 'opex_destination_secret', __( 'The secret could not be stored safely.', 'open-export' ) );
+			return new WP_Error( 'opex_destination_secret', __( 'Open Export could not store the secret safely.', 'open-export' ) );
 		}
 		return $encrypted;
 	}

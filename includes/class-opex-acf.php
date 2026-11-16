@@ -142,7 +142,7 @@ class OPEX_Acf {
 		}
 		return sprintf(
 			/* translators: 1: ACF field names, joined with commas, 2: the row limit. */
-			__( 'Some records hold more than %2$d rows in %1$s. Only the first %2$d rows of each were exported.', 'open-export' ),
+			__( 'Some records hold more than %2$d rows in %1$s. Open Export exported only the first %2$d rows of each.', 'open-export' ),
 			implode( ', ', $names ),
 			self::MAX_ROWS
 		);

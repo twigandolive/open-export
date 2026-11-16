@@ -2,9 +2,8 @@
  * Open Export admin screen: the export builder (shell).
  *
  * One reusable component that reads and writes ONE export config in the
- * shape OPEX_Config::sanitize_config accepts. The Export tab mounts it now,
- * the Schedules tab will mount the same thing, so nothing here knows which
- * tab it lives in.
+ * shape OPEX_Config::sanitize_config accepts. The Export tab and the
+ * Schedules tab both mount it, so nothing here knows which tab it lives in.
  *
  * Each card (source, columns, filters, format, preview) is a section file
  * that calls opexApp.builder.register( def ). A section builds its DOM once
@@ -17,7 +16,7 @@
  *       Returns { getConfig(), setConfig( config ), validate(), summary(),
  *       sourceLabel(), previewTotal(), ready }. onChange( config ) fires
  *       after every change with a copy of the config.
- *   Config helpers, the card shell and register() live in builder-parts.js.
+ *   The config functions, the card shell and register() live in builder-parts.js.
  */
 ( function () {
 	'use strict';
@@ -105,6 +104,7 @@
 		// Hoisted: sections such as Preview check the whole config first.
 		ctx.validate = validate;
 
+		// Indexes the fields of the source by id, with their type and group.
 		function indexFields() {
 			ctx.fieldIndex = {};
 			( ( ctx.fields && ctx.fields.groups ) || [] ).forEach( ( group, i ) => {
@@ -180,10 +180,12 @@
 			changed( 'source' );
 		}
 
+		// Returns a copy of the config.
 		function getConfig() {
 			return JSON.parse( JSON.stringify( ctx.config ) );
 		}
 
+		// Tells every card about a change, then updates the cards and the caller.
 		function changed( reason ) {
 			views.forEach( ( view ) => {
 				if ( view.refresh ) {
@@ -196,6 +198,7 @@
 			}
 		}
 
+		// Updates each card's locked state, done mark and summary.
 		function syncCards() {
 			const hasSource = !! ctx.config.source;
 			views.forEach( ( view ) => {
@@ -227,6 +230,7 @@
 			fetchFields( false );
 		}
 
+		// Loads a config into the builder and fetches the fields of its source.
 		function setConfig( config ) {
 			ctx.config = B.normalize( config );
 			ctx.preview = null;
@@ -254,11 +258,13 @@
 			return problems;
 		}
 
+		// Returns the name of the chosen source.
 		function sourceLabel() {
 			const found = ctx.source( ctx.config.source );
 			return found ? found.item.label : ctx.config.source;
 		}
 
+		// Describes the setup in one line, card by card.
 		function summary() {
 			if ( ! ctx.config.source ) {
 				return __( 'No source chosen yet', 'open-export' );
@@ -272,6 +278,7 @@
 			return app.list( parts );
 		}
 
+		// Returns the preview row count while it still matches the config.
 		function previewTotal() {
 			return ctx.preview && ctx.preview.key === JSON.stringify( ctx.config ) ? ctx.preview.total : null;
 		}

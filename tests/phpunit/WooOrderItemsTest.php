@@ -76,7 +76,7 @@ class WooOrderItemsTest extends WooSourceCase {
 		$draft->add_item( $draft_line );
 		$this->ids['draft'] = (int) $draft->save();
 		// WooCommerce saves this status as "wc-checkout-draft". This fixture stores
-		// the plain spelling, which older code wrote. WooDraftOrdersTest covers the real one.
+		// the plain spelling, which older WooCommerce code wrote. WooOrderRulingsTest covers the real one.
 		global $wpdb;
 		if ( OPEX_Woo::use_hpos() ) {
 			$wpdb->update( OPEX_Woo::table( 'orders' ), array( 'status' => 'checkout-draft' ), array( 'id' => $this->ids['draft'] ) );

@@ -161,6 +161,7 @@
 		const label = o.rowLabel
 			? el( 'span', { class: 'opex-rowlabel', id: o.labelId }, o.label )
 			: el( 'label', { for: target.id }, o.label );
+		// Points the control at its help and error lines.
 		const describe = () => {
 			const ids = [ help ? helpId : '', error.hidden ? '' : errorId ].filter( Boolean ).join( ' ' );
 			if ( target && ! o.rowLabel ) {
@@ -176,6 +177,7 @@
 			label,
 			el( 'div', { class: 'opex-rowcontrol' }, [ control, help, error ] ),
 		] );
+		// Shows or clears the error line of a field.
 		function setError( message ) {
 			error.textContent = message || '';
 			error.hidden = ! message;
@@ -214,12 +216,14 @@
 	 */
 	ui.result = function () {
 		const root = el( 'p', { class: 'opex-result', role: 'status', 'aria-live': 'polite' } );
+		// Shows a result line of one kind.
 		function set( kind, text ) {
 			app.clear( root );
 			root.className = 'opex-result opex-result-' + kind;
 			const icon = { success: 'check', error: 'error', info: 'info', busy: 'sync' }[ kind ] || 'info';
 			app.append( root, [ app.icon( icon, { sm: true } ), el( 'span', {}, text ) ] );
 		}
+		// Empties the result line.
 		function clear() {
 			app.clear( root );
 			root.className = 'opex-result';

@@ -55,7 +55,7 @@ class DeliveryTest extends TestCase {
 		$this->assertFalse( $out['webhook']['enabled'] );
 		$this->assertSame( '', $out['webhook']['url'] );
 
-		$out = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'abc' ) ), $notes );
+		$out = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => 'abc' ) ), $notes );
 		$this->assertSame( 'abc', OPEX_Secrets::decrypt( $out['webhook']['secret'] ) );
 		$again = OPEX_Delivery::sanitize( array( 'webhook' => $out['webhook'] ), $notes );
 		$this->assertSame( $out['webhook']['secret'], $again['webhook']['secret'] );
@@ -189,12 +189,12 @@ class DeliveryTest extends TestCase {
 
 	public function test_webhook_must_be_https_unless_it_is_this_site() {
 		$notes = array();
-		$out   = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'http://example.com/hook' ) ), $notes );
+		$out   = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'http://93.184.216.34/hook' ) ), $notes );
 		$this->assertFalse( $out['webhook']['enabled'] );
 		$this->assertNotEmpty( $notes );
 
 		$notes = array();
-		$out   = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook' ) ), $notes );
+		$out   = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook' ) ), $notes );
 		$this->assertTrue( $out['webhook']['enabled'] );
 
 		$notes = array();
@@ -205,12 +205,12 @@ class DeliveryTest extends TestCase {
 
 	public function test_blank_webhook_secret_keeps_the_previous_one_and_clear_removes_it() {
 		$notes = array();
-		$first = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/h', 'secret' => 'abc' ) ), $notes );
-		$kept  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/h', 'secret' => '' ) ), $notes, $first );
+		$first = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/h', 'secret' => 'abc' ) ), $notes );
+		$kept  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/h', 'secret' => '' ) ), $notes, $first );
 		$this->assertSame( $first['webhook']['secret'], $kept['webhook']['secret'] );
-		$none  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/h' ) ), $notes );
+		$none  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/h' ) ), $notes );
 		$this->assertSame( '', $none['webhook']['secret'] );
-		$gone  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/h', 'clear_secret' => true ) ), $notes, $first );
+		$gone  = OPEX_Delivery::sanitize( array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/h', 'clear_secret' => true ) ), $notes, $first );
 		$this->assertSame( '', $gone['webhook']['secret'] );
 	}
 }

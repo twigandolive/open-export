@@ -1,6 +1,6 @@
 <?php
 /**
- * R1-4.2c: a zip that cannot be written (a full disk shows up when the zip
+ * A zip that cannot be written (a full disk shows up when the zip
  * is closed) stops the finish with a plain message. The plain file and the
  * job record stay as they were, so finishing again retries.
  *
@@ -74,7 +74,7 @@ class CodexEngineCompressTest extends TestCase {
 		$this->assertIsArray( $out );
 		$stored = OPEX_Jobs::get( $job['id'] );
 		$this->assertSame( 'error', $stored['status'] );
-		$this->assertSame( 'The export file could not be compressed. The disk may be full.', $stored['error'] );
+		$this->assertSame( 'Open Export could not compress the export file. The disk may be full.', $stored['error'] );
 		$this->assertSame( $job['filename'], $stored['filename'], 'The job keeps its plain file name.' );
 		$this->assertFileExists( $plain, 'The plain file stays.' );
 		$this->assertFileDoesNotExist( $plain . '.zip' );

@@ -128,6 +128,7 @@
 		const warn = el( 'p', { class: 'opex-help opex-warnline', id: app.uid( 'opex-warn' ), hidden: true } );
 		const insert = B.insertMenu( { label: __( 'Insert field into template', 'open-export' ), target: () => input, items: () => fieldItems( ctx ) } );
 		input.setAttribute( 'aria-describedby', [ describedBy, warn.id ].filter( Boolean ).join( ' ' ) );
+		// Shows the warning for placeholders that will stay plain text.
 		function sync() {
 			const text = warning( input.value, ctx );
 			warn.textContent = text;
@@ -180,6 +181,7 @@
 		const reason = el( 'span', { class: 'opex-reason', id: reasonId, hidden: true } );
 		const addButton = ui.button( { label: __( 'Add column', 'open-export' ), describedBy: reasonId, onClick: add } );
 
+		// Shows or clears the error under the template input.
 		function setTemplateError( text ) {
 			templateError.textContent = text;
 			templateError.hidden = ! text;
@@ -190,6 +192,7 @@
 			}
 		}
 
+		// Checks the new column's label and template, then adds the column.
 		function add() {
 			const label = labelInput.value;
 			const template = box.input.value;
@@ -213,6 +216,7 @@
 			labelInput.focus();
 		}
 
+		// Turns the Add column button off when every custom column is used.
 		function refresh() {
 			const used = ctx.config.custom_columns.length;
 			const max = maxColumns( ctx );

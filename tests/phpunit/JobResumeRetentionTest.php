@@ -1,6 +1,6 @@
 <?php
 /**
- * Two job lifecycle fixes: resuming a background job hands it back to the
+ * The job lifecycle: resuming a background job hands it back to the
  * runner, and the retention sweep counts days from when a job finished.
  *
  * @package Open_Export

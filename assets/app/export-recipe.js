@@ -70,6 +70,7 @@
 	function reportList( answer ) {
 		const report = ( answer && answer.report ) || {};
 		const lines = [];
+		// Adds one line of the result for a list of fields.
 		const add = ( icon, cls, name, items ) => {
 			if ( items.length ) {
 				lines.push( el( 'li', {}, [
@@ -131,7 +132,7 @@
 
 		const panel = el( 'div', { class: 'opex-recipe', id: panelId, hidden: true }, [
 			el( 'div', { class: 'opex-recipe-head' }, [ el( 'h2', { class: 'opex-h2 opex-m0' }, __( 'Use an AI recipe', 'open-export' ) ), close ] ),
-			el( 'p', {}, __( 'Copy your site schema into an AI assistant, ask it for an export recipe, then paste the recipe here. Applying a recipe fills in the builder. It does not start an export.', 'open-export' ) ),
+			el( 'p', {}, __( 'Copy your site schema into an AI assistant, ask it for an export recipe, then paste the recipe here. Applying a recipe fills in the setup below. It does not start an export.', 'open-export' ) ),
 			el( 'div', { class: 'opex-mt', role: 'radiogroup', 'aria-labelledby': scopeLabel }, [ el( 'span', { class: 'opex-rowlabel', id: scopeLabel }, __( 'Describe', 'open-export' ) ), scopes.map( ( s ) => s.root ) ] ),
 			el( 'div', { class: 'opex-inline opex-mt' }, [ copy, download ] ),
 			schemaResult.root,
@@ -142,6 +143,7 @@
 			report,
 		] );
 
+		// Opens or closes the AI recipe panel.
 		function setOpen( open, focus ) {
 			panel.hidden = ! open;
 			toggle.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
@@ -153,11 +155,13 @@
 		toggle.addEventListener( 'click', () => setOpen( panel.hidden, panel.hidden ) );
 		close.addEventListener( 'click', () => setOpen( false, true ) );
 
+		// Returns which sources the schema describes.
 		function scope() {
 			const picked = scopes.find( ( s ) => s.input.checked );
 			return picked ? picked.input.value : 'source';
 		}
 
+		// Gets the site schema, then copies or downloads it.
 		function schema( action ) {
 			const source = o.source();
 			const all = 'all' === scope();
@@ -189,6 +193,7 @@
 			} );
 		}
 
+		// Reads the pasted recipe, sends it to the server and shows the result.
 		function applyRecipe() {
 			app.clear( report );
 			report.hidden = true;

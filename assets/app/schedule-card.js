@@ -72,6 +72,7 @@
 			el( 'div', { class: 'opex-sched-actions' }, [ runButton, editButton, copyButton, deleteButton ] ),
 		] );
 
+		// Changes the text of a node only when it differs.
 		function setText( node, text ) {
 			if ( node.textContent !== text ) {
 				node.textContent = text;
@@ -86,9 +87,10 @@
 				/* translators: %s: the error the server recorded on the job. */
 				return sprintf( __( 'The last run failed: %s Check the setup, then run it again.', 'open-export' ), job.error );
 			}
-			return __( 'The last run failed. Open the job in History to see why, then run it again.', 'open-export' );
+			return __( 'The last run failed. Open it in History to see why, then run it again.', 'open-export' );
 		}
 
+		// Updates the card from the schedule record.
 		function render() {
 			setText( title, s.name );
 			setText( stateText, s.enabled ? __( 'On', 'open-export' ) : __( 'Off', 'open-export' ) );

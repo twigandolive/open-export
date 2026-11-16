@@ -7,7 +7,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -152,7 +152,7 @@ abstract class OPEX_Writer {
 	 * Sizes of the files this writer owns, so a batch can be replayed. The
 	 * exporter saves this with the cursor and passes it back to restore().
 	 *
-	 * @return array Keys depend on the writer; `size` is the output file's byte size.
+	 * @return array Keys depend on the writer. `size` is the output file's byte size.
 	 */
 	public function checkpoint(): array {
 		return array( 'size' => self::file_size( $this->path ) );
@@ -288,7 +288,7 @@ abstract class OPEX_Writer {
 	 * @return OPEX_User_Error The error to throw.
 	 */
 	protected static function write_failed(): OPEX_User_Error {
-		return new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
+		return new OPEX_User_Error( esc_html__( 'Open Export could not write the export file. The disk may be full.', 'open-export' ) );
 	}
 
 	/**

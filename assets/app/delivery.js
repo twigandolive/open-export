@@ -5,7 +5,7 @@
  *   email:       { enabled, to: [ up to 10 addresses ], mode: 'link'|'attach', subject }
  *   webhook:     { enabled, url, secret }   (the secret is write-only: has_secret on read, clear_secret to remove)
  *   destination: { enabled, id }
- * The Export tab sends it with a new job. The Schedules tab will reuse it.
+ * The Export tab sends it with a new job. The Schedules tab uses it too.
  * The screen applies the server's rules before sending, because the server
  * turns a bad channel off with a note that a schedule save discards.
  *
@@ -56,6 +56,7 @@
 		let value = normalize( o.value );
 		const fields = {};
 
+		// Builds one delivery channel: its switch and the settings under it.
 		function channel( key, icon, label, body ) {
 			const sw = ui.switchControl( { label, checked: value[ key ].enabled, onChange: () => {
 				value[ key ].enabled = sw.input.checked;
@@ -67,6 +68,7 @@
 			return { root: el( 'div', { class: 'opex-switchrow' }, [ sw.root, bodyBox ] ), input: sw.input, body: bodyBox };
 		}
 
+		// Sends the delivery settings to the caller.
 		function changed() {
 			if ( o.onChange ) {
 				o.onChange( get() );
@@ -96,7 +98,7 @@
 			rowLabel: true,
 			labelId: modeLabel,
 			control: el( 'div', { class: 'opex-stack', role: 'radiogroup', 'aria-labelledby': modeLabel }, modes.map( ( m ) => m.root ) ),
-			help: __( 'Files over 10 MB are sent as a link. Links work for the number of days set in Settings.', 'open-export' ),
+			help: __( 'Open Export sends files over 10 MB as a link. Links work for the number of days set in Settings.', 'open-export' ),
 		} );
 		const subject = el( 'input', { type: 'text', class: 'opex-w-full' } );
 		fields.subject = ui.field( { label: __( 'Subject', 'open-export' ), control: subject, help: __( 'Leave empty to use "Your export is ready" and the export name.', 'open-export' ) } );
@@ -123,7 +125,7 @@
 			label: __( 'Secret', 'open-export' ),
 			control: el( 'div', {}, [ secret, saved, clearLine ] ),
 			input: secret,
-			help: __( 'Optional. Each request then carries an X-Opex-Signature header (sha256 HMAC of the body), so your server can check it came from this site. The secret is stored encrypted and never shown again.', 'open-export' ),
+			help: __( 'Optional. Each request then carries an X-Opex-Signature header (sha256 HMAC of the body), so your server can check it came from this site. Open Export stores the secret encrypted and never shows it again.', 'open-export' ),
 		} );
 		url.addEventListener( 'input', () => {
 			value.webhook.url = url.value.trim();
@@ -153,6 +155,7 @@
 			destination.root.appendChild( el( 'p', { class: 'opex-help' }, __( 'Destinations need the PHP sodium extension to store passwords, and it is missing on this server.', 'open-export' ) ) );
 		}
 
+		// Fills the destination select from the saved destinations.
 		function fillDestinations() {
 			const list = store.get( 'destinations' );
 			app.clear( dest );
@@ -166,13 +169,14 @@
 				dest.appendChild( el( 'option', { value: value.destination.id }, sprintf( __( 'Missing destination (%s)', 'open-export' ), value.destination.id ) ) );
 			}
 			dest.value = value.destination.id;
-			destHelp.textContent = list && ! list.length ? __( 'No destinations are saved yet. Add one on the Destinations tab.', 'open-export' ) : ( false === features.ftp ? __( 'FTP and FTPS destinations cannot be used because the PHP ftp extension is missing.', 'open-export' ) : '' );
+			destHelp.textContent = list && ! list.length ? __( 'No destinations are saved yet. Add one on the Destinations tab.', 'open-export' ) : ( false === features.ftp ? __( 'You cannot use FTP and FTPS destinations because the PHP ftp extension is missing.', 'open-export' ) : '' );
 		}
 		store.subscribe( 'destinations', fillDestinations );
 		if ( ! store.get( 'destinations' ) ) {
 			app.api.get( '/destinations' ).then( ( list ) => store.set( 'destinations', Array.isArray( list ) ? list : [] ) ).catch( () => {} );
 		}
 
+		// Loads delivery settings into the controls.
 		function set( next ) {
 			value = normalize( next );
 			email.input.checked = value.email.enabled;
@@ -196,6 +200,7 @@
 			Object.keys( fields ).forEach( ( k ) => fields[ k ].setError( '' ) );
 		}
 
+		// Returns the delivery settings in the shape the server stores.
 		function get() {
 			const out = {
 				email: { enabled: value.email.enabled, to: value.email.to.slice(), mode: value.email.mode, subject: value.email.subject },
@@ -223,6 +228,7 @@
 		 * @return {boolean} True when the server would accept it over http.
 		 */
 		function httpAllowed( address ) {
+			// Reads the host name out of an address.
 			const hostOf = ( text ) => {
 				const match = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/?#]*@)?(\[[^\]/?#]*\]|[^:/?#]*)/i.exec( String( text || '' ).trim() );
 				return match ? match[ 1 ].replace( /^\[|\]$/g, '' ).toLowerCase() : '';
@@ -239,8 +245,10 @@
 			return host === hostOf( app.boot.restRoot );
 		}
 
+		// Checks every channel that is on and marks the fields with a problem.
 		function validate() {
 			const problems = [];
+			// Marks a field with a problem and lists it.
 			const add = ( field, input, message ) => {
 				field.setError( message );
 				problems.push( { message, focus: () => input.focus() } );

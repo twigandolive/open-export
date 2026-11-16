@@ -46,6 +46,7 @@
 
 		app.append( panel, [ messages, body ] );
 
+		// Shows a message above the table.
 		function say( type, text ) {
 			app.clear( messages );
 			if ( text ) {
@@ -53,6 +54,7 @@
 			}
 		}
 
+		// Shows an error, unless the session has expired.
 		function fail( err ) {
 			if ( ! err.session ) {
 				say( 'error', err.message );
@@ -61,6 +63,7 @@
 
 		const rowActions = app.historyActions( { say, fail, rows, body, hintId } );
 
+		// Reads the exports from the server.
 		function load() {
 			loadState = 'loading';
 			render();
@@ -87,6 +90,7 @@
 			app.api.get( '/schedules' ).then( ( items ) => store.set( 'schedules', Array.isArray( items ) ? items : [] ) ).catch( () => {} );
 		}
 
+		// Draws the table, a loading state or the empty state.
 		function render() {
 			const list = store.get( 'jobs' );
 			if ( 'loading' === loadState && ! list ) {
@@ -117,6 +121,7 @@
 		// Another tab asked to show one job (store key "historyFocus", a job id).
 		// A job missing from the list gets one fresh load before giving up.
 		let focusReloaded = false;
+		// Opens and puts focus on the row another tab asked for.
 		function takeFocus() {
 			const id = store.get( 'historyFocus' );
 			if ( ! id || 'ready' !== loadState ) {
@@ -131,7 +136,7 @@
 			focusReloaded = false;
 			store.set( 'historyFocus', null );
 			if ( ! row ) {
-				say( 'warning', __( 'That export is no longer in the history. Finished exports are removed after the number of days set in Settings.', 'open-export' ) );
+				say( 'warning', __( 'That export is no longer in History. Open Export removes finished exports after the number of days set in Settings.', 'open-export' ) );
 				return;
 			}
 			if ( row.detail.hidden ) {
@@ -141,17 +146,20 @@
 			row.tr.scrollIntoView( { block: 'nearest' } );
 		}
 
+		// Shows one node in place of the table.
 		function showOnly( node ) {
 			table = null;
 			rows.clear();
 			app.clear( body ).appendChild( node );
 		}
 
+		// Forgets the table and its rows.
 		function dropTable() {
 			table = null;
 			rows.clear();
 		}
 
+		// Builds the table the first time it is needed.
 		function ensureTable() {
 			if ( table ) {
 				return;
@@ -173,10 +181,11 @@
 			app.clear( body );
 			app.append( body, [
 				table.root,
-				el( 'p', { class: 'opex-help', id: hintId }, __( 'Open in builder loads the setup of an export into the Export tab, so you can change it and run it again.', 'open-export' ) ),
+				el( 'p', { class: 'opex-help', id: hintId }, __( 'Edit and run again loads the setup of an export into the Export tab, so you can change it and run it again.', 'open-export' ) ),
 			] );
 		}
 
+		// Updates the rows to match the export list.
 		function sync( list ) {
 			ensureTable();
 			// Drop gone rows first, so the rows after them stay in place.
@@ -206,6 +215,7 @@
 			} );
 		}
 
+		// Builds the row of one export.
 		function createRow( job ) {
 			const detailId = app.uid( 'opex-job' );
 			const toggle = el( 'button', {
@@ -244,6 +254,7 @@
 			return row;
 		}
 
+		// Changes the text of a node only when it differs.
 		function setText( node, text ) {
 			if ( node.textContent !== text ) {
 				node.textContent = text;
@@ -269,6 +280,7 @@
 			return ! again;
 		}
 
+		// Updates a row for the export's latest state.
 		function updateRow( row, job ) {
 			row.job = job;
 			setText( row.name, job.label );
@@ -301,6 +313,7 @@
 			}
 		}
 
+		// Updates the Started by cell.
 		function updateBy( row, job ) {
 			const text = view.startedBy( job );
 			const key = text + ( 'background' === job.mode ? ':bg' : '' );

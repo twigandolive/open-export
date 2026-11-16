@@ -2,8 +2,7 @@
 /**
  * The seam between the query engine and one export source.
  *
- * A provider answers every question the engine used to settle with a branch on
- * the source type: what to select from, which rows count, how to page, which
+ * A provider answers every question that depends on the source type: what to select from, which rows count, how to page, which
  * fields exist, which are dates, and how a value is read and shown. The query,
  * catalog and schema code ask the registry (OPEX_Sources) for the provider and
  * never name a source themselves.

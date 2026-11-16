@@ -84,6 +84,7 @@
 		} );
 		timing = app.scheduleTiming( { record, builder, onRecord: ( next ) => o.onRecord && o.onRecord( next ) } );
 
+		// Opens or closes the export setup.
 		function openSetup( open, focusButton ) {
 			builderBox.hidden = ! open;
 			editSetup.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
@@ -97,6 +98,7 @@
 			}
 		}
 
+		// Shows the export setup in one line.
 		function syncSummary() {
 			const text = builder.summary();
 			if ( summaryText.textContent !== text ) {
@@ -122,13 +124,14 @@
 			label: __( 'File name pattern', 'open-export' ),
 			input: pattern,
 			control: el( 'div', {}, [ pattern, chips, sampleLine ] ),
-			help: __( 'Unknown tokens are dropped and the extension is added for you. Dates and times use the site time zone.', 'open-export' ),
+			help: __( 'Open Export drops unknown tokens and adds the file extension for you. Dates and times use the site time zone.', 'open-export' ),
 		} );
 		pattern.addEventListener( 'input', () => {
 			patternRow.setError( '' );
 			syncSample();
 		} );
 
+		// Shows a sample file name for the pattern.
 		function syncSample() {
 			const config = builder.getConfig();
 			const format = ( options.formats || {} )[ config.format ] || {};
@@ -163,6 +166,7 @@
 			el( 'div', { class: 'opex-formactions' }, [ save, cancel, status.root, remove ] ),
 		] );
 
+		// Shows a message above the form, with an optional list.
 		function say( type, text, list ) {
 			app.clear( messages );
 			if ( ! text ) {
@@ -175,6 +179,7 @@
 			messages.appendChild( notice );
 		}
 
+		// Checks the whole form and lists the problems.
 		function validate() {
 			const problems = [];
 			const n = name.value.trim();
@@ -202,6 +207,7 @@
 			return problems.concat( setup, timing.validate(), delivery.validate() );
 		}
 
+		// Collects the form into the record the server saves.
 		function body() {
 			return Object.assign( {
 				name: name.value.trim(),
@@ -212,6 +218,7 @@
 		}
 
 		let saving = false;
+		// Checks the form, then saves the schedule.
 		async function submit() {
 			if ( saving ) {
 				return;

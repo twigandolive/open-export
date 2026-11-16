@@ -45,7 +45,7 @@ class OPEX_Config_Output {
 		if ( 'zip' === $compress && 'xlsx' === $format ) {
 			// An Excel file is already a zip, so packing it again only adds a step for the person.
 			$compress = 'none';
-			$notes[]  = __( 'Zip compression was turned off: an Excel file is already compressed.', 'open-export' );
+			$notes[]  = __( 'Open Export turned zip compression off because an Excel file is already compressed.', 'open-export' );
 		}
 		if ( 'zip' === $compress && ! OPEX_Compress::available() ) {
 			return new WP_Error( 'opex_no_zip', __( 'Zip compression needs the PHP zip extension, which is not installed on this server. Turn compression off.', 'open-export' ), array( 'status' => 400 ) );

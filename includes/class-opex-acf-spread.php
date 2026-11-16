@@ -72,7 +72,7 @@ class OPEX_Acf_Spread {
 			$max = self::max_rows( $src, $def );
 			if ( $max > self::MAX_ROWS ) {
 				/* translators: 1: column name, 2: largest row count, 3: the cap. */
-				$notes[] = sprintf( __( '"%1$s" has up to %2$d rows. Only the first %3$d are spread into columns.', 'open-export' ), $label, $max, self::MAX_ROWS );
+				$notes[] = sprintf( __( '"%1$s" has up to %2$d rows. Open Export spreads only the first %3$d into columns.', 'open-export' ), $label, $max, self::MAX_ROWS );
 			}
 			$count = min( $max, self::MAX_ROWS );
 			if ( 0 === $count ) {

@@ -31,12 +31,14 @@
 		const chosen = B.chosen( ctx, { onChange: ( reason ) => ctx.changed( reason ), onEmpty: () => search } );
 		const custom = B.custom.addForm( ctx, () => ctx.changed( 'custom' ) );
 
+		// Adds a field to the chosen columns, once.
 		function addField( id ) {
 			if ( ctx.config.fields.indexOf( id ) < 0 ) {
 				ctx.config.fields.push( id );
 			}
 		}
 
+		// Takes a field out of the chosen columns, with its label, steps and ACF spread setting.
 		function removeField( id ) {
 			ctx.config.fields = ctx.config.fields.filter( ( f ) => f !== id );
 			delete ctx.config.column_labels[ id ];
@@ -44,6 +46,7 @@
 			B.dropAcf( ctx.config, id );
 		}
 
+		// Draws the field checkboxes of the chosen source, group by group.
 		function renderPicker() {
 			app.clear( pane );
 			boxes.clear();
@@ -61,6 +64,7 @@
 			( ctx.fields.groups || [] ).forEach( ( group, i ) => {
 				const key = group.id ? String( group.id ) : 'group-' + i;
 				const fields = group.fields || [];
+				// Checks or clears every field of one group.
 				const set = ( on ) => {
 					fields.forEach( ( f ) => ( on ? addField( f.id ) : removeField( f.id ) ) );
 					ctx.changed( 'fields' );
@@ -73,7 +77,7 @@
 						/* translators: %s: field group name. */
 						ui.linkButton( { label: __( 'all', 'open-export' ), ariaLabel: sprintf( __( 'Select all %s fields', 'open-export' ), group.label ), onClick: () => set( true ) } ),
 						/* translators: %s: field group name. */
-						ui.linkButton( { label: __( 'none', 'open-export' ), ariaLabel: sprintf( __( 'Select none of the %s fields', 'open-export' ), group.label ), onClick: () => set( false ) } ),
+						ui.linkButton( { label: __( 'none', 'open-export' ), ariaLabel: sprintf( __( 'Clear all %s fields', 'open-export' ), group.label ), onClick: () => set( false ) } ),
 					] ),
 				] );
 				const items = fields.map( ( field ) => {
@@ -100,6 +104,7 @@
 			applySearch();
 		}
 
+		// Checks the boxes of the fields that are in the config.
 		function syncBoxes() {
 			const on = new Set( ctx.config.fields );
 			boxes.forEach( ( box, id ) => {
@@ -107,6 +112,7 @@
 			} );
 		}
 
+		// Hides the fields and groups that do not match the search text.
 		function applySearch() {
 			const q = search.value.trim().toLowerCase();
 			let any = false;
@@ -165,7 +171,7 @@
 			errors() {
 				const list = [];
 				if ( ctx.config.source && ! ctx.config.fields.length ) {
-					list.push( { message: __( 'Pick at least one column.', 'open-export' ), focus: () => search.focus() } );
+					list.push( { message: __( 'Choose at least one column.', 'open-export' ), focus: () => search.focus() } );
 				}
 				B.custom.errors( ctx ).concat( B.transforms.errors( ctx ) ).forEach( ( problem ) => {
 					list.push( { message: problem.message, focus: () => chosen.focusError( problem ) } );

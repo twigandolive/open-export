@@ -58,14 +58,14 @@
 		f.passive = passive.input;
 
 		f.rows = {
-			name: ui.field( { label: __( 'Name', 'open-export' ), control: f.name, help: __( 'Leave blank to use the host name.', 'open-export' ) } ),
+			name: ui.field( { label: __( 'Name', 'open-export' ), control: f.name, help: __( 'Leave empty to use the host name.', 'open-export' ) } ),
 			type: ui.field( { label: __( 'Type', 'open-export' ), control: el( 'div', {}, [ f.type, f.note ] ), input: f.type } ),
 			host: ui.field( { label: __( 'Host', 'open-export' ), control: f.host, help: __( 'The server name or IP address only, without ftp:// or a folder.', 'open-export' ) } ),
-			port: ui.field( { label: __( 'Port', 'open-export' ), control: f.port, help: __( 'Leave blank for the usual port: 21 for FTP and FTPS, 22 for SFTP.', 'open-export' ) } ),
+			port: ui.field( { label: __( 'Port', 'open-export' ), control: f.port, help: __( 'Leave empty for the usual port: 21 for FTP and FTPS, 22 for SFTP.', 'open-export' ) } ),
 			username: ui.field( { label: __( 'User name', 'open-export' ), control: f.username } ),
-			auth: ui.field( { label: __( 'Login method', 'open-export' ), control: auth, rowLabel: true, labelId, help: __( 'A private key works with SFTP only. Keys with a passphrase are not supported.', 'open-export' ) } ),
+			auth: ui.field( { label: __( 'Login method', 'open-export' ), control: auth, rowLabel: true, labelId, help: __( 'A private key works with SFTP only. Open Export cannot use a key that has a passphrase.', 'open-export' ) } ),
 			secret: ui.field( { label: __( 'Password', 'open-export' ), control: el( 'div', {}, [ f.password, f.key, f.secretSaved ] ), input: f.password } ),
-			path: ui.field( { label: __( 'Remote folder', 'open-export' ), control: f.path, help: __( 'The folder on the server where files are uploaded.', 'open-export' ) } ),
+			path: ui.field( { label: __( 'Remote folder', 'open-export' ), control: f.path, help: __( 'The folder on the server that receives the files.', 'open-export' ) } ),
 			passive: ui.field( { label: __( 'Mode', 'open-export' ), control: passive.root, rowLabel: true, input: f.passive } ),
 		};
 		return f;
@@ -80,13 +80,14 @@
 		const code = el( 'code', { class: 'opex-fingerprint' } );
 		const none = el( 'p', {}, __( 'None saved yet.', 'open-export' ) );
 		const reset = ui.button( { label: __( 'Reset saved fingerprint', 'open-export' ), action: 'reset', cls: 'opex-mt', onClick: o.onReset } );
-		const help = __( 'Open Export saves the server fingerprint the first time a test or delivery works, and refuses to connect if it changes. If the server was rebuilt on purpose, reset it and test again.', 'open-export' );
+		const help = __( 'Open Export saves the server fingerprint the first time a test or delivery works, and refuses to connect if it changes. If someone rebuilt the server on purpose, reset the fingerprint and test again.', 'open-export' );
 		const row = ui.field( {
 			label: __( 'Server fingerprint', 'open-export' ),
 			control: el( 'div', {}, [ code, none, el( 'p', { class: 'opex-help' }, help ), reset ] ),
 			rowLabel: true,
 			input: code,
 		} );
+		// Shows the saved fingerprint, or that none is saved.
 		function update( record ) {
 			const key = record && record.host_key ? record.host_key : '';
 			code.textContent = key;

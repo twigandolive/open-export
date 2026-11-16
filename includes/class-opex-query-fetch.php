@@ -9,7 +9,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -346,10 +346,10 @@ class OPEX_Query_Fetch {
 		}
 		$notes = array();
 		if ( '' === self::table_pk( $src['table'] ) && '' === self::table_order( $src['table'] ) ) {
-			$notes[] = __( 'This table has no primary key, so the order of its rows is not guaranteed. If the table changes while the export runs, a row can be missed or repeated.', 'open-export' );
+			$notes[] = __( 'This table has no primary key, so the order of its rows can change. If the table changes while the export runs, the export can miss or repeat a row.', 'open-export' );
 		}
 		if ( $wpdb->usermeta === $src['table'] && in_array( 'col:meta_value', (array) $config['fields'], true ) ) {
-			$notes[] = __( 'Login credentials (session tokens and application passwords) are never exported. Their values are left empty.', 'open-export' );
+			$notes[] = __( 'Open Export never exports login credentials (session tokens and application passwords). It leaves their values empty.', 'open-export' );
 		}
 		return $notes;
 	}

@@ -60,7 +60,7 @@ class OPEX_Delivery_Ftp {
 		try {
 			$probe = tempnam( get_temp_dir(), 'opex' );
 			if ( ! $probe || false === file_put_contents( $probe, 'ok' ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				return new WP_Error( 'opex_ftp_local', __( 'Could not create a local test file.', 'open-export' ) );
+				return new WP_Error( 'opex_ftp_local', __( 'Open Export could not create a local test file.', 'open-export' ) );
 			}
 			$name = 'opex-test-' . bin2hex( random_bytes( 6 ) ) . '.tmp';
 			try {
@@ -103,11 +103,11 @@ class OPEX_Delivery_Ftp {
 			$conn = @ftp_connect( $host, $port, self::CONNECT_TIMEOUT ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
 		if ( ! $conn ) {
-			return new WP_Error( 'opex_ftp_connect', __( 'Could not connect to the server.', 'open-export' ) );
+			return new WP_Error( 'opex_ftp_connect', __( 'Open Export could not connect to the server.', 'open-export' ) );
 		}
 		@ftp_set_option( $conn, FTP_TIMEOUT_SEC, self::IO_TIMEOUT ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		if ( defined( 'FTP_USEPASVADDRESS' ) ) {
-			// Connect the data channel to the server we logged in to, not to the
+			// Connect the data channel to the server Open Export logged in to, not to the
 			// address its passive reply names, which a hostile server could point
 			// at another machine on this network. Must be set before ftp_pasv().
 			@ftp_set_option( $conn, FTP_USEPASVADDRESS, false ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
@@ -119,13 +119,13 @@ class OPEX_Delivery_Ftp {
 		}
 		if ( ! @ftp_pasv( $conn, ! isset( $d['passive'] ) || (bool) $d['passive'] ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_close( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			return new WP_Error( 'opex_ftp_pasv', __( 'Could not set the transfer mode.', 'open-export' ) );
+			return new WP_Error( 'opex_ftp_pasv', __( 'Open Export could not set the transfer mode on the server.', 'open-export' ) );
 		}
 		// "/" is changed to as well: a login folder is often not the server's root.
 		$path = (string) ( $d['path'] ?? '/' );
 		if ( '' !== $path && ! @ftp_chdir( $conn, $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_close( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			return new WP_Error( 'opex_ftp_path', __( 'The remote folder was not found.', 'open-export' ) );
+			return new WP_Error( 'opex_ftp_path', __( 'Open Export could not find the remote folder.', 'open-export' ) );
 		}
 		return $conn;
 	}
@@ -167,7 +167,7 @@ class OPEX_Delivery_Ftp {
 		$backup = '.' . $name . '.' . $tag . '.old';
 		if ( ! @ftp_rename( $conn, $name, $backup ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			return new WP_Error( 'opex_ftp_rename', __( 'The file was uploaded but could not be renamed. The server may not allow renaming files in this folder. Nothing on the server was changed.', 'open-export' ) );
+			return new WP_Error( 'opex_ftp_rename', __( 'Open Export uploaded the file but could not rename it. The server may not allow renaming files in this folder. Open Export removed the upload, so nothing on the server changed.', 'open-export' ) );
 		}
 		if ( @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_delete( $conn, $backup ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
@@ -234,13 +234,13 @@ class OPEX_Delivery_Ftp {
 	 */
 	public static function rename_failed( string $code, bool $restored, string $backup ): WP_Error {
 		if ( $restored ) {
-			return new WP_Error( $code, __( 'The file was uploaded but could not replace the file already on the server. The old file was kept.', 'open-export' ) );
+			return new WP_Error( $code, __( 'Open Export uploaded the file but could not replace the file already on the server. It kept the old file.', 'open-export' ) );
 		}
 		return new WP_Error(
 			$code,
 			sprintf(
 				/* translators: %s: the name the old file is kept under on the server. */
-				__( 'The file was uploaded but could not replace the file already on the server. The old file is kept on the server as %s.', 'open-export' ),
+				__( 'Open Export uploaded the file but could not replace the file already on the server. It kept the old file on the server as %s.', 'open-export' ),
 				$backup
 			)
 		);

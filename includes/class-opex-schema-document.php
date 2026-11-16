@@ -63,13 +63,13 @@ class OPEX_Schema_Document {
 		);
 		$doc['xml_template']   = array(
 			'max_part_length' => OPEX_Config::XML_PART_MAX,
-			'means'           => 'With format "xml" and a non-empty "row", the export writes "header" once, "row" once per record and "footer" once. In "row", {field id} becomes the XML-escaped value and {field id|cdata} becomes a CDATA section. Every placeholder must name a field listed in "fields" (a custom column id counts). The header and footer are written as they are, with no placeholders. Header, one row and footer together must be well-formed XML, and no DOCTYPE or entity declaration is allowed.',
+			'means'           => 'With format "xml" and a non-empty "row", the export writes "header" once, "row" once per record and "footer" once. In "row", {field id} becomes the XML-escaped value and {field id|cdata} becomes a CDATA section. Every placeholder must name a field listed in "fields" (a custom column id counts). The export writes the header and footer as they are, with no placeholders. Header, one row and footer together must be well-formed XML, and no DOCTYPE or entity declaration is allowed.',
 		);
 		$doc['network']        = array(
 			'available'   => OPEX_Network::may_request(),
 			'columns'     => array_keys( OPEX_Network::columns() ),
 			'not_sources' => array( 'users', 'table:*' ),
-			'means'       => 'On a multisite network, "network": true runs the same export on every public site that is not archived or deleted, in site id order, into one file. Every row then starts with the columns site_id and site_url, and an XML template may use {site_id} and {site_url}. Only a network super admin may ask for it, and it does not work with the users source or raw tables. A site without the source adds no rows and the job says so.',
+			'means'       => 'On a multisite network, "network": true runs the same export on every public site that is not archived or deleted, in site id order, into one file. Every row then starts with the columns site_id and site_url, and an XML template may use {site_id} and {site_url}. Only a network super admin may ask for it, and it does not work with the users source or raw tables. A site without the source adds no rows, and the export notes say so.',
 		);
 		return $doc;
 	}
@@ -86,7 +86,7 @@ class OPEX_Schema_Document {
 				'A recipe may also set: "transforms" (per-field steps from "transforms.types"), "custom_columns" (see "custom_columns"), "csv_encoding" and "csv_eol" for CSV files, "xml_template" for XML files (see "xml_template"), and "network" on a multisite network (see "network").',
 				'CSV files may also set "csv_enclosure" and "csv_quote_all", and every format except xlsx may set "compress" to "zip" when "format_options" lists it.',
 				'Formats are listed under "formats", and "format_options" says which recipe keys each one reads.',
-				'Anything in a recipe that this site cannot honor is dropped and reported, never applied silently.',
+				'Open Export drops and reports anything in a recipe that this site cannot honor. It never applies such a thing silently.',
 			)
 		);
 	}

@@ -8,7 +8,7 @@
 require_once __DIR__ . '/CharacterizationCase.php';
 
 /**
- * Pure date helpers with fixed inputs, in UTC and New York.
+ * Pure date functions with fixed inputs, in UTC and New York.
  */
 class DatesTest extends CharacterizationCase {
 
@@ -46,7 +46,7 @@ class DatesTest extends CharacterizationCase {
 	}
 
 	/**
-	 * Run the fixed-input helpers under the current timezone.
+	 * Run the fixed-input functions under the current timezone.
 	 *
 	 * @return array
 	 */

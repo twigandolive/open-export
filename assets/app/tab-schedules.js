@@ -9,7 +9,7 @@
  * starts a background job through POST /schedules/{id}/run. The job goes
  * into the shared job list and is polled the way History polls it, so its
  * card shows progress, and the card refreshes its last run when the job
- * ends. "View job" opens History on that job (store key "historyFocus").
+ * ends. "View in History" opens History on that job (store key "historyFocus").
  *
  * Registers the tab "schedules".
  */
@@ -54,6 +54,7 @@
 
 		app.append( panel, [ listView, formView ] );
 
+		// Shows a message above the list, with an optional list.
 		function say( type, text, list ) {
 			app.clear( messages );
 			if ( ! text ) {
@@ -66,6 +67,7 @@
 			messages.appendChild( notice );
 		}
 
+		// Shows an error, unless the session has expired.
 		function fail( err ) {
 			if ( ! err.session ) {
 				say( 'error', err.message );
@@ -74,6 +76,7 @@
 
 		const list = () => store.get( 'schedules' );
 
+		// Puts a saved schedule into the list, in place.
 		function put( record ) {
 			const items = ( list() || [] ).slice();
 			const at = items.findIndex( ( item ) => item.id === record.id );
@@ -85,6 +88,7 @@
 			store.set( 'schedules', items );
 		}
 
+		// Reads the schedules from the server.
 		function load() {
 			loadError = null;
 			render();
@@ -99,6 +103,7 @@
 			} );
 		}
 
+		// Draws the cards, a loading state or the empty state.
 		function render() {
 			const items = list();
 			if ( ! items ) {
@@ -164,7 +169,7 @@
 			const yes = await ui.confirm( {
 				title: __( 'Delete this schedule?', 'open-export' ),
 				/* translators: %s: schedule name. */
-				message: sprintf( __( '%s will be deleted and its trigger URL stops working. Finished exports stay in History.', 'open-export' ), s.name ),
+				message: sprintf( __( 'This deletes %s, and its trigger URL stops working. Finished exports stay in History.', 'open-export' ), s.name ),
 				confirmLabel: __( 'Delete', 'open-export' ),
 				danger: true,
 			} );
@@ -190,12 +195,14 @@
 			}
 		}
 
+		// Opens History on the export of a run.
 		function viewJob( jobId ) {
 			// Open the tab first: History can only focus a row that is visible.
 			app.showTab( 'history', false );
 			store.set( 'historyFocus', jobId );
 		}
 
+		// Puts focus on a card's button, or on Add schedule.
 		function focusCard( id, action ) {
 			const card = id ? cards.get( id ) : null;
 			const target = card ? card.root.querySelector( '[data-action="' + action + '"]' ) : null;
@@ -211,6 +218,7 @@
 			}
 		}
 
+		// Opens the form to add or edit a schedule.
 		function openForm( record, from ) {
 			opener = from || addButton;
 			say( '', '' );
@@ -221,7 +229,7 @@
 					closeForm( false );
 					const text = notes.length
 						/* translators: %s: schedule name. */
-						? sprintf( __( '%s was saved. The server changed a few things:', 'open-export' ), saved.name )
+						? sprintf( __( '%s was saved. Open Export changed a few things:', 'open-export' ), saved.name )
 						/* translators: %s: schedule name. */
 						: sprintf( __( '%s was saved.', 'open-export' ), saved.name );
 					say( notes.length ? 'warning' : 'success', text, notes );
@@ -238,6 +246,7 @@
 			form.focus();
 		}
 
+		// Closes the form and shows the list again.
 		function closeForm( restoreFocus ) {
 			form = null;
 			app.clear( formView );

@@ -218,7 +218,7 @@ class OPEX_Dates {
 			return array( $value, true );
 		}
 
-		// The compact form people type out of habit, e.g. 20260301.
+		// The compact form people type out of habit, for example 20260301.
 		if ( preg_match( '/^(\d{4})(\d{2})(\d{2})$/', $value, $m ) ) {
 			$dashed = $m[1] . '-' . $m[2] . '-' . $m[3];
 			return '' === self::normalize_date( $dashed ) ? null : array( $dashed, true );

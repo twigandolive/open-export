@@ -1,6 +1,6 @@
 <?php
 /**
- * Engine fixes for WooCommerce orders (S-10): one output format on both storage
+ * WooCommerce orders: one output format on both storage
  * engines, draft orders excluded, and friendly filter values.
  *
  * @package Open_Export

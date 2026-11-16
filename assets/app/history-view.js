@@ -96,6 +96,7 @@
 		const bar = ui.bar( percent( job ), barKind( job ), sprintf( __( '%s progress', 'open-export' ), job.label ) );
 		const text = el( 'span', {}, progressText( job ) );
 		const root = el( 'div', {}, [ bar, text ] );
+		// Updates the progress bar and its text.
 		function update( next ) {
 			const value = Math.round( percent( next ) );
 			bar.className = 'opex-bar' + ( barKind( next ) ? ' opex-bar-' + barKind( next ) : '' );

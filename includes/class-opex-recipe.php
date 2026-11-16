@@ -212,7 +212,7 @@ class OPEX_Recipe {
 					$out[] = array(
 						'id'     => $id,
 						'status' => 'dropped',
-						'reason' => __( 'Listed more than once; the first one is kept.', 'open-export' ),
+						'reason' => __( 'Listed more than once. Open Export keeps the first one.', 'open-export' ),
 					);
 					continue;
 				}
@@ -347,7 +347,7 @@ class OPEX_Recipe {
 				continue;
 			}
 			if ( 'opex_no_zip' === $code ) {
-				$notes[]       = __( 'Excel export needs the PHP zip extension, which this server does not have, so the format was set to CSV.', 'open-export' );
+				$notes[]       = __( 'Excel export needs the PHP zip extension, which this server does not have, so Open Export set the format to CSV.', 'open-export' );
 				$raw['format'] = 'csv';
 				continue;
 			}

@@ -254,7 +254,7 @@ class OPEX_Rest_Delivery {
 	 * @return WP_Error
 	 */
 	private static function missing(): WP_Error {
-		return new WP_Error( 'opex_missing', __( 'Destination not found.', 'open-export' ), array( 'status' => 404 ) );
+		return new WP_Error( 'opex_missing', __( 'That destination does not exist.', 'open-export' ), array( 'status' => 404 ) );
 	}
 
 	/**

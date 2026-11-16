@@ -7,7 +7,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -107,7 +107,7 @@ class OPEX_Query_Dates {
 					if ( OPEX_Query::is_forbidden_column( $col['name'] ) ) {
 						continue;
 					}
-					// A bare table tells us nothing about its timezone, so go by
+					// A bare table says nothing about its timezone, so go by
 					// the naming convention every WordPress and WooCommerce table
 					// follows and treat the rest as site-local.
 					$utc = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
@@ -150,8 +150,8 @@ class OPEX_Query_Dates {
 		$from   = (string) ( $range['from'] ?? '' );
 		$to     = (string) ( $range['to'] ?? '' );
 
-		// A relative preset that has not been pinned yet - a preview, or a
-		// template loaded straight from storage - resolves against now.
+		// A relative preset that has not been pinned yet (a preview, or a
+		// template loaded straight from storage) resolves against now.
 		if ( '' === $from && '' === $to && 'all_time' !== $preset && 'custom' !== $preset ) {
 			list( $from, $to ) = OPEX_Dates::preset_range( $preset );
 		}

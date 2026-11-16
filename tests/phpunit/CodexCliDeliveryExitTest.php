@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-5.6: `wp opex run` exits with code 1 when a delivery failed,
+ * `wp opex run` exits with code 1 when a delivery failed,
  * after it printed the file path and each delivery error, with and
  * without --porcelain. Runs real `wp` processes against the test site.
  *

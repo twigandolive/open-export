@@ -1,9 +1,9 @@
 <?php
 /**
- * R1-2.3b: the batch run passes a raw table's cursor through as stored. A
- * cursor may be digit text (a key that is zero, negative or above
- * PHP_INT_MAX), and it must survive a save and a reload unchanged. A job
- * saved by the older code with an integer cursor resumes as before.
+ * The batch run passes a raw table's cursor through as stored. A cursor may
+ * be digit text (a key that is zero, negative or above PHP_INT_MAX), and it
+ * must survive a save and a reload unchanged. A job saved in the older
+ * format, with an integer cursor, still resumes.
  *
  * @package Open_Export
  */

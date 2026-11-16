@@ -212,7 +212,7 @@ class OPEX_Exporter {
 		if ( null !== $guard && ! $guard() ) {
 			OPEX_Jobs::discard_files( $job );
 			OPEX_Jobs::discard_files( $plain );
-			return new WP_Error( 'opex_busy', __( 'This export was started again elsewhere while it was being prepared.', 'open-export' ), array( 'status' => 409 ) );
+			return new WP_Error( 'opex_busy', __( 'Someone started this export again from another place while Open Export was preparing it.', 'open-export' ), array( 'status' => 409 ) );
 		}
 		try {
 			OPEX_Jobs::save( $job );
@@ -316,7 +316,7 @@ class OPEX_Exporter {
 		$src   = OPEX_Query::parse_source( (string) ( $config['source'] ?? '' ) );
 		$ok    = $src && isset( OPEX_Query::date_fields( $src )[ $field ] ) && 1 === preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $after );
 		if ( ! $ok ) {
-			return new WP_Error( 'opex_bad_since', __( 'The incremental date field is not a date field of this source.', 'open-export' ), array( 'status' => 400 ) );
+			return new WP_Error( 'opex_bad_since', __( 'The Changes only date field is not a date field of this source.', 'open-export' ), array( 'status' => 400 ) );
 		}
 		return array(
 			'field' => $field,
@@ -365,7 +365,7 @@ class OPEX_Exporter {
 	public static function rerun( string $id ) {
 		$job = OPEX_Jobs::get( $id );
 		if ( ! $job || empty( $job['config'] ) ) {
-			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 
 		$label = sanitize_text_field( (string) ( $job['label'] ?? '' ) );
@@ -392,7 +392,7 @@ class OPEX_Exporter {
 			}
 		);
 		if ( ! $job ) {
-			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 		return OPEX_Jobs::expose( $job );
 	}
@@ -424,9 +424,9 @@ class OPEX_Exporter {
 			return $e->getMessage();
 		}
 		if ( false !== stripos( $e->getMessage(), 'export file' ) ) {
-			return __( 'Could not write the export file. Check that the uploads directory is writable.', 'open-export' );
+			return __( 'Open Export could not write the export file. Check that the uploads folder is writable.', 'open-export' );
 		}
-		return __( 'Export failed. Try resuming or starting a new export.', 'open-export' );
+		return __( 'The export failed. Resume it, or start a new export.', 'open-export' );
 	}
 
 	/**

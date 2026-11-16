@@ -1,7 +1,7 @@
 <?php
 /**
- * Codex R1-4.3 and R1-4.9 for FTP: a failed rename never deletes the file
- * already on the server, and a configured "/" is changed to.
+ * FTP: a failed rename never deletes the file already on the server, and
+ * Open Export changes into a configured "/" folder.
  *
  * Each test starts its own pyftpdlib server from tests/servers/ftp_server.py,
  * with one function patched before the script runs (the same way
@@ -138,7 +138,7 @@ class CodexDeliveryFtpTest extends TestCase {
 		$job = $this->make_job();
 		$res = OPEX_Delivery_Ftp::send( $job, $this->dest(), OPEX_Jobs::file_path( $job ) );
 		$this->assertInstanceOf( WP_Error::class, $res );
-		$this->assertStringContainsString( 'The old file was kept', $res->get_error_message() );
+		$this->assertStringContainsString( 'It kept the old file', $res->get_error_message() );
 		$this->assertSame( 'old export', file_get_contents( $this->server->dir . '/in/Orders-May.csv' ) );
 		$this->assertSame( array( 'Orders-May.csv' ), $this->listing() );
 	}

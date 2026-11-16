@@ -1,6 +1,6 @@
 <?php
 /**
- * R1-1.1, R1-1.9 and R1-5.1: a change to a stored option never lands over a
+ * A change to a stored option never lands over a
  * newer value, and settings and templates go through that locked change.
  * The other process is played by writes straight into the database, the
  * way a second PHP process would write.

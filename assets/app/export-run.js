@@ -61,6 +61,7 @@
 			__( 'Send the result when it is finished', 'open-export' ),
 			app.icon( 'chevron', { sm: true, cls: 'opex-chev' } ),
 		] );
+		// Opens or closes the delivery settings.
 		const setDeliveryOpen = ( open ) => {
 			deliveryBox.hidden = ! open;
 			collapser.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
@@ -68,7 +69,7 @@
 		collapser.addEventListener( 'click', () => setDeliveryOpen( deliveryBox.hidden ) );
 
 		const tplName = el( 'input', { type: 'text', class: 'opex-w-md', maxlength: 200 } );
-		const tplField = ui.field( { label: __( 'Template name', 'open-export' ), control: tplName, help: __( 'Saving under a name that exists updates that template. Delivery is not saved in templates.', 'open-export' ) } );
+		const tplField = ui.field( { label: __( 'Template name', 'open-export' ), control: tplName, help: __( 'Saving under a name that exists updates that template. Templates do not save delivery settings.', 'open-export' ) } );
 		const tplResult = ui.result();
 		const tplButton = ui.button( { label: __( 'Save as template', 'open-export' ), onClick: saveTemplate } );
 		const startButton = ui.button( { label: __( 'Start export', 'open-export' ), primary: true, action: 'start', onClick: start } );
@@ -84,12 +85,14 @@
 			el( 'div', { class: 'opex-run-template' }, [ tplField.root, el( 'div', { class: 'opex-inline' }, [ tplButton, tplResult.root ] ) ] ),
 		] );
 
+		// Uses the source name as the export name until someone types a name.
 		function syncName() {
 			if ( ! nameTouched ) {
 				nameInput.value = builder.sourceLabel() || '';
 			}
 		}
 
+		// Sets the export name, or lets it follow the source again.
 		function setName( name ) {
 			if ( name ) {
 				nameInput.value = name;
@@ -100,11 +103,13 @@
 			}
 		}
 
+		// Joins the setup problems into one message.
 		function problemsText( problems ) {
 			// Each message ends as a sentence, so joined messages still read apart.
 			return problems.map( ( p ) => String( p.message ).replace( /([^.!?])$/, '$1.' ) ).join( ' ' );
 		}
 
+		// Checks the setup, then saves it as a template.
 		function saveTemplate() {
 			tplField.setError( '' );
 			const problems = builder.validate();
@@ -135,15 +140,18 @@
 			} );
 		}
 
+		// Tells whether the export this tab started is still running.
 		function isRunning() {
 			const job = current();
 			return !! job && 'running' === job.status;
 		}
 
+		// Returns the export this tab started, from the shared list.
 		function current() {
 			return currentId ? ( store.get( 'jobs' ) || [] ).find( ( j ) => j.id === currentId ) || null : null;
 		}
 
+		// Checks the setup, then starts the export.
 		function start() {
 			if ( starting ) {
 				return;
@@ -192,6 +200,7 @@
 			} );
 		}
 
+		// Runs the export batch by batch in this page.
 		function drive( id, resume ) {
 			jobs.drive( id, resume ).catch( ( err ) => {
 				if ( ! err.session && view ) {
@@ -218,6 +227,7 @@
 			watch();
 		}
 
+		// Shows the progress of the current export and follows its deliveries.
 		function watch() {
 			const job = current();
 			if ( ! job ) {
@@ -233,6 +243,7 @@
 			// Deliveries run after the job is done, so check the job again for a while.
 			if ( 'done' === job.status && ( job.deliveries || [] ).some( ( d ) => 'pending' === d.status ) && ! deliveryTimer ) {
 				let tries = 0;
+				// Reads the export again until its deliveries are no longer pending.
 				const tick = () => {
 					tries += 1;
 					app.api.get( '/jobs/' + encodeURIComponent( job.id ) ).then( jobs.upsert ).catch( () => {} ).then( () => {

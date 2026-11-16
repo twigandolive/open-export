@@ -64,6 +64,7 @@
 			control: el( 'div', {}, [ el( 'div', { class: 'opex-inline' }, [ freq, timeBox, weekdayBox, monthdayBox ] ), timeError, enabledLine, freqHelp ] ),
 		} );
 
+		// Shows only the timing controls the frequency needs.
 		function syncFrequency() {
 			const f = freq.value;
 			timeBox.hidden = 'manual' === f;
@@ -72,7 +73,7 @@
 			enabledLine.hidden = 'manual' === f;
 			let help = '';
 			if ( 'manual' === f ) {
-				help = __( 'Runs only when you press Run now, or when something calls the trigger URL.', 'open-export' );
+				help = __( 'Runs only when you click Run now, or when something calls the trigger URL.', 'open-export' );
 			} else {
 				/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
 				help = sprintf( __( 'Times use the site time zone, %s.', 'open-export' ), options.timezone || '' );
@@ -122,11 +123,13 @@
 			syncMark();
 		} );
 
+		// Returns the date fields of the chosen source.
 		function dateFields() {
 			const ctx = o.builder.ctx;
 			return ( ctx.fields && ctx.fields.date_fields ) || [];
 		}
 
+		// Fills the Changes only date field select.
 		function refresh() {
 			const ctx = o.builder.ctx;
 			const list = dateFields();
@@ -156,6 +159,7 @@
 			syncMark();
 		}
 
+		// Shows how far the last finished run got.
 		function syncMark() {
 			const ts = parts.watermarkTime( record && record.watermark );
 			markLine.hidden = ! incBox.checked || ! record;
@@ -176,10 +180,11 @@
 			}
 		} );
 
+		// Asks first, then makes the next run export every row.
 		async function resetMark() {
 			const yes = await ui.confirm( {
 				title: __( 'Start over?', 'open-export' ),
-				message: __( 'The next run will export every row again, not only the changes. Later runs go back to changes only.', 'open-export' ),
+				message: __( 'The next run exports every row again, not only the changes. Later runs go back to changes only.', 'open-export' ),
 				confirmLabel: __( 'Start over', 'open-export' ),
 			} );
 			if ( ! yes || ! record ) {
@@ -203,6 +208,7 @@
 			}
 		}
 
+		// Returns the timing settings in the shape the server stores.
 		function get() {
 			const f = freq.value;
 			return {
@@ -215,6 +221,7 @@
 			};
 		}
 
+		// Checks the time and the Changes only field.
 		function validate() {
 			const problems = [];
 			if ( 'manual' !== freq.value && ! TIME.test( time.value ) ) {

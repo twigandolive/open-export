@@ -1,7 +1,7 @@
 <?php
 /**
- * Codex round 1 fixes in the WooCommerce sources: R1-3.2 (coupon amounts) and
- * R1-3.3 (customer totals cannot be filtered).
+ * The WooCommerce sources: coupon amounts, and customer totals that cannot
+ * be filtered.
  *
  * @package Open_Export
  */
@@ -52,7 +52,7 @@ class CodexSourceWooTest extends WooSourceCase {
 		return array_column( $rows, 'woo:amount', 'woo:code' );
 	}
 
-	/** R1-3.2: a coupon amount keeps its stored decimals, whatever the price decimals. */
+	/** A coupon amount keeps its stored decimals, whatever the price decimals. */
 	public function test_coupon_amount_is_never_rounded(): void {
 		$this->coupon( 'opexb1-pct', 'percent', '12.5' );
 		$this->coupon( 'opexb1-fixed', 'fixed_cart', '5' );
@@ -87,7 +87,7 @@ class CodexSourceWooTest extends WooSourceCase {
 		return $map;
 	}
 
-	/** R1-3.3: rules on total spend and average order value are refused, and /fields says so. */
+	/** Rules on total spend and average order value are refused, and /fields says so. */
 	public function test_customer_totals_are_not_filterable(): void {
 		$src = OPEX_Query::parse_source( 'woo:customers' );
 		$this->assertIsArray( $src );

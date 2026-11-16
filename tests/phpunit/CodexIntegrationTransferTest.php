@@ -54,7 +54,7 @@ class CodexIntegrationTransferTest extends TestCase {
 	 */
 	private function set_static( string $class, string $name, $value ): void {
 		if ( ! property_exists( $class, $name ) ) {
-			return; // Code from before the fix, run to see these tests fail.
+			return; // The property is missing from older code. Running these tests against it shows them fail.
 		}
 		$prop = new ReflectionProperty( $class, $name );
 		if ( PHP_VERSION_ID < 80100 ) {

@@ -63,7 +63,7 @@ function opex_uninstall_site( string $dir = '' ): void {
 		delete_option( $option );
 	}
 
-	// Every transient with our prefix (opex_table_status, opex_keys_*, and so on).
+	// Every transient with the opex_ prefix (opex_table_status, opex_keys_*, and so on).
 	$like         = $wpdb->esc_like( '_transient_opex_' ) . '%';
 	$like_timeout = $wpdb->esc_like( '_transient_timeout_opex_' ) . '%';
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup of our own prefixed transients.

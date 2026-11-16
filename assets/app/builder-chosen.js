@@ -52,10 +52,11 @@
 		const panels = new Map();
 		const title = el( 'p', { class: 'opex-pane-title' } );
 		const list = el( 'ol', { class: 'opex-chosen', 'aria-label': __( 'Chosen columns', 'open-export' ) } );
-		const empty = el( 'p', { class: 'opex-help', hidden: true }, __( 'No columns yet. Tick fields in the list, or add a custom column below.', 'open-export' ) );
+		const empty = el( 'p', { class: 'opex-help', hidden: true }, __( 'No columns yet. Select fields in the list, or add a custom column below.', 'open-export' ) );
 		const live = el( 'p', { class: 'opex-sr', 'aria-live': 'polite' } );
 		let dragId = null;
 
+		// Takes a column out of the config, with its label, steps and custom definition.
 		function dropColumn( id ) {
 			const config = ctx.config;
 			config.fields = config.fields.filter( ( f ) => f !== id );
@@ -66,6 +67,7 @@
 			open.delete( id );
 		}
 
+		// Moves a column to a new position in the column order.
 		function moveTo( id, to ) {
 			const fields = ctx.config.fields;
 			const from = fields.indexOf( id );
@@ -98,10 +100,12 @@
 			}
 		}
 
+		// Counts the transform steps on a column.
 		function stepCount( id ) {
 			return ( ctx.config.transforms[ id ] || [] ).length;
 		}
 
+		// Shows the step count on a column's Transform button.
 		function badge( button, id ) {
 			const n = stepCount( id );
 			const old = button.querySelector( '.opex-count' );
@@ -114,6 +118,7 @@
 			}
 		}
 
+		// Builds the header label input for one column.
 		function headerInput( id, custom ) {
 			const name = ctx.label( id );
 			/* translators: %s: field id or custom column label. */
@@ -186,8 +191,10 @@
 			] );
 		}
 
+		// Builds the open panel under a column: the template editor for a custom column, then its steps.
 		function panelFor( id, custom, button ) {
 			const box = el( 'div', { class: 'opex-colpanel', id: app.uid( 'opex-tf' ) } );
+			// Updates the step count badge, then reports the change.
 			const onChange = ( reason ) => {
 				badge( button, id );
 				o.onChange( reason );
@@ -198,6 +205,7 @@
 			return { box, editor, steps };
 		}
 
+		// Builds one row of the chosen columns list.
 		function row( id, index, count ) {
 			const custom = ctx.config.custom_columns.find( ( col ) => col.id === id ) || null;
 			const name = ctx.label( id );
@@ -234,6 +242,7 @@
 			] );
 			app.append( item, [ main, custom ? null : acfChoice( id ) ] );
 
+			// Opens or closes the column panel, building it the first time.
 			const setOpen = ( value ) => {
 				if ( value && ! panels.has( id ) ) {
 					const made = panelFor( id, custom, toggle );
@@ -302,6 +311,7 @@
 			return item;
 		}
 
+		// Draws the whole list again from the config.
 		function rebuild() {
 			panels.clear();
 			app.clear( list );
@@ -316,6 +326,7 @@
 			] );
 		}
 
+		// Opens the row a problem belongs to and puts focus on it.
 		function focusError( problem ) {
 			const id = problem.fieldId || problem.id;
 			const item = id ? list.querySelector( '[data-col="' + CSS.escape( id ) + '"]' ) : null;

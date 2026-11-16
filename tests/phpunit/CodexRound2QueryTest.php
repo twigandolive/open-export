@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R2-2.1: a stored serialized value that refers to itself, or that is
+ * A stored serialized value that refers to itself, or that is
  * nested very deep, is exported as its stored text. Walking it must not run
  * until memory runs out.
  *

@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-4.2: every writer path checks that every byte was written. A
+ * Every writer path checks that every byte was written. A
  * short write that stops making progress (a full disk) throws, and a short
  * write that keeps making progress is finished in a loop.
  *
@@ -201,7 +201,7 @@ class CodexWriterShortWriteTest extends TestCase {
 		CodexShortWriteMode::$mode  = 'stall';
 		CodexShortWriteMode::$calls = 0;
 		$this->expectException( OPEX_User_Error::class );
-		$this->expectExceptionMessage( 'The export file could not be written. The disk may be full.' );
+		$this->expectExceptionMessage( 'Open Export could not write the export file. The disk may be full.' );
 		$this->writer( $format )->start();
 	}
 
@@ -217,7 +217,7 @@ class CodexWriterShortWriteTest extends TestCase {
 			$this->writer( $format )->append( $this->rows(), true );
 			$this->fail( 'A stalled write must stop the batch.' );
 		} catch ( OPEX_User_Error $e ) {
-			$this->assertSame( 'The export file could not be written. The disk may be full.', $e->getMessage() );
+			$this->assertSame( 'Open Export could not write the export file. The disk may be full.', $e->getMessage() );
 		}
 		CodexShortWriteMode::$mode  = 'fail';
 		CodexShortWriteMode::$calls = 0;

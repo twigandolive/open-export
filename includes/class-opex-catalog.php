@@ -68,7 +68,7 @@ class OPEX_Catalog {
 				foreach ( $content as $i => $item ) {
 					if ( 'posts:' . $replaces === $item['id'] ) {
 						$item['label'] = sprintf(
-							/* translators: %s: the post type name, e.g. "Orders". */
+							/* translators: %s: the post type name, for example "Orders". */
 							__( '%s (raw post type)', 'open-export' ),
 							$item['label']
 						);
@@ -307,7 +307,7 @@ class OPEX_Catalog {
 	}
 
 	/**
-	 * Sort raw meta keys into labelled groups. See OPEX_Catalog_Meta.
+	 * Sort raw meta keys into labeled groups. See OPEX_Catalog_Meta.
 	 *
 	 * @param array $keys     Raw meta keys.
 	 * @param array $acf_keys Keys that belong to ACF fields.

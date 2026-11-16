@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-5.2 and R1-5.3: --output is written through a unique temporary
+ * The --output copy is written through a unique temporary
  * file of its own, and without --force a file that appeared while the
  * export ran is never replaced.
  *

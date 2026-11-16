@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-4.7 and R1-4.8: XML templates are checked with no rows, one row
+ * XML templates are checked with no rows, one row
  * and two rows, and field ids with pipes (spread ACF columns) are filled.
  *
  * @package Open_Export

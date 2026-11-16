@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Helpers for the private MariaDB lane. Sourced by setup-site.sh and test.sh.
+# Shared functions for the private MariaDB test run. Sourced by setup-site.sh and test.sh.
 # Never touches the system MariaDB service or its data directory: every server
 # started here has its own data directory, pid file and port inside the site folder.
 # The unix socket lives behind a short symlink in /tmp, because macOS limits socket

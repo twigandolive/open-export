@@ -37,6 +37,7 @@
 		let runCard = null;
 		let builder = null;
 
+		// Shows a message at the top of the tab.
 		function say( type, text ) {
 			app.clear( messages );
 			if ( text ) {
@@ -60,6 +61,7 @@
 			},
 		} );
 
+		// Loads a setup and an export name into the tab.
 		function load( config, name ) {
 			builder.setConfig( config ).then( () => syncBar() );
 			run.setName( name || '' );
@@ -86,6 +88,7 @@
 		} } );
 		const bar = el( 'div', { class: 'opex-stickybar', role: 'region', 'aria-label': __( 'Export summary', 'open-export' ) }, [ barText, barButton ] );
 
+		// Updates the summary bar with the setup and the preview count.
 		function syncBar() {
 			const total = builder.previewTotal();
 			let text = builder.summary();
@@ -102,6 +105,7 @@
 		start.loadTemplates();
 		syncBar();
 
+		// Loads a setup that another tab asked to open here.
 		function takeLoad() {
 			const request = store.get( 'builderLoad' );
 			if ( ! request || ! request.config ) {
@@ -110,7 +114,7 @@
 			store.set( 'builderLoad', null );
 			load( request.config, request.name );
 			/* translators: %s: export name. */
-			say( 'success', request.name ? sprintf( __( 'Loaded the setup of %s into the builder.', 'open-export' ), request.name ) : __( 'Loaded the setup into the builder.', 'open-export' ) );
+			say( 'success', request.name ? sprintf( __( 'Loaded the setup of %s into the Export tab.', 'open-export' ), request.name ) : __( 'Loaded the setup into the Export tab.', 'open-export' ) );
 		}
 		store.subscribe( 'builderLoad', takeLoad );
 		takeLoad();

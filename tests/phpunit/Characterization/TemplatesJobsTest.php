@@ -62,7 +62,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertSame( array_keys( $tpl ), array_keys( OPEX_Templates::expose( $stored ) ) );
 		$this->assertArrayHasKey( $tpl['id'], OPEX_Templates::all() );
 
-		// S-24: saving the same name again updates the template instead of adding one.
+		// Saving the same name again updates the template instead of adding one.
 		$again = OPEX_Templates::save( 'My template', $raw );
 		$this->assertSame( $tpl['id'], $again['id'] );
 		$this->assertSame( $tpl['created'], $again['created'] );
@@ -129,7 +129,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertSame( 20, $paused['processed'] );
 		$this->assertSame( 'paused', OPEX_Exporter::pause( $job['id'] )['status'] );
 
-		// S-7: a plain run call leaves a paused job paused. Only an explicit resume continues it.
+		// A plain run call leaves a paused job paused. Only an explicit resume continues it.
 		$late = OPEX_Exporter::run( $job['id'] );
 		$this->assertSame( 'paused', $late['status'] );
 		$this->assertSame( 20, $late['processed'] );
@@ -212,7 +212,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 			$job   = OPEX_Exporter::create( $this->config( array( 'source' => 'terms:category', 'fields' => array( 'core:term_id' ) ) ), "h$i" );
 			$ids[] = $job['id'];
 		}
-		// The cap went from 50 to 200 in 2.0 (spec 3.8, D2). HistoryCapTest proves the cap and what it evicts.
+		// The cap is 200 from 2.0 on (50 before). HistoryCapTest proves the cap and what it evicts.
 		$this->assertLessThanOrEqual( max( OPEX_Jobs::MAX_HISTORY, count( $ids ) ), count( OPEX_Jobs::all() ) );
 
 		$old            = OPEX_Jobs::get( end( $ids ) );

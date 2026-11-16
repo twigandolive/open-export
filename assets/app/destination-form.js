@@ -72,6 +72,7 @@
 		f.type.addEventListener( 'change', refresh );
 		f.authInputs.forEach( ( input ) => input.addEventListener( 'change', refresh ) );
 
+		// Returns the chosen type and login method.
 		function current() {
 			return { type: f.type.value, auth: f.authKey.checked && 'sftp' === f.type.value ? 'key' : 'password' };
 		}
@@ -94,7 +95,7 @@
 			const saved = !! ( record && record.has_secret && record.auth === now.auth );
 			f.secretSaved.hidden = ! saved;
 			f.secretSavedText.textContent = isKey ? __( 'A private key is saved', 'open-export' ) : __( 'A password is saved', 'open-export' );
-			f.password.placeholder = saved ? __( 'Leave blank to keep the saved password', 'open-export' ) : '';
+			f.password.placeholder = saved ? __( 'Leave empty to keep the saved password', 'open-export' ) : '';
 			f.key.placeholder = saved ? __( 'Paste a new private key to replace the saved one', 'open-export' ) : '';
 			rows.passive.root.hidden = 'sftp' === now.type;
 			// A pin belongs to the saved host. Changing the type clears it on save.
@@ -106,6 +107,7 @@
 			}
 		}
 
+		// Collects the form into the record the server saves.
 		function payload() {
 			const now = current();
 			const data = {
@@ -125,6 +127,7 @@
 			return data;
 		}
 
+		// Clears the error on every row.
 		function clearErrors() {
 			Object.keys( rows ).forEach( ( key ) => rows[ key ].setError( '' ) );
 		}
@@ -136,7 +139,7 @@
 				errors.host = __( 'Enter the server address.', 'open-export' );
 			}
 			if ( '' !== data.port && ! ( /^\d+$/.test( data.port ) && +data.port >= 1 && +data.port <= 65535 ) ) {
-				errors.port = __( 'Use a port from 1 to 65535, or leave it blank.', 'open-export' );
+				errors.port = __( 'Use a port from 1 to 65535, or leave it empty.', 'open-export' );
 			}
 			if ( ! data.username ) {
 				errors.username = __( 'Enter the user name.', 'open-export' );
@@ -148,6 +151,7 @@
 			return errors;
 		}
 
+		// Shows errors on their rows and puts focus on the first one.
 		function showErrors( errors ) {
 			let first = null;
 			Object.keys( errors ).forEach( ( key ) => {
@@ -165,6 +169,7 @@
 			return !! first;
 		}
 
+		// Matches a server error to the fields it is about.
 		function serverErrors( err ) {
 			const errors = {};
 			if ( ERROR_FIELDS[ err.code ] ) {
@@ -176,6 +181,7 @@
 			return errors;
 		}
 
+		// Takes the saved record, clears the secret inputs and updates the form.
 		function setRecord( next ) {
 			record = next;
 			f.password.value = '';
@@ -184,6 +190,7 @@
 			refresh();
 		}
 
+		// Checks the form, saves the destination, then tests the connection.
 		async function save() {
 			clearErrors();
 			const data = payload();
@@ -224,10 +231,11 @@
 			}
 		}
 
+		// Asks first, then clears the saved fingerprint.
 		async function resetFingerprint() {
 			const yes = await ui.confirm( {
 				title: __( 'Reset the saved fingerprint?', 'open-export' ),
-				message: __( 'Do this only if the server was rebuilt on purpose. The next test or delivery saves the new fingerprint.', 'open-export' ),
+				message: __( 'Do this only if someone rebuilt the server on purpose. The next test or delivery saves the new fingerprint.', 'open-export' ),
 				confirmLabel: __( 'Reset fingerprint', 'open-export' ),
 				danger: true,
 			} );
@@ -241,7 +249,7 @@
 				if ( saved.host_key ) {
 					result.set( 'error', __( 'The fingerprint was not reset. This version of Open Export cannot reset it yet.', 'open-export' ) );
 				} else {
-					result.set( 'success', __( 'The saved fingerprint was reset. Save and test to save the new one.', 'open-export' ) );
+					result.set( 'success', __( 'Open Export cleared the saved fingerprint. Click Save and test to save the new one.', 'open-export' ) );
 				}
 				saveButton.focus();
 			} catch ( err ) {

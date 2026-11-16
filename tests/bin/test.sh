@@ -3,7 +3,7 @@
 # Usage: tests/bin/test.sh [--site <dir>] [--legacy-orders] [--php <bin dir>] [phpunit args...]
 # --php runs everything with the php in that folder, for example the plugin's floor:
 #   tests/bin/test.sh --php /opt/homebrew/opt/php@7.4/bin
-# PHP older than 8.2 cannot run the main PHPUnit, so that lane uses PHPUnit 9.6 from
+# PHP older than 8.2 cannot run the main PHPUnit, so that test run uses PHPUnit 9.6 from
 # tests/php74 (install it once with: composer install --working-dir=tests/php74).
 set -euo pipefail
 
@@ -40,7 +40,7 @@ cd "$REPO"
 WP_BIN="$(command -v wp || true)"
 wpcli() { php -d memory_limit=1G -d error_reporting=22527 -d display_errors=0 "$WP_BIN" --path="$SITE/wordpress" "$@"; }
 
-# Private MariaDB lane: start the server this site owns, stop it on exit.
+# Private MariaDB test run: start the server this site owns, stop it on exit.
 if [ -f "$SITE/mariadb.env" ]; then
 	# shellcheck disable=SC1091
 	. "$HERE/mariadb-lib.sh"

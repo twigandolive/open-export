@@ -33,7 +33,7 @@ class OPEX_Schedule_Start {
 		OPEX_Schedule_Owed::settle( $id );
 		$s = OPEX_Schedules::get( $id );
 		if ( ! $s ) {
-			return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That schedule does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 		if ( 'cron' === $origin && ! $s['enabled'] ) {
 			return new WP_Error( 'opex_disabled', __( 'This schedule is turned off.', 'open-export' ), array( 'status' => 409 ) );

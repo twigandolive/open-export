@@ -1,7 +1,7 @@
 <?php
 /**
  * GET /templates rows carry source and source_label, and a template keeps
- * the pass (e) output keys through a save.
+ * the 2.0 output keys through a save.
  *
  * Templates made here are deleted in tearDown.
  *

@@ -1,7 +1,7 @@
 <?php
 /**
- * Helpers for the WP-CLI commands: find the target, check options, work a job
- * to the end and copy the file. Kept apart so OPEX_CLI stays a thin command list.
+ * The work behind the WP-CLI commands: find the target, check options, work a job
+ * to the end and copy the file. It lives here so OPEX_CLI stays a thin command list.
  *
  * @package Open_Export
  */
@@ -82,7 +82,7 @@ class OPEX_CLI_Runner {
 	 */
 	public static function find_target( string $key ): array {
 		if ( '' === $key ) {
-			WP_CLI::error( 'Pass the id or exact name of a template or schedule.' );
+			WP_CLI::error( 'Give the id or exact name of a template or schedule.' );
 		}
 		$tpl = OPEX_Templates::get( $key );
 		if ( $tpl ) {
@@ -261,7 +261,7 @@ class OPEX_CLI_Runner {
 		}
 		if ( $failed > 0 ) {
 			// A shell script must see a failed delivery, so the command fails after reporting the file.
-			WP_CLI::error( sprintf( '%d delivery(ies) failed. The export file was written, and failed deliveries are tried again later.', $failed ) );
+			WP_CLI::error( sprintf( '%d delivery(ies) failed. Open Export wrote the export file and tries failed deliveries again later.', $failed ) );
 		}
 	}
 

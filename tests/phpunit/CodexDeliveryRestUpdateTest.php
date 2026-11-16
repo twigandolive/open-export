@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-5.5: a partial destination update sends only the submitted
+ * A partial destination update sends only the submitted
  * fields to the store, which merges them with the record as stored at that
  * moment, under its lock. A change another request saved in between is kept.
  *

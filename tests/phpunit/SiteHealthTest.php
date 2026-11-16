@@ -37,7 +37,7 @@ class SiteHealthTest extends TestCase {
 				'config'    => array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'batch_size' => 10 ),
 				'frequency' => 'daily',
 				'enabled'   => $enabled,
-				'delivery'  => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://hooks.example.org/in', 'secret' => 'WEBHOOK-SECRET-VALUE' ) ),
+				'delivery'  => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/in', 'secret' => 'WEBHOOK-SECRET-VALUE' ) ),
 			)
 		);
 		$this->assertIsArray( $rec );

@@ -69,6 +69,7 @@
 			onChange( 'date' );
 		} ) );
 
+		// Shows the From and To dates only for a custom range.
 		function syncCustom() {
 			const isCustom = 'custom' === range().preset;
 			custom.hidden = ! isCustom;
@@ -76,6 +77,7 @@
 			to.value = range().to || '';
 		}
 
+		// Fills a select, keeping a saved value that is not in the list.
 		function options( select, items, value ) {
 			app.clear( select );
 			items.forEach( ( item ) => select.appendChild( el( 'option', { value: item.id }, item.label ) ) );
@@ -85,6 +87,7 @@
 			select.value = value;
 		}
 
+		// Fills the date field and range selects for the chosen source.
 		function refresh() {
 			const fields = dateFields();
 			row.hidden = ! fields.length;
@@ -101,11 +104,12 @@
 			const zone = ( ctx.fields && ctx.fields.timezone ) || ctx.options.timezone || '';
 			help.textContent = 'schedule' === ctx.mode
 				/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
-				? sprintf( __( 'Dates use the site time zone, %s. Ranges such as Last 7 days are worked out again on every run.', 'open-export' ), zone )
+				? sprintf( __( 'Dates use the site time zone, %s. Open Export works out ranges such as Last 7 days again on every run.', 'open-export' ), zone )
 				/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
-				: sprintf( __( 'Dates use the site time zone, %s. Ranges such as Last 7 days are worked out when the export starts. Either custom date may be left empty.', 'open-export' ), zone );
+				: sprintf( __( 'Dates use the site time zone, %s. Open Export works out ranges such as Last 7 days when the export starts. You can leave either custom date empty.', 'open-export' ), zone );
 		}
 
+		// Describes the date range for the card summary.
 		function summary() {
 			const r = range();
 			if ( ! dateFields().length || ! r.preset || 'all_time' === r.preset ) {
@@ -119,6 +123,7 @@
 			return found ? found.label : r.preset;
 		}
 
+		// Lists custom dates that are not written as YYYY-MM-DD.
 		function errors() {
 			const r = range();
 			if ( 'custom' !== r.preset ) {

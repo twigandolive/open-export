@@ -39,7 +39,7 @@
 			[ 'contains', __( 'contains', 'open-export' ) ], [ 'not_contains', __( 'does not contain', 'open-export' ) ],
 			[ 'starts_with', __( 'starts with', 'open-export' ) ], [ 'ends_with', __( 'ends with', 'open-export' ) ],
 			[ 'gt', '>' ], [ 'gte', '>=' ], [ 'lt', '<' ], [ 'lte', '<=' ],
-			[ 'in', __( 'is one of (comma list)', 'open-export' ) ], [ 'not_in', __( 'is not one of (comma list)', 'open-export' ) ],
+			[ 'in', __( 'is one of (separate with commas)', 'open-export' ) ], [ 'not_in', __( 'is not one of (separate with commas)', 'open-export' ) ],
 			[ 'empty', __( 'is empty', 'open-export' ) ], [ 'not_empty', __( 'is not empty', 'open-export' ) ],
 		].map( ( pair ) => ( { id: pair[ 0 ], label: pair[ 1 ], needs_value: 'empty' !== pair[ 0 ] && 'not_empty' !== pair[ 0 ] } ) );
 	}
@@ -82,6 +82,7 @@
 			return 0 !== f.id.indexOf( 'computed:' ) || 'computed:roles' === f.id;
 		}
 
+		// Lists the field groups with only the fields that can be filtered.
 		function filterable() {
 			const groups = [];
 			( ( ctx.fields && ctx.fields.groups ) || [] ).forEach( ( group ) => {
@@ -93,10 +94,12 @@
 			return groups;
 		}
 
+		// Tells whether this source can filter on a field.
 		function isFilterable( id ) {
 			return filterable().some( ( group ) => group.fields.some( ( f ) => f.id === id ) );
 		}
 
+		// Lists the operators that fit the type of a rule's field.
 		function opsFor( rule ) {
 			const info = ctx.fieldIndex[ rule.field ];
 			const allowed = info && BY_TYPE[ info.type ];
@@ -107,11 +110,13 @@
 			return list;
 		}
 
+		// Tells whether an operator needs a value.
 		function needsValue( op ) {
 			const found = operators().find( ( item ) => item.id === op );
 			return found ? false !== found.needs_value : true;
 		}
 
+		// Makes a new rule on the first field that can be filtered.
 		function newRule() {
 			const first = filterable()[ 0 ];
 			const field = first ? first.fields[ 0 ].id : '';
@@ -135,6 +140,7 @@
 			( target || tree.querySelector( '[data-filter="add-rule"]' ) ).focus();
 		}
 
+		// Builds the field, operator and value controls of one rule.
 		function ruleRow( rule, group, index, label ) {
 			/* translators: %s: rule number. */
 			const field = el( 'select', { 'aria-label': sprintf( __( 'Rule %s field', 'open-export' ), label ) } );
@@ -148,6 +154,7 @@
 			const op = el( 'select', { 'aria-label': sprintf( __( 'Rule %s operator', 'open-export' ), label ) } );
 			/* translators: %s: rule number. */
 			const value = el( 'input', { type: 'text', value: rule.value, 'aria-label': sprintf( __( 'Rule %s value', 'open-export' ), label ) } );
+			// Fills the operator select for the rule's field.
 			const fillOps = () => {
 				app.clear( op );
 				const list = opsFor( rule );
@@ -158,6 +165,7 @@
 				op.value = rule.op;
 				syncValue();
 			};
+			// Shows the value input only for operators that need a value.
 			const syncValue = () => {
 				const needed = needsValue( rule.op );
 				value.hidden = ! needed;
@@ -193,6 +201,7 @@
 			return row;
 		}
 
+		// Builds a group of rules, with its match mode and its nested groups.
 		function groupBox( group, depth, parent, index, prefix ) {
 			const name = app.uid( 'opex-rel' );
 			/* translators: %d: nesting level. */
@@ -250,6 +259,7 @@
 			return box;
 		}
 
+		// Draws the whole filter tree again from the config.
 		function render() {
 			app.clear( tree );
 			if ( ! ctx.fields ) {
@@ -261,6 +271,7 @@
 			limitsLine.textContent = sprintf( __( 'Rules: %1$s Groups can nest %2$d levels deep.', 'open-export' ), B.usedOf( used, maxRules ), maxDepth );
 		}
 
+		// Collects the rules whose field this source cannot filter on.
 		function badRules( group, out ) {
 			group.rules.forEach( ( node ) => {
 				if ( isGroup( node ) ) {
@@ -296,7 +307,7 @@
 				if ( ctx.fields ) {
 					badRules( ctx.config.filters, [] ).forEach( ( rule ) => list.push( {
 						/* translators: %s: field id. */
-						message: rule.field ? sprintf( __( 'This source cannot filter on %s. Pick another field or remove the rule.', 'open-export' ), rule.field ) : __( 'A filter rule has no field.', 'open-export' ),
+						message: rule.field ? sprintf( __( 'This source cannot filter on %s. Choose another field or remove the rule.', 'open-export' ), rule.field ) : __( 'A filter rule has no field.', 'open-export' ),
 						focus: () => {
 							const row = nodeEls.get( rule );
 							if ( row ) {

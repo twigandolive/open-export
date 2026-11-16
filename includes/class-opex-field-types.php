@@ -109,7 +109,7 @@ class OPEX_Field_Types {
 
 	/**
 	 * Every translated group label the plugin uses, by stable id. A new group
-	 * label needs a line here (FieldTypesTest checks that none is missing).
+	 * label needs a line here (ScreenDataTest checks that none is missing).
 	 *
 	 * @return array<string, string>
 	 */

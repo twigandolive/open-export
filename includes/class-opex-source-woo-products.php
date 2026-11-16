@@ -276,7 +276,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 				'group' => $product,
 				'type'  => 'text',
 				'read'  => 'meta:_global_unique_id',
-				'label' => __( 'GTIN, UPC, EAN or ISBN', 'open-export' ),
+				'label' => __( 'GTIN, UPC, EAN, or ISBN', 'open-export' ),
 			),
 			'woo:featured'           => array(
 				'group' => $product,

@@ -79,7 +79,7 @@ class OPEX_Site_Health {
 				'debug' => $disk['bytes'],
 			),
 			'retention'     => array(
-				'label' => __( 'Retention (days)', 'open-export' ),
+				'label' => __( 'Keep finished exports (days)', 'open-export' ),
 				'value' => (int) OPEX_Settings::get( 'retention_days' ),
 			),
 			'schedules'     => array(
@@ -88,12 +88,12 @@ class OPEX_Site_Health {
 				'debug' => count( $all ),
 			),
 			'schedules_on'  => array(
-				'label' => __( 'Enabled schedules', 'open-export' ),
+				'label' => __( 'Schedules turned on', 'open-export' ),
 				'value' => $on,
 				'debug' => $on,
 			),
 			'next_run'      => self::next_run_field( $all ),
-			'cron_disabled' => self::yes_no( __( 'WP-Cron is disabled', 'open-export' ), self::cron_disabled() ),
+			'cron_disabled' => self::yes_no( __( 'WP-Cron is turned off', 'open-export' ), self::cron_disabled() ),
 		);
 
 		foreach ( array( 'zip', 'sodium', 'ftp', 'mbstring', 'iconv', 'dom' ) as $ext ) {
@@ -185,7 +185,7 @@ class OPEX_Site_Health {
 					),
 					$stuck
 				)
-			) . '</p><p>' . esc_html__( 'Background exports run on WP-Cron. Check that WP-Cron runs on this site, then pause and resume the export from the History screen, or start it again.', 'open-export' ) . '</p>';
+			) . '</p><p>' . esc_html__( 'Background exports run on WP-Cron. Check that WP-Cron runs on this site. Then pause and resume the export on the History tab of Tools > Open Export, or start it again.', 'open-export' ) . '</p>';
 		}
 		return $result;
 	}
@@ -216,8 +216,8 @@ class OPEX_Site_Health {
 		if ( $enabled > 0 && self::cron_disabled() ) {
 			$result['status']      = 'recommended';
 			$result['label']       = __( 'Open Export scheduled exports need a server cron job', 'open-export' );
-			$result['description'] = '<p>' . esc_html__( 'You have enabled schedules, but WP-Cron is turned off on this site (DISABLE_WP_CRON), so WordPress will not start them by itself.', 'open-export' ) . '</p>'
-				. '<p>' . esc_html__( 'Either call wp-cron.php from a server cron job every few minutes, or call the trigger URL of each schedule on its own timetable. You can copy the trigger URL from the Schedules screen.', 'open-export' ) . '</p>';
+			$result['description'] = '<p>' . esc_html__( 'You have schedules turned on, but WP-Cron is turned off on this site (DISABLE_WP_CRON), so WordPress does not start them by itself.', 'open-export' ) . '</p>'
+				. '<p>' . esc_html__( 'Either call wp-cron.php from a server cron job every few minutes, or call the trigger URL of each schedule on its own timetable. You can copy the trigger URL on the Schedules tab of Tools > Open Export.', 'open-export' ) . '</p>';
 		}
 		return $result;
 	}
@@ -296,7 +296,7 @@ class OPEX_Site_Health {
 	 */
 	private static function protection_field( array $rules ): array {
 		if ( ! $rules ) {
-			$value = __( 'No deny rule is written yet. Files are guarded only by their random names.', 'open-export' );
+			$value = __( 'Open Export has not written a deny rule yet. Only their random names protect the files.', 'open-export' );
 		} else {
 			$value = sprintf(
 				/* translators: %s: file names, such as ".htaccess, web.config". */

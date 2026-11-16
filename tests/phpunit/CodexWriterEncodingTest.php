@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-4.1: CSV cells are put into the target encoding before the
+ * CSV cells are put into the target encoding before the
  * formula guard and the quoting, so a transliterated character can never
  * add a delimiter, a quote or a formula.
  *

@@ -69,6 +69,7 @@
 			} );
 		}
 
+		// Shows the match count, the sample rows and the notes of a preview.
 		function show( data ) {
 			const headers = Array.isArray( data.headers ) ? data.headers : [];
 			const rows = Array.isArray( data.rows ) ? data.rows : [];
@@ -102,6 +103,7 @@
 			}
 		}
 
+		// Empties the preview card.
 		function clearAll() {
 			app.clear( tableBox );
 			app.clear( notesBox );

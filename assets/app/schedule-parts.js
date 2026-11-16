@@ -1,7 +1,7 @@
 /**
  * Open Export admin screen: shared pieces of the Schedules tab.
  *
- * Pure builders and text helpers for one schedule, used by the list cards
+ * Pure builders and text functions for one schedule, used by the list cards
  * (schedule-card.js) and the add and edit form (schedule-form.js).
  *
  * Exposes opexApp.scheduleParts:
@@ -10,7 +10,7 @@
  *   timetable( s )         "Daily at 03:00", "Weekly on Monday at 07:00".
  *   nextRun( s )           Next run in the site time zone, or why there is none.
  *   watermarkTime( mark )  The stored UTC "Y-m-d H:i:s" mark as a timestamp, or 0.
- *   lastRun( s, onView )   The last run cell: status, time, rows and a View job link.
+ *   lastRun( s, onView )   The last run cell: status, time, rows and a View in History link.
  *   deliveryList( d )      Icon plus label for every channel that is on.
  *   sampleName( pattern, ctx )  A live sample of the file name the server would make.
  *   activeJob( id )        The running or paused job of a schedule, or null.
@@ -151,7 +151,7 @@
 			sprintf( __( '%1$s, %2$s', 'open-export' ), app.formatDate( run.time ), app.rows( run.rows ) ),
 			run.job_id && onView ? el( 'br', {} ) : null,
 			run.job_id && onView ? ui.linkButton( {
-				label: __( 'View job', 'open-export' ),
+				label: __( 'View in History', 'open-export' ),
 				action: 'view-job',
 				/* translators: %s: schedule name. */
 				ariaLabel: sprintf( __( 'View the last run of %s in History', 'open-export' ), s.name ),

@@ -301,7 +301,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			throw new RuntimeException( 'Could not write the Excel export data.' );
 		}
 		if ( strlen( $content ) !== $wrote ) {
-			throw new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
+			throw new OPEX_User_Error( esc_html__( 'Open Export could not write the export file. The disk may be full.', 'open-export' ) );
 		}
 	}
 

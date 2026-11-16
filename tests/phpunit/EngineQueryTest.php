@@ -1,6 +1,8 @@
 <?php
 /**
- * Engine fixes for the query layer: S-3, S-8, S-14, S-15, S-16, S-19, S-24, S-28, S-30 and NULL text columns.
+ * The query layer: refused rules, tables without a simple key, the time zone,
+ * shared field checks, column caching, credentials, template names, the
+ * "see all fields" link, malformed recipes and NULL text columns.
  *
  * @package Open_Export
  */
@@ -83,7 +85,7 @@ class EngineQueryTest extends TestCase {
 		return array( OPEX_Jobs::get( $job['id'] ), (string) file_get_contents( OPEX_Jobs::file_path( OPEX_Jobs::get( $job['id'] ) ) ) );
 	}
 
-	/** S-3: a rule on a field the source lacks is refused with the field named, everywhere a config is saved. */
+	/** A rule on a field the source lacks is refused with the field named, everywhere a config is saved. */
 	public function test_bad_filter_field_is_refused_everywhere(): void {
 		$raw = array(
 			'source'  => 'posts:post',
@@ -116,7 +118,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertSame( 400, $sched->get_error_data()['status'] );
 	}
 
-	/** S-3: computed values and credential keys cannot be filtered on. */
+	/** Computed values and credential keys cannot be filtered on. */
 	public function test_unfilterable_and_credential_fields_are_refused(): void {
 		foreach ( array( 'computed:permalink', 'meta:session_tokens', 'meta:_application_passwords' ) as $field ) {
 			$out = OPEX_Exporter::sanitize_config( array( 'source' => 'users' === substr( $field, 0, 4 ) ? 'users' : 'posts:post', 'fields' => array( 'core:ID' ), 'filters' => array( 'rules' => array( array( 'field' => $field, 'op' => 'eq', 'value' => 'x' ) ) ) ) );
@@ -127,7 +129,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertWPError( $users );
 	}
 
-	/** S-3: the recipe path still reports the dropped rule and keeps going. */
+	/** The recipe path still reports the dropped rule and keeps going. */
 	public function test_recipe_keeps_report_and_drop(): void {
 		$res = OPEX_Schema::recipe_to_config( array(
 			'source'  => 'posts:post',
@@ -139,14 +141,14 @@ class EngineQueryTest extends TestCase {
 		$this->assertCount( 1, $res['config']['filters']['rules'] );
 	}
 
-	/** S-3: unknown fields at query time match nothing instead of vanishing. */
+	/** Unknown fields at query time match nothing instead of vanishing. */
 	public function test_unknown_field_at_query_time_matches_nothing(): void {
 		$config = $this->config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ) ) );
 		$config['filters'] = array( 'relation' => 'AND', 'rules' => array( array( 'field' => 'core:nope', 'op' => 'eq', 'value' => 'x' ) ) );
 		$this->assertSame( 0, OPEX_Query::count( $config ) );
 	}
 
-	/** S-30: a recipe with the wrong shapes at every level does not warn or fail. */
+	/** A recipe with the wrong shapes at every level does not warn or fail. */
 	public function test_recipe_with_wrong_shapes(): void {
 		$warnings = array();
 		set_error_handler( static function ( $no, $msg ) use ( &$warnings ) {
@@ -168,7 +170,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertSame( array(), $warnings );
 	}
 
-	/** S-8: a table with a composite key pages in key order with no row twice or missed. */
+	/** A table with a composite key pages in key order with no row twice or missed. */
 	public function test_table_without_integer_key_is_ordered(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_eng_pair', 'a INT NOT NULL, b INT NOT NULL, PRIMARY KEY (a, b)' );
@@ -199,7 +201,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertSame( array(), OPEX_Query::export_notes( $config ), 'a keyed table needs no warning' );
 	}
 
-	/** S-8: a table with no key at all gets a job note. */
+	/** A table with no key at all gets a job note. */
 	public function test_table_without_any_key_gets_a_note(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_eng_nokey', 'a INT, b VARCHAR(10)' );
@@ -209,10 +211,10 @@ class EngineQueryTest extends TestCase {
 		$this->jobs[] = $job['id'];
 		$notes = OPEX_Jobs::get( $job['id'] )['notes'];
 		$this->assertCount( 1, $notes );
-		$this->assertStringContainsString( 'not guaranteed', $notes[0] );
+		$this->assertStringContainsString( 'the order of its rows can change', $notes[0] );
 	}
 
-	/** S-16: column lists are read once per request. */
+	/** Column lists are read once per request. */
 	public function test_describe_runs_once_per_table(): void {
 		global $wpdb;
 		$table = $this->table( 'opex_eng_cols', 'id INT NOT NULL PRIMARY KEY, c1 INT, c2 INT, c3 INT, c4 INT, created DATETIME' );
@@ -251,7 +253,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertSame( array( '3' ), $ids( 'eq', 'x' ) );
 	}
 
-	/** S-19: credential values never reach the file, through the raw usermeta table. */
+	/** Credential values never reach the file, through the raw usermeta table. */
 	public function test_usermeta_table_blanks_credentials(): void {
 		global $wpdb;
 		update_user_meta( 1, 'session_tokens', array( 'TOKENSECRET' => array( 'expiration' => time() + 100 ) ) );
@@ -280,7 +282,7 @@ class EngineQueryTest extends TestCase {
 		}
 	}
 
-	/** S-19: the user source never reads the credential keys, even from a hand-made config. */
+	/** The user source never reads the credential keys, even from a hand-made config. */
 	public function test_users_source_never_reads_credential_meta(): void {
 		update_user_meta( 1, '_application_passwords', array( array( 'uuid' => 'u', 'password' => 'HASHSECRET' ) ) );
 		update_user_meta( 1, 'session_tokens', array( 'TOKENSECRET' => array() ) );
@@ -312,7 +314,7 @@ class EngineQueryTest extends TestCase {
 		}
 	}
 
-	/** S-15: the shared helpers behave the same way for every caller. */
+	/** The shared field checks behave the same way for every caller. */
 	public function test_shared_helpers(): void {
 		$this->assertTrue( OPEX_Query::is_field_id( 'woo:total' ) );
 		$this->assertTrue( OPEX_Query::is_field_id( 'meta:_sku' ) );
@@ -329,13 +331,13 @@ class EngineQueryTest extends TestCase {
 		$this->assertSame( '', OPEX_Query::date_field_or_default( array( 'type' => 'terms', 'taxonomy' => 'category' ), 'nope' ) );
 	}
 
-	/** S-14: the time zone comes straight from WordPress. */
+	/** The time zone comes straight from WordPress. */
 	public function test_site_timezone_follows_wordpress(): void {
 		$this->assertSame( wp_timezone()->getName(), OPEX_Dates::site_timezone()->getName() );
 		$this->assertSame( 'This month so far', OPEX_Dates::preset_label( 'this_month' ) );
 	}
 
-	/** S-24: saving a template under an existing name updates it. */
+	/** Saving a template under an existing name updates it. */
 	public function test_template_with_same_name_updates(): void {
 		$raw   = array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ) );
 		$first = OPEX_Templates::save( 'Weekly', $raw );
@@ -347,7 +349,7 @@ class EngineQueryTest extends TestCase {
 		$this->assertCount( 2, OPEX_Templates::all() );
 	}
 
-	/** S-28: the "see all fields" link is built from rest_url. */
+	/** The "see all fields" link is built from rest_url. */
 	public function test_schema_link_uses_rest_url(): void {
 		$post = wp_insert_post( array( 'post_title' => 'meta bag', 'post_status' => 'publish' ) );
 		for ( $i = 0; $i < 130; $i++ ) {

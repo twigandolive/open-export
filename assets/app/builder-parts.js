@@ -1,7 +1,7 @@
 /**
  * Open Export admin screen: shared parts of the export builder.
  *
- * The config helpers, the numbered card shell and the "Insert field" menu.
+ * The config functions, the numbered card shell and the "Insert field" menu.
  * builder.js mounts the component. Section files register their cards here.
  *
  * Exposes on opexApp.builder:
@@ -145,6 +145,7 @@
 		const root = el( 'section', { class: 'opex-card opex-bcard' }, [ el( o.level || 'h2', { class: 'opex-card-h' }, head ), body ] );
 		let open = true;
 		let isLocked = false;
+		// Shows the card as open or closed.
 		function sync() {
 			root.classList.toggle( 'is-collapsed', ! open );
 			head.setAttribute( 'aria-expanded', open && ! isLocked ? 'true' : 'false' );
@@ -214,6 +215,7 @@
 				}
 			},
 		} );
+		// Fills the field select of the Insert field menu.
 		function refresh() {
 			const keep = select.value;
 			app.clear( select );

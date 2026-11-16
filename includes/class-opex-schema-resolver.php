@@ -9,7 +9,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -47,7 +47,7 @@ class OPEX_Schema_Resolver {
 		if ( isset( $recipe['opex_recipe'] ) && (int) $recipe['opex_recipe'] > OPEX_Schema::RECIPE_VERSION ) {
 			$notes[] = sprintf(
 				/* translators: 1: the recipe's version, 2: the version this plugin understands. */
-				__( 'This recipe declares format version %1$d but this plugin understands version %2$d. Reading it anyway.', 'open-export' ),
+				__( 'This recipe uses format version %1$d, but Open Export reads version %2$d. Open Export reads the recipe anyway.', 'open-export' ),
 				(int) $recipe['opex_recipe'],
 				OPEX_Schema::RECIPE_VERSION
 			);
@@ -64,7 +64,7 @@ class OPEX_Schema_Resolver {
 				'opex_recipe_source',
 				sprintf(
 					/* translators: %s: the source id from the recipe. */
-					__( 'This site has no source called "%s". Check all_sources in the capability document.', 'open-export' ),
+					__( 'This site has no source called "%s". Check all_sources in the site schema.', 'open-export' ),
 					$source
 				),
 				array( 'status' => 400 )
@@ -88,7 +88,7 @@ class OPEX_Schema_Resolver {
 			}
 			if ( in_array( $field, $fields, true ) ) {
 				$row['status'] = 'dropped';
-				$row['reason'] = __( 'Listed more than once; the first one is kept.', 'open-export' );
+				$row['reason'] = __( 'Listed more than once. Open Export keeps the first one.', 'open-export' );
 			} elseif ( ! OPEX_Query::is_field_id( $field ) ) {
 				$row['status']     = 'dropped';
 				$row['reason']     = __( 'Not a field id. Ids look like "woo:total" or "core:post_title".', 'open-export' );
@@ -130,7 +130,7 @@ class OPEX_Schema_Resolver {
 				$row['reason'] = __( 'The rule names no field.', 'open-export' );
 			} elseif ( ! OPEX_Query::is_valid_op( $op ) ) {
 				$row['status']     = 'dropped';
-				$row['reason']     = __( 'Unsupported operator.', 'open-export' );
+				$row['reason']     = __( 'Open Export does not know this operator.', 'open-export' );
 				$row['suggestion'] = self::suggest( $op, OPEX_Query::ops() );
 			} elseif ( ! OPEX_Query::is_filterable_field( $src, $rf ) ) {
 				$row['status']     = 'dropped';
@@ -190,7 +190,7 @@ class OPEX_Schema_Resolver {
 		if ( ! $matched ) {
 			$report['ok']     = false;
 			$report['reason'] = count( $report['fields'] )
-				? __( 'None of the fields in this recipe exist on this source, so there is nothing to export. Give the assistant the capability document for this site and ask it to use only the field ids listed there.', 'open-export' )
+				? __( 'None of the fields in this recipe exist on this source, so there is nothing to export. Give your AI assistant the site schema of this site and ask it to use only the field ids listed there.', 'open-export' )
 				: __( 'The recipe lists no fields to export.', 'open-export' );
 
 			return array(

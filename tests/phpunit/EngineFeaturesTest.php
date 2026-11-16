@@ -1,6 +1,6 @@
 <?php
 /**
- * Engine features (pass b): new config keys, transforms and custom columns
+ * Engine features: new config keys, transforms and custom columns
  * through real exports, nested filters, since, create() extras and job done.
  *
  * @package Open_Export
@@ -441,7 +441,7 @@ class EngineFeaturesTest extends TestCase {
 
 	public function test_job_secrets_stay_out_of_the_exposed_job(): void {
 		$config   = $this->config( array( 'fields' => array( 'core:ID' ) ) );
-		$delivery = array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'sekrit-value' ) );
+		$delivery = array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => 'sekrit-value' ) );
 		$job      = $this->export( $config, array( 'delivery' => $delivery ) );
 		$this->assertStringNotContainsString( 'sekrit-value', wp_json_encode( OPEX_Jobs::expose( $job ) ) );
 		$this->assertStringNotContainsString( 'sekrit-value', wp_json_encode( OPEX_Jobs::expose_detail( $job ) ) );

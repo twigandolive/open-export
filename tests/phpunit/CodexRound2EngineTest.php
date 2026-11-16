@@ -1,9 +1,9 @@
 <?php
 /**
- * Codex round 2 engine fixes: R2-1.2 (a job whose lock file cannot be opened
- * says so once), R2-1.3 (a cron callback whose work comes back busy is tried
- * again, a bounded number of times) and R2-1.5 (a schedule's completion
- * bookkeeping that could not be saved is done later, exactly once).
+ * The engine: a job whose lock file cannot be opened says so once, a cron
+ * callback whose work comes back busy is tried again a bounded number of
+ * times, and a schedule's completion bookkeeping that could not be saved is
+ * done later, exactly once.
  *
  * The store is made busy through its own seam, as CodexIntegrationBusyTest
  * does: another holder keeps the option's store lock, and the wait of

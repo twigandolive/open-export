@@ -55,7 +55,7 @@ class SourcesTest extends CharacterizationCase {
 		$name   = 'source-' . preg_replace( '/[^a-z0-9]+/i', '-', $this->dataName() );
 		$raw    = array( 'source' => $source, 'fields' => $fields, 'batch_size' => 10 );
 		if ( 'table_posts' === $this->dataName() ) {
-			// Order rows in the posts table change when the legacy-orders lane runs, so look at content only.
+			// Order rows in the posts table change when the classic order storage test run runs, so look at content only.
 			$raw['filters'] = array( 'relation' => 'OR', 'rules' => array( array( 'field' => 'col:post_type', 'op' => 'eq', 'value' => 'post' ), array( 'field' => 'col:post_type', 'op' => 'eq', 'value' => 'page' ) ) );
 		}
 		$res    = $this->export( $raw, $name );

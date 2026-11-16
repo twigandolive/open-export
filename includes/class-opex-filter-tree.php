@@ -87,7 +87,7 @@ class OPEX_Filter_Tree {
 			}
 			if ( self::is_group( $rule ) ) {
 				if ( $depth >= self::MAX_DEPTH ) {
-					$notes[] = __( 'A filter group was dropped: groups can be nested three levels deep.', 'open-export' );
+					$notes[] = __( 'Open Export dropped a filter group because groups can nest only three levels deep.', 'open-export' );
 					continue;
 				}
 				$inner = self::clean_group( $rule, $depth + 1, $src, $notes, $count );
@@ -100,7 +100,7 @@ class OPEX_Filter_Tree {
 				continue;
 			}
 			if ( $count >= self::MAX_RULES ) {
-				$notes[] = __( 'Only the first 50 filter rules were kept.', 'open-export' );
+				$notes[] = __( 'Open Export kept only the first 50 filter rules.', 'open-export' );
 				break;
 			}
 			$leaf = self::clean_rule( $rule, $src, $notes );
@@ -134,7 +134,7 @@ class OPEX_Filter_Tree {
 				'opex_bad_filter',
 				sprintf(
 					/* translators: %s: the field id a filter rule names. */
-					__( 'The filter uses a field this source cannot filter on: "%s". Remove the rule or pick another field.', 'open-export' ),
+					__( 'The filter uses a field this source cannot filter on: "%s". Remove the rule or choose another field.', 'open-export' ),
 					$rule_field
 				),
 				array( 'status' => 400 )
@@ -144,7 +144,7 @@ class OPEX_Filter_Tree {
 		if ( ! OPEX_Query::is_valid_op( $rule_op ) ) {
 			$notes[] = sprintf(
 				/* translators: 1: the operator, 2: the field it was used on. */
-				__( 'Filter operator "%1$s" on "%2$s" is not supported and was dropped.', 'open-export' ),
+				__( 'Open Export dropped the filter operator "%1$s" on "%2$s" because it does not know that operator.', 'open-export' ),
 				$rule_op,
 				$rule_field
 			);

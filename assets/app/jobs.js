@@ -2,8 +2,8 @@
  * Open Export admin screen: shared job actions.
  *
  * The job list lives in the store under "jobs", newest first. History reads
- * it now, and the Export tab will start and drive jobs through the same
- * functions, so a job looks the same in both places.
+ * it, and the Export tab starts and drives jobs through the same functions,
+ * so a job looks the same in both places.
  *
  * A browser-mode job only moves while someone calls run. This screen calls
  * run in a loop only for jobs it started or resumed itself (drive). Jobs
@@ -158,6 +158,7 @@
 	function load() {
 		const asked = ++clock;
 		asking.add( asked );
+		// Marks this request as finished, then cleans up.
 		const done = () => {
 			asking.delete( asked );
 			prune();
@@ -365,6 +366,7 @@
 		let timer = null;
 		let stopped = false;
 		const needed = () => list().some( ( job ) => ( isActive( job ) && ! driving.has( job.id ) ) || deliveryOpen( job ) );
+		// Reads the exports again, then waits for the next poll.
 		const tick = () => {
 			timer = null;
 			if ( stopped || 'expired' === store.get( 'session' ) ) {
@@ -375,6 +377,7 @@
 			}
 			load().catch( () => {} ).then( schedule );
 		};
+		// Sets the next poll while any export still needs watching.
 		const schedule = () => {
 			if ( ! stopped && ! timer && needed() ) {
 				timer = window.setTimeout( tick, POLL_MS );

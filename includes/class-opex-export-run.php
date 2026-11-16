@@ -8,7 +8,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -65,7 +65,7 @@ class OPEX_Export_Run {
 			// around every write, so it still keeps a second worker out. The job
 			// says so once, whichever way the file lock failed.
 			if ( OPEX_File_Lock::UNSUPPORTED === $file || OPEX_File_Lock::UNAVAILABLE === $file ) {
-				self::note_once( $id, __( 'This server cannot lock the export file, so only the job lock keeps two workers apart. Avoid running this export from two places at once.', 'open-export' ) );
+				self::note_once( $id, __( 'This server cannot lock the export file, so Open Export has less protection against two runs writing to it at once. Run this export from one place at a time.', 'open-export' ) );
 			}
 			$out   = OPEX_Access::scope(
 				! empty( $job['wide'] ),
@@ -129,7 +129,7 @@ class OPEX_Export_Run {
 	 * @return array|WP_Error The job as the screen shows it, or an error.
 	 */
 	private static function run_locked( string $id, bool $resume ) {
-		// Read again: the job may have changed while we waited for the lock.
+		// Read again: the job may have changed while this process waited for the lock.
 		$job = OPEX_Jobs::get( $id );
 		if ( ! $job ) {
 			return self::missing();
@@ -293,6 +293,6 @@ class OPEX_Export_Run {
 	 * @return WP_Error The not found error.
 	 */
 	private static function missing(): WP_Error {
-		return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 	}
 }

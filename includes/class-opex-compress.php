@@ -86,10 +86,10 @@ class OPEX_Compress {
 	public static function apply( array $job ): string {
 		$plain = OPEX_Jobs::file_path( $job );
 		if ( ! self::available() ) {
-			throw new OPEX_User_Error( esc_html__( 'Could not compress the export file: the PHP zip extension is missing.', 'open-export' ) );
+			throw new OPEX_User_Error( esc_html__( 'Open Export could not compress the export file because the PHP zip extension is missing.', 'open-export' ) );
 		}
 		if ( ! is_file( $plain ) ) {
-			throw new RuntimeException( 'Could not compress the export file: it is missing.' );
+			throw new RuntimeException( 'Open Export could not compress the export file because the file is missing.' );
 		}
 		$part = $plain . self::PART;
 		if ( file_exists( $part ) ) {
@@ -104,7 +104,7 @@ class OPEX_Compress {
 			if ( file_exists( $part ) ) {
 				wp_delete_file( $part );
 			}
-			throw new OPEX_User_Error( esc_html__( 'The export file could not be compressed. The disk may be full.', 'open-export' ) );
+			throw new OPEX_User_Error( esc_html__( 'Open Export could not compress the export file. The disk may be full.', 'open-export' ) );
 		}
 		return (string) $job['filename'] . self::SUFFIX;
 	}

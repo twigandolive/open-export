@@ -192,7 +192,7 @@ class FiltersTest extends CharacterizationCase {
 
 	/**
 	 * Bad operators are dropped with a note. A rule on a field the source does
-	 * not have is refused (S-3), and an empty in-list matches nothing.
+	 * not have is refused, and an empty in-list matches nothing.
 	 */
 	public function test_ignored_rules(): void {
 		$all     = $this->describe( 'posts:post', array() );
@@ -227,7 +227,7 @@ class FiltersTest extends CharacterizationCase {
 	}
 
 	/**
-	 * S-5: a text value that looks like a date token stays text. Only a date column reads tokens.
+	 * A text value that looks like a date token stays text. Only a date column reads tokens.
 	 */
 	public function test_date_token_in_text_field_stays_text(): void {
 		$this->temp_post( 'today', 1, array( 'post_excerpt' => 'opextok' ) );

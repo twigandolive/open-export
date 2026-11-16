@@ -1,6 +1,6 @@
 <?php
 /**
- * Engine wiring (pass b): schedules end to end through the runner, locks,
+ * Engine wiring: schedules end to end through the runner, locks,
  * delivery timing, the trigger limit, route permissions, background mode.
  *
  * @package Open_Export
@@ -435,7 +435,7 @@ class EngineRunTest extends TestCase {
 		$body = array(
 			'source'   => 'posts:post',
 			'fields'   => array( 'core:ID' ),
-			'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'route-secret-1' ) ),
+			'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => 'route-secret-1' ) ),
 		);
 		$out  = $this->call( 'POST', '/jobs', $body )->get_data();
 		$this->assertStringNotContainsString( 'route-secret-1', wp_json_encode( $out ) );

@@ -42,6 +42,7 @@
 		const unsaved = el( 'p', { class: 'opex-help' }, __( 'The trigger URL appears here after you save the schedule.', 'open-export' ) );
 		app.append( card.body, [ box, unsaved ] );
 
+		// Shows the trigger URL, or a note that it appears after saving.
 		function sync() {
 			const url = record && record.trigger_url ? String( record.trigger_url ) : '';
 			input.value = url;
@@ -49,8 +50,10 @@
 			unsaved.hidden = !! url;
 		}
 
+		// Copies the trigger URL.
 		function copyUrl() {
 			const done = () => result.set( 'success', __( 'Copied.', 'open-export' ) );
+			// Copies through a selection when the clipboard API is not allowed.
 			const fallback = () => {
 				input.focus();
 				input.select();
@@ -74,13 +77,14 @@
 			}
 		}
 
+		// Asks first, then makes a new trigger URL.
 		async function renewUrl() {
 			if ( ! record ) {
 				return;
 			}
 			const yes = await ui.confirm( {
 				title: __( 'Make a new trigger URL?', 'open-export' ),
-				message: __( 'The current URL stops working at once. Anything that calls it must be given the new one.', 'open-export' ),
+				message: __( 'The current URL stops working at once. Give the new one to anything that calls it.', 'open-export' ),
 				confirmLabel: __( 'Make a new URL', 'open-export' ),
 				danger: true,
 			} );

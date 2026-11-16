@@ -10,7 +10,7 @@
 use PHPUnit\Framework\TestCase;
 
 /**
- * Additive response fields from spec 3.5.
+ * Fields the 2.0 screen added to existing responses.
  */
 class ScreenDataTest extends TestCase {
 
@@ -166,7 +166,7 @@ class ScreenDataTest extends TestCase {
 		$ids    = array_column( $res['groups'], 'id' );
 		$this->assertSame( array( 'core', 'computed', 'taxonomies' ), array_slice( $ids, 0, 3 ) );
 		$this->assertSame( $ids, array_values( array_unique( $ids ) ), 'ids are unique' );
-		// One assertion each, whatever the site's group and field counts, so every lane counts the same.
+		// One assertion each, whatever the site's group and field counts, so every test run counts the same.
 		$first_keys = array();
 		$labels     = array();
 		$bad_types  = array();

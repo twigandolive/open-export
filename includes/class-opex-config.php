@@ -8,7 +8,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds code moved from class-opex-exporter.php, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -68,7 +68,7 @@ class OPEX_Config {
 			if ( ! OPEX_Query::is_field_id( $field ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: it is not a recognized field id.', 'open-export' ),
+					__( 'Open Export left out the field "%s" because it does not know that field id.', 'open-export' ),
 					$field
 				);
 				continue;
@@ -76,7 +76,7 @@ class OPEX_Config {
 			if ( preg_match( '/^col:(.+)$/', $field, $matches ) && OPEX_Query::is_forbidden_column( $matches[1] ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: that column can never be exported.', 'open-export' ),
+					__( 'Open Export left out the field "%s" because it never exports that column.', 'open-export' ),
 					$field
 				);
 				continue;
@@ -84,17 +84,17 @@ class OPEX_Config {
 			if ( 0 === strpos( $field, 'meta:' ) && OPEX_Query::is_credential_meta( substr( $field, 5 ) ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: login credentials can never be exported.', 'open-export' ),
+					__( 'Open Export left out the field "%s" because it never exports login credentials.', 'open-export' ),
 					$field
 				);
 				continue;
 			}
 			// A raw table has no meta, no taxonomies and no computed values, so
-			// asking for them used to produce silent empty columns.
+			// asking for them would give silent empty columns.
 			if ( 'table' === $src['type'] && 0 !== strpos( $field, 'col:' ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: a raw database table only has its own columns.', 'open-export' ),
+					__( 'Open Export left out the field "%s" because a raw database table has only its own columns.', 'open-export' ),
 					$field
 				);
 				continue;
@@ -102,7 +102,7 @@ class OPEX_Config {
 			if ( ! OPEX_Query::is_valid_field( $src, $field ) ) {
 				$notes[] = sprintf(
 					/* translators: %s: the rejected field id. */
-					__( 'Field "%s" was ignored: this source does not have it.', 'open-export' ),
+					__( 'Open Export left out the field "%s" because this source does not have it.', 'open-export' ),
 					$field
 				);
 				continue;
@@ -117,7 +117,7 @@ class OPEX_Config {
 			'custom_columns' => $custom,
 		);
 		if ( ! $fields || ! self::fetch_fields( $config ) ) {
-			return new WP_Error( 'opex_no_fields', __( 'Pick at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
+			return new WP_Error( 'opex_no_fields', __( 'Choose at least one field to export.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
 		$filters = OPEX_Filter_Tree::sanitize( (array) ( $raw['filters'] ?? array() ), $src, $notes );
@@ -142,7 +142,7 @@ class OPEX_Config {
 					'opex_no_zip',
 					sprintf(
 						/* translators: %s: the formats this server can write, as a comma-separated list such as "CSV, JSON, XML, HTML table". */
-						__( 'Excel export needs the PHP zip extension, which is not installed on this server. Pick another format: %s.', 'open-export' ),
+						__( 'Excel export needs the PHP zip extension, which is not installed on this server. Choose another format: %s.', 'open-export' ),
 						implode( ', ', $writable )
 					),
 					array( 'status' => 400 )
@@ -160,7 +160,7 @@ class OPEX_Config {
 		}
 
 		if ( ! $date_range['field'] && ! empty( $raw_range ) && 'all_time' !== self::text( $raw_range['preset'] ?? 'all_time' ) ) {
-			$notes[] = __( 'The date range was dropped: this source has no date column to filter on.', 'open-export' );
+			$notes[] = __( 'Open Export dropped the date range because this source has no date column to filter on.', 'open-export' );
 		}
 
 		$encoding = sanitize_key( self::text( $raw['csv_encoding'] ?? 'utf8_bom' ) );
@@ -314,8 +314,8 @@ class OPEX_Config {
 
 	/**
 	 * Validate the date range. The field is checked against the source's own
-	 * allowlist of real date columns, so nothing caller-supplied can reach SQL;
-	 * an unrecognized field turns the range off rather than failing the
+	 * allowlist of real date columns, so nothing caller-supplied can reach SQL.
+	 * An unrecognized field turns the range off rather than failing the
 	 * export. Relative presets are stored unresolved so a saved template still
 	 * means "last 30 days" the next time it runs, not the 30 days it meant when
 	 * it was saved.

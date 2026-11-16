@@ -121,7 +121,7 @@ class RecipeV2Test extends TestCase {
 		$this->assertSame( 3, $report['summary']['fields_matched'] );
 	}
 
-	/** A broken XML template is dropped with a note; a good one is kept. */
+	/** A broken XML template is dropped with a note. A good one is kept. */
 	public function test_xml_template_report_and_drop(): void {
 		$base  = array( 'source' => 'posts:post', 'fields' => array( 'core:ID', 'core:post_title' ), 'format' => 'xml' );
 		$notes = array();

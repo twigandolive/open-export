@@ -1,6 +1,6 @@
 <?php
 /**
- * S-15: the picker, the capability document and the query engine share one
+ * The picker, the capability document and the query engine share one
  * list of core columns per source, and the query engine's list is the truth.
  *
  * @package Open_Export
@@ -47,7 +47,7 @@ class CoreColumnsTest extends TestCase {
 		}
 	}
 
-	/** The columns the picker used to miss are listed and described now. */
+	/** The picker lists and describes these columns too. */
 	public function test_columns_the_picker_gained(): void {
 		$this->assertContains( 'core:post_type', $this->picker_core( 'posts:post' ) );
 		$this->assertContains( 'core:post_mime_type', $this->picker_core( 'posts:post' ) );

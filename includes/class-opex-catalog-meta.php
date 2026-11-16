@@ -8,7 +8,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -200,8 +200,8 @@ class OPEX_Catalog_Meta {
 	}
 
 	/**
-	 * Sort raw meta keys into labelled groups: known plugins first, then
-	 * Custom Fields, with underscored/technical keys tucked in last.
+	 * Sort raw meta keys into labeled groups: known plugins first, then
+	 * Custom Fields, with underscored and technical keys last.
 	 *
 	 * @param string[] $keys     Meta keys to sort into groups.
 	 * @param string[] $acf_keys Keys that belong to ACF fields, so they land in the ACF group.
@@ -246,7 +246,7 @@ class OPEX_Catalog_Meta {
 			unset( $buckets['Technical'] );
 		}
 
-		// Anything classify_key invented that we did not order explicitly.
+		// Anything classify_key made up that the order list does not name.
 		foreach ( $buckets as $label => $fields ) {
 			$groups[] = array(
 				'label'  => $label,

@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared helpers for the 1.3.1 characterization tests.
+ * Shared setup and checks for the 1.3.1 characterization tests.
  *
  * These tests pin what the plugin does today, even where it looks wrong, so a
  * later refactor of the query layer can be proven to change nothing.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared helpers for the WooCommerce source tests.
+ * Shared setup and checks for the WooCommerce source tests.
  *
  * Each source test makes its own fixtures and removes them, then runs the real
  * engine: sanitize, count, batches with cursor paging, jobs in every format,

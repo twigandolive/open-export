@@ -4,7 +4,7 @@
  *
  * The code that knows the tables, the field map and the formats stays in
  * OPEX_Woo and OPEX_Woo_Format. This class only answers the engine's questions
- * with it, so the engine no longer names the order source.
+ * with it, so the engine never names the order source.
  *
  * @package Open_Export
  */

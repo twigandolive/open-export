@@ -151,7 +151,7 @@ class OPEX_Transforms {
 				if ( count( $clean ) >= self::MAX_STEPS ) {
 					$notes[] = sprintf(
 						/* translators: %s: field id. */
-						__( 'Field "%s" keeps its first 8 steps, the rest were dropped.', 'open-export' ),
+						__( 'Field "%s" keeps its first 8 steps. Open Export dropped the rest.', 'open-export' ),
 						$field
 					);
 					break;
@@ -181,7 +181,7 @@ class OPEX_Transforms {
 		if ( '' === $type || ! array_key_exists( $type, self::types() ) ) {
 			$notes[] = sprintf(
 				/* translators: %s: field id. */
-				__( 'A step on "%s" was dropped: it is not a known step type.', 'open-export' ),
+				__( 'Open Export dropped a step on "%s" because it does not know that step type.', 'open-export' ),
 				$field
 			);
 			return array();
@@ -244,7 +244,7 @@ class OPEX_Transforms {
 	private static function drop( string $type, string $field, array &$notes ): array {
 		$notes[] = sprintf(
 			/* translators: 1: step type, 2: field id. */
-			__( 'The "%1$s" step on "%2$s" was dropped: its settings are not valid.', 'open-export' ),
+			__( 'Open Export dropped the "%1$s" step on "%2$s" because its settings are not valid.', 'open-export' ),
 			$type,
 			$field
 		);

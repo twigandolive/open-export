@@ -60,7 +60,7 @@ class OPEX_Custom_Columns {
 
 		foreach ( $raw as $index => $item ) {
 			if ( count( $out ) >= self::MAX_COLUMNS ) {
-				$notes[] = __( 'Only the first 50 custom columns were kept.', 'open-export' );
+				$notes[] = __( 'Open Export kept only the first 50 custom columns.', 'open-export' );
 				break;
 			}
 			if ( ! is_array( $item ) ) {
@@ -69,7 +69,7 @@ class OPEX_Custom_Columns {
 			$label    = self::clean_label( $item['label'] ?? '' );
 			$template = OPEX_Transforms::clean_string( $item['template'] ?? '', self::MAX_TEMPLATE );
 			if ( '' === $label || '' === $template ) {
-				$notes[] = __( 'A custom column was ignored: it needs a name and a template.', 'open-export' );
+				$notes[] = __( 'Open Export left out a custom column because it needs a name and a template.', 'open-export' );
 				continue;
 			}
 
@@ -114,7 +114,7 @@ class OPEX_Custom_Columns {
 			if ( 0 === strpos( $id, 'custom:' ) ) {
 				$notes[] = sprintf(
 					/* translators: 1: custom column name, 2: placeholder. */
-					__( 'Custom column "%1$s": {%2$s} stays as plain text, a template cannot use another custom column.', 'open-export' ),
+					__( 'Custom column "%1$s": {%2$s} stays as plain text because a template cannot use another custom column.', 'open-export' ),
 					$label,
 					$id
 				);

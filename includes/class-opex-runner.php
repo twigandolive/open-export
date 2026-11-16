@@ -92,7 +92,7 @@ class OPEX_Runner {
 		while ( true ) {
 			$job = OPEX_Jobs::get( $job_id );
 			if ( ! $job ) {
-				return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+				return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 			}
 			// Check before each batch: run() turns a paused job back into running.
 			if ( 'running' !== $job['status'] || ( ! $first && microtime( true ) >= $deadline ) ) {
@@ -338,7 +338,7 @@ class OPEX_Runner {
 	public static function deliver_now( string $job_id ) {
 		$job = OPEX_Jobs::get( $job_id );
 		if ( ! $job ) {
-			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 		if ( 'done' !== $job['status'] ) {
 			return new WP_Error( 'opex_not_done', __( 'Deliveries run only after the export has finished.', 'open-export' ), array( 'status' => 409 ) );
@@ -359,7 +359,7 @@ class OPEX_Runner {
 			OPEX_Lock::release( 'deliver_' . $job_id, $token );
 		}
 		$job = OPEX_Jobs::get( $job_id );
-		return $job ? OPEX_Jobs::expose( $job ) : new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		return $job ? OPEX_Jobs::expose( $job ) : new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 	}
 
 	/**

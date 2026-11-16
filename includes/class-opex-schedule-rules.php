@@ -94,12 +94,12 @@ class OPEX_Schedule_Rules {
 	public static function build( array $all, array $raw, string $id, array &$notes ) {
 		if ( '' !== $id ) {
 			if ( ! isset( $all[ $id ] ) ) {
-				return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
+				return new WP_Error( 'opex_missing', __( 'That schedule does not exist.', 'open-export' ), array( 'status' => 404 ) );
 			}
 			$base = $all[ $id ];
 		} else {
 			if ( count( $all ) >= OPEX_Schedules::MAX ) {
-				return new WP_Error( 'opex_limit', __( 'You have reached the limit of 50 schedules.', 'open-export' ), array( 'status' => 400 ) );
+				return new WP_Error( 'opex_limit', __( 'You can have at most 50 schedules. Delete one to add another.', 'open-export' ), array( 'status' => 400 ) );
 			}
 			$base = self::defaults();
 		}
@@ -129,19 +129,19 @@ class OPEX_Schedule_Rules {
 
 		$freq = (string) ( $raw['frequency'] ?? $base['frequency'] );
 		if ( ! in_array( $freq, self::FREQUENCIES, true ) ) {
-			return self::invalid( __( 'Unknown frequency.', 'open-export' ) );
+			return self::invalid( __( 'Open Export does not know this frequency.', 'open-export' ) );
 		}
 		$rec['frequency'] = $freq;
 
 		$time = (string) ( $raw['time'] ?? $base['time'] );
 		if ( ! preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $time ) ) {
-			return self::invalid( __( 'Time must look like 14:30.', 'open-export' ) );
+			return self::invalid( __( 'Enter a time such as 14:30.', 'open-export' ) );
 		}
 		$rec['time'] = $time;
 
 		$weekday = $raw['weekday'] ?? $base['weekday'];
 		if ( ! is_numeric( $weekday ) || (int) $weekday < 0 || (int) $weekday > 6 ) {
-			return self::invalid( __( 'Weekday must be 0 to 6.', 'open-export' ) );
+			return self::invalid( __( 'The weekday must be a number from 0 to 6.', 'open-export' ) );
 		}
 		$rec['weekday'] = (int) $weekday;
 
@@ -151,7 +151,7 @@ class OPEX_Schedule_Rules {
 		} elseif ( is_numeric( $monthday ) && (int) $monthday >= 1 && (int) $monthday <= 28 ) {
 			$rec['monthday'] = (int) $monthday;
 		} else {
-			return self::invalid( __( 'Day of month must be 1 to 28 or last.', 'open-export' ) );
+			return self::invalid( __( 'The day of the month must be a number from 1 to 28, or last.', 'open-export' ) );
 		}
 
 		$rec['enabled'] = isset( $raw['enabled'] ) ? (bool) rest_sanitize_boolean( $raw['enabled'] ) : (bool) $base['enabled'];
@@ -159,7 +159,7 @@ class OPEX_Schedule_Rules {
 		$inc       = is_array( $raw['incremental'] ?? null ) ? $raw['incremental'] : $base['incremental'];
 		$inc_field = sanitize_text_field( (string) ( $inc['field'] ?? '' ) );
 		if ( '' !== $inc_field && ! preg_match( '/^(core|meta|tax|computed|col|woo):\S/', $inc_field ) ) {
-			return self::invalid( __( 'Unknown date field for incremental exports.', 'open-export' ) );
+			return self::invalid( __( 'The Changes only date field is not a field id Open Export knows.', 'open-export' ) );
 		}
 		$rec['incremental'] = array(
 			'enabled' => (bool) rest_sanitize_boolean( $inc['enabled'] ?? false ),
@@ -169,7 +169,7 @@ class OPEX_Schedule_Rules {
 		// before this check keeps working until one of them is edited.
 		$touched = '' === $id || isset( $raw['config'] ) || is_array( $raw['incremental'] ?? null );
 		if ( $rec['incremental']['enabled'] && $touched && ! self::is_date_field( (string) ( $rec['config']['source'] ?? '' ), $inc_field ) ) {
-			return self::invalid( __( 'Changes only needs one of the date fields of this source. Pick one, or turn Changes only off.', 'open-export' ) );
+			return self::invalid( __( 'Changes only needs one of the date fields of this source. Choose one, or turn Changes only off.', 'open-export' ) );
 		}
 		self::follow_watermark( $rec, $base, '' !== $id, $notes );
 
@@ -225,7 +225,7 @@ class OPEX_Schedule_Rules {
 		}
 		if ( '' !== (string) $rec['watermark'] ) {
 			$rec['watermark'] = '';
-			$notes[]          = __( 'The source or the Changes only date field changed, so the watermark was cleared. The next run exports every row.', 'open-export' );
+			$notes[]          = __( 'The source or the Changes only date field changed, so Open Export forgot where the last run stopped. The next run exports every row.', 'open-export' );
 		}
 		$rec['generation'] = self::new_generation();
 	}

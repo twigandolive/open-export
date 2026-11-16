@@ -175,6 +175,7 @@
 		/* translators: %s: column name. */
 		app.append( root, [ el( 'p', { class: 'opex-h3' }, sprintf( __( 'Transform steps for %s', 'open-export' ), ctx.label( fieldId ) ) ), count, list, el( 'div', { class: 'opex-inline' }, [ addType, add, reason ] ) ] );
 
+		// Gets the steps of the column, making the list when asked to.
 		function stepsList( create ) {
 			if ( ! ctx.config.transforms[ fieldId ] && create ) {
 				ctx.config.transforms[ fieldId ] = [];
@@ -182,6 +183,7 @@
 			return ctx.config.transforms[ fieldId ] || [];
 		}
 
+		// Removes an empty steps list from the config.
 		function tidy() {
 			if ( ctx.config.transforms[ fieldId ] && ! ctx.config.transforms[ fieldId ].length ) {
 				delete ctx.config.transforms[ fieldId ];
@@ -199,6 +201,7 @@
 			( target || add ).focus();
 		}
 
+		// Draws the steps of the column and the add controls.
 		function render() {
 			app.clear( list );
 			const steps = stepsList( false );
@@ -212,6 +215,7 @@
 			reason.textContent = sprintf( __( 'A column can have at most %d steps.', 'open-export' ), max );
 		}
 
+		// Builds one step with its arguments and its move and remove buttons.
 		function stepItem( step, index, steps ) {
 			const n = index + 1;
 			const errorLine = el( 'p', { class: 'opex-field-error', id: app.uid( 'opex-err' ), hidden: true } );
@@ -235,6 +239,7 @@
 			} );
 			body.appendChild( errorLine );
 
+			// Marks the arguments of the step that have a problem.
 			function validate() {
 				const found = check( step, ctx );
 				Object.keys( controls ).forEach( ( name ) => {
@@ -253,6 +258,7 @@
 				onChange( 'transform-value' );
 			}
 
+			// Moves the step to a new position and draws the list again.
 			const move = ( to ) => {
 				const moved = steps.splice( index, 1 )[ 0 ];
 				steps.splice( to, 0, moved );
@@ -281,6 +287,7 @@
 			return item;
 		}
 
+		// Builds the input for one argument of a step.
 		function argInput( step, name, arg, validate ) {
 			let input;
 			if ( 'select' === arg.type ) {

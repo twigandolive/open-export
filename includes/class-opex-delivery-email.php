@@ -35,7 +35,7 @@ class OPEX_Delivery_Email {
 		}
 		$to = array_slice( array_values( array_unique( $to ) ), 0, self::MAX_TO );
 		if ( ! $to ) {
-			return new WP_Error( 'opex_email_to', __( 'There is no valid email address.', 'open-export' ) );
+			return new WP_Error( 'opex_email_to', __( 'The email delivery has no valid address.', 'open-export' ) );
 		}
 
 		$name   = '' !== (string) ( $job['delivery_name'] ?? '' ) ? (string) $job['delivery_name'] : (string) ( $job['label'] ?? '' );
@@ -54,7 +54,7 @@ class OPEX_Delivery_Email {
 		$subject = (string) preg_replace( '/[\r\n]+/', ' ', $subject );
 
 		/* translators: 1: export name, 2: row count, 3: file size, 4: finish time. */
-		$lines   = array( sprintf( __( 'Your export "%1$s" is finished. It has %2$s rows and is %3$s. It finished on %4$s.', 'open-export' ), self::one_line( $name ), number_format_i18n( $rows ), size_format( $size ), $when ), '' );
+		$lines   = array( sprintf( __( 'Your export "%1$s" finished on %4$s. It has %2$s rows and is %3$s.', 'open-export' ), self::one_line( $name ), number_format_i18n( $rows ), size_format( $size ), $when ), '' );
 		$attachs = array();
 		$temp    = '';
 
@@ -71,11 +71,11 @@ class OPEX_Delivery_Email {
 			$days    = (int) OPEX_Settings::get( 'link_days' );
 			$token   = OPEX_Download_Tokens::issue_saved( $job, DAY_IN_SECONDS * $days );
 			$expires = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), time() + DAY_IN_SECONDS * $days );
-			$lines[] = __( 'Download the file here:', 'open-export' );
+			$lines[] = __( 'To download the file, open this link:', 'open-export' );
 			$lines[] = OPEX_Download_Tokens::url( $job, $token );
 			$lines[] = '';
 			/* translators: %s: expiry date and time. */
-			$lines[] = sprintf( __( 'This link expires on %s.', 'open-export' ), $expires );
+			$lines[] = sprintf( __( 'The link stops working on %s.', 'open-export' ), $expires );
 		}
 
 		try {
@@ -83,7 +83,7 @@ class OPEX_Delivery_Email {
 		} finally {
 			self::remove_temp( $temp );
 		}
-		return $sent ? true : new WP_Error( 'opex_email_failed', __( 'The email was not accepted for sending.', 'open-export' ) );
+		return $sent ? true : new WP_Error( 'opex_email_failed', __( 'The mail system of the site did not accept the email. Check the email settings of the site.', 'open-export' ) );
 	}
 
 	/**

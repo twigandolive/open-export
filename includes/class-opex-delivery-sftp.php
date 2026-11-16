@@ -63,7 +63,7 @@ class OPEX_Delivery_Sftp {
 		try {
 			$probe = tempnam( get_temp_dir(), 'opex' );
 			if ( ! $probe || false === file_put_contents( $probe, 'ok' ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				return new WP_Error( 'opex_sftp_local', __( 'Could not create a local test file.', 'open-export' ) );
+				return new WP_Error( 'opex_sftp_local', __( 'Open Export could not create a local test file.', 'open-export' ) );
 			}
 			$name = 'opex-test-' . bin2hex( random_bytes( 6 ) ) . '.tmp';
 			try {
@@ -154,7 +154,7 @@ class OPEX_Delivery_Sftp {
 	 */
 	private static function open( array $d, string &$fingerprint ) {
 		if ( ! self::load_library() ) {
-			return new WP_Error( 'opex_sftp_lib', __( 'The SFTP library is missing from the plugin.', 'open-export' ) );
+			return new WP_Error( 'opex_sftp_lib', __( 'The SFTP library is missing from Open Export. Install the plugin again.', 'open-export' ) );
 		}
 		$secret = OPEX_Secrets::decrypt( (string) ( $d['secret'] ?? '' ) );
 		if ( null === $secret ) {
@@ -165,7 +165,7 @@ class OPEX_Delivery_Sftp {
 			try {
 				$credential = \phpseclib3\Crypt\PublicKeyLoader::load( $secret );
 			} catch ( Throwable $e ) {
-				return new WP_Error( 'opex_sftp_key', __( 'The private key could not be read. Keys with a passphrase are not supported.', 'open-export' ) );
+				return new WP_Error( 'opex_sftp_key', __( 'Open Export could not read the private key. It cannot use a key that has a passphrase.', 'open-export' ) );
 			}
 		}
 
@@ -177,14 +177,14 @@ class OPEX_Delivery_Sftp {
 		$fingerprint = self::fingerprint( $sftp );
 		if ( '' === $fingerprint ) {
 			$sftp->disconnect();
-			return new WP_Error( 'opex_sftp_connect', __( 'Could not connect to the server.', 'open-export' ) );
+			return new WP_Error( 'opex_sftp_connect', __( 'Open Export could not connect to the server.', 'open-export' ) );
 		}
 		$pinned = trim( (string) ( $d['host_key'] ?? '' ) );
 		if ( '' !== $pinned && ! hash_equals( $pinned, $fingerprint ) ) {
 			$sftp->disconnect();
 			return new WP_Error(
 				'opex_sftp_hostkey',
-				__( 'The server\'s identity has changed since this destination was set up. Nothing was sent, not even your password. If the server was rebuilt on purpose, reset the saved host key on the destination and test it again.', 'open-export' )
+				__( 'The server\'s identity has changed since this destination was set up. Open Export sent nothing, not even your password. If someone rebuilt the server on purpose, reset the saved fingerprint on the destination and test it again.', 'open-export' )
 			);
 		}
 
@@ -198,13 +198,13 @@ class OPEX_Delivery_Sftp {
 			$sftp->disconnect();
 			return new WP_Error(
 				'opex_sftp_login',
-				$connected ? __( 'The server refused the login.', 'open-export' ) : __( 'Could not connect to the server.', 'open-export' )
+				$connected ? __( 'The server refused the login.', 'open-export' ) : __( 'Open Export could not connect to the server.', 'open-export' )
 			);
 		}
 		$path = (string) ( $d['path'] ?? '/' );
 		if ( '' !== $path && ! $sftp->chdir( $path ) ) {
 			$sftp->disconnect();
-			return new WP_Error( 'opex_sftp_path', __( 'The remote folder was not found.', 'open-export' ) );
+			return new WP_Error( 'opex_sftp_path', __( 'Open Export could not find the remote folder.', 'open-export' ) );
 		}
 		return $sftp;
 	}
@@ -240,7 +240,7 @@ class OPEX_Delivery_Sftp {
 		$backup = '.' . $name . '.' . $tag . '.old';
 		if ( ! $sftp->rename( $name, $backup ) ) {
 			$sftp->delete( $temp );
-			return new WP_Error( 'opex_sftp_rename', __( 'The file was uploaded but could not be renamed. The server may not allow renaming files in this folder. Nothing on the server was changed.', 'open-export' ) );
+			return new WP_Error( 'opex_sftp_rename', __( 'Open Export uploaded the file but could not rename it. The server may not allow renaming files in this folder. Open Export removed the upload, so nothing on the server changed.', 'open-export' ) );
 		}
 		if ( $sftp->rename( $temp, $name ) ) {
 			$sftp->delete( $backup );

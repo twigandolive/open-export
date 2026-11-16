@@ -198,7 +198,7 @@ class RestSchedulesTest extends TestCase {
 		$s           = $this->call(
 			'POST',
 			'/schedules',
-			$this->payload( array( 'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => $hook_secret ) ) ) )
+			$this->payload( array( 'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook', 'secret' => $hook_secret ) ) ) )
 		)->get_data();
 		$id          = $s['id'];
 		$this->assertTrue( $s['delivery']['webhook']['has_secret'] );
@@ -209,7 +209,7 @@ class RestSchedulesTest extends TestCase {
 		$this->assertNotSame( '', $cipher );
 
 		// A blank secret on update keeps the stored one.
-		$upd = $this->call( 'POST', '/schedules/' . $id, array( 'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://example.com/hook' ) ) ) );
+		$upd = $this->call( 'POST', '/schedules/' . $id, array( 'delivery' => array( 'webhook' => array( 'enabled' => true, 'url' => 'https://93.184.216.34/hook' ) ) ) );
 		$this->assertSame( 200, $upd->get_status() );
 		$this->assertSame( $cipher, OPEX_Schedules::get( $id )['delivery']['webhook']['secret'] );
 

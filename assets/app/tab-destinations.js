@@ -45,7 +45,7 @@
 			warnings.push( ui.notice( 'warning', __( 'The PHP ftp extension is not installed on this server, so FTP and FTPS destinations cannot send files. SFTP still works.', 'open-export' ), { role: 'note' } ) );
 		}
 		if ( false === features.sodium ) {
-			warnings.push( ui.notice( 'warning', __( 'This server cannot store passwords safely because the PHP sodium extension is missing. Destinations cannot be saved until it is installed.', 'open-export' ), { role: 'note' } ) );
+			warnings.push( ui.notice( 'warning', __( 'This server cannot store passwords safely because the PHP sodium extension is missing. You cannot save destinations until it is installed.', 'open-export' ), { role: 'note' } ) );
 		}
 
 		app.append( panel, [
@@ -59,6 +59,7 @@
 			formBox,
 		] );
 
+		// Shows a message above the list.
 		function say( type, text ) {
 			app.clear( messages );
 			if ( text ) {
@@ -66,10 +67,12 @@
 			}
 		}
 
+		// Returns the saved destinations.
 		function list() {
 			return store.get( 'destinations' );
 		}
 
+		// Returns the name of a destination type.
 		function typeLabel( id ) {
 			const found = types.find( ( item ) => item.id === id );
 			return found ? found.label : String( id || '' ).toUpperCase();
@@ -84,6 +87,7 @@
 			return notes;
 		}
 
+		// Reads the saved destinations from the server.
 		function load() {
 			loadError = null;
 			render();
@@ -95,6 +99,7 @@
 			} );
 		}
 
+		// Draws the list, a loading state or the empty state.
 		function render() {
 			const items = list();
 			app.clear( listBox );
@@ -119,6 +124,7 @@
 			listBox.appendChild( table( items ) );
 		}
 
+		// Builds the table of saved destinations.
 		function table( items ) {
 			// The Last test column needs last_test, which an older server does not send. Without it the column is left out.
 			const withTest = items.some( ( item ) => Object.prototype.hasOwnProperty.call( item, 'last_test' ) );
@@ -162,6 +168,7 @@
 			return t.root;
 		}
 
+		// Opens the form to add or edit a destination.
 		function openForm( record, from ) {
 			opener = from || addButton;
 			editingId = record ? record.id : null;
@@ -177,6 +184,7 @@
 			form.focus();
 		}
 
+		// Closes the form and puts focus back where it was.
 		function closeForm() {
 			form = null;
 			editingId = null;
@@ -200,6 +208,7 @@
 			}
 		}
 
+		// Puts a saved destination into the list, in place.
 		function upsert( record ) {
 			editingId = record.id;
 			// Replace in place so a saved row keeps its position in the list.
@@ -219,7 +228,7 @@
 			const yes = await ui.confirm( {
 				title: __( 'Delete this destination?', 'open-export' ),
 				/* translators: %s: destination name. */
-				message: sprintf( __( '%s will be deleted. Exports and schedules that send files to it will stop sending there.', 'open-export' ), name ),
+				message: sprintf( __( 'This deletes %s. Exports and schedules that send files to it stop sending there.', 'open-export' ), name ),
 				confirmLabel: __( 'Delete', 'open-export' ),
 				danger: true,
 			} );

@@ -153,7 +153,7 @@ class OPEX_Admin {
 		<div class="wrap opex-wrap">
 			<div id="opex-app">
 				<p><?php esc_html_e( 'Loading Open Export…', 'open-export' ); ?></p>
-				<noscript><?php esc_html_e( 'Open Export needs JavaScript enabled.', 'open-export' ); ?></noscript>
+				<noscript><?php esc_html_e( 'Open Export needs JavaScript. Turn it on in your browser.', 'open-export' ); ?></noscript>
 			</div>
 		</div>
 		<?php

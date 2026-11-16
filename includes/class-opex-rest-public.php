@@ -373,7 +373,7 @@ class OPEX_Rest_Public {
 	 * @return WP_Error
 	 */
 	private static function failed(): WP_Error {
-		return new WP_Error( 'opex_failed', __( 'The export could not run.', 'open-export' ), array( 'status' => 500 ) );
+		return new WP_Error( 'opex_failed', __( 'Open Export could not run the export.', 'open-export' ), array( 'status' => 500 ) );
 	}
 
 	/**

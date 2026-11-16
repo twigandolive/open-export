@@ -33,7 +33,7 @@ class OPEX_Recipe_Rules {
 		);
 		if ( $depth > OPEX_Filter_Tree::MAX_DEPTH ) {
 			$row['status'] = 'dropped';
-			$row['reason'] = __( 'Filter groups can be nested three levels deep. This one is deeper.', 'open-export' );
+			$row['reason'] = __( 'Filter groups can nest only three levels deep. This one is deeper.', 'open-export' );
 			return array( $row, null );
 		}
 
@@ -59,7 +59,7 @@ class OPEX_Recipe_Rules {
 
 		if ( ! $kept ) {
 			$row['status'] = 'dropped';
-			$row['reason'] = __( 'No rule in this group can be used, so the group was left out.', 'open-export' );
+			$row['reason'] = __( 'Open Export left out this group because none of its rules can be used.', 'open-export' );
 			return array( $row, null );
 		}
 		$row['status'] = 'matched';
@@ -95,7 +95,7 @@ class OPEX_Recipe_Rules {
 		}
 		if ( ! OPEX_Query::is_valid_op( $op ) ) {
 			$row['status']     = 'dropped';
-			$row['reason']     = __( 'Unsupported operator.', 'open-export' );
+			$row['reason']     = __( 'Open Export does not know this operator.', 'open-export' );
 			$row['suggestion'] = OPEX_Schema::suggest( $op, OPEX_Query::ops() );
 			return array( $row, null );
 		}

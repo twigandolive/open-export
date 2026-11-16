@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R1-4.3 and R1-4.4 for SFTP: a failed rename never deletes the file
+ * SFTP: a failed rename never deletes the file
  * already on the server, and a host key is pinned only onto the server
  * that produced it.
  *
@@ -155,7 +155,7 @@ class CodexDeliverySftpTest extends TestCase {
 		$this->start( 'part' );
 		$res = $this->send_over_old_file();
 		$this->assertInstanceOf( WP_Error::class, $res );
-		$this->assertStringContainsString( 'The old file was kept', $res->get_error_message() );
+		$this->assertStringContainsString( 'It kept the old file', $res->get_error_message() );
 		$this->assertSame( 'old export', file_get_contents( $this->server->dir . '/root/in/Orders-May.csv' ) );
 		$this->assertSame( array( 'Orders-May.csv' ), $this->listing() );
 	}

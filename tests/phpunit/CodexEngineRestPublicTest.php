@@ -1,6 +1,6 @@
 <?php
 /**
- * R1-5.4: the trigger URL's wrong-key counters and its start gap are read
+ * The trigger URL's wrong-key counters and its start gap are read
  * and written under a lock, so requests at the same moment cannot lose a
  * count or both start. The other request is played inside a filter that
  * fires at the moment it would run, and it takes the same lock a real

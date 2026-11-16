@@ -30,6 +30,7 @@
 		app.append( panel, [ settingsCard.root, serverCard.root ] );
 		serverCard.body.appendChild( serverList( ( store.get( 'options' ) || {} ).features || {} ) );
 
+		// Reads the settings from the server and builds the form.
 		function load() {
 			app.clear( settingsCard.body ).appendChild( ui.skeleton( 3 ) );
 			api.get( '/settings' ).then( ( saved ) => {
@@ -68,7 +69,7 @@
 				label: __( 'Keep finished exports', 'open-export' ),
 				control: el( 'div', { class: 'opex-inline' }, [ keep, el( 'span', {}, __( 'days', 'open-export' ) ) ] ),
 				input: keep,
-				help: __( 'From 1 to 365 days. Older exports and their files are removed by the hourly cleanup.', 'open-export' ),
+				help: __( 'From 1 to 365 days. The hourly cleanup removes older exports and their files.', 'open-export' ),
 			} ),
 			link_days: ui.field( {
 				label: __( 'Download links work for', 'open-export' ),
@@ -95,6 +96,7 @@
 		// The row label names the group, so the help is tied to the box itself.
 		keepData.setAttribute( 'aria-describedby', rows.keep_data_on_uninstall.help.id );
 
+		// Reads a number field and marks it when it is out of range.
 		function readNumber( input, key ) {
 			const raw = input.value.trim();
 			const n = Number( raw );
@@ -108,6 +110,7 @@
 			return n;
 		}
 
+		// Checks and saves the settings.
 		async function submit( event ) {
 			event.preventDefault();
 			const data = {
@@ -168,11 +171,11 @@
 	function serverList( f ) {
 		const ok = __( 'Available', 'open-export' );
 		const lines = [
-			[ f.zip, __( 'Excel export (zip)', 'open-export' ), f.zip ? __( 'Available.', 'open-export' ) : __( 'Not available. The PHP zip extension is missing, so Excel files cannot be made.', 'open-export' ) ],
+			[ f.zip, __( 'Excel export (zip)', 'open-export' ), f.zip ? __( 'Available.', 'open-export' ) : __( 'Not available. The PHP zip extension is missing, so Open Export cannot make Excel files.', 'open-export' ) ],
 			[ f.ftp, __( 'FTP and FTPS', 'open-export' ), f.ftp ? __( 'Available.', 'open-export' ) : __( 'Not available. The PHP ftp extension is missing. SFTP still works.', 'open-export' ) ],
-			[ f.sodium, __( 'Encrypted secrets', 'open-export' ), f.sodium ? __( 'Available. Passwords, keys and webhook secrets are stored encrypted.', 'open-export' ) : __( 'Not available. The PHP sodium extension is missing, so passwords and secrets cannot be saved.', 'open-export' ) ],
+			[ f.sodium, __( 'Encrypted secrets', 'open-export' ), f.sodium ? __( 'Available. Open Export stores passwords, keys and webhook secrets encrypted.', 'open-export' ) : __( 'Not available. The PHP sodium extension is missing, so Open Export cannot save passwords and secrets.', 'open-export' ) ],
 			[ ! f.cron_disabled, __( 'Scheduled runs (WP-Cron)', 'open-export' ), f.cron_disabled ? __( 'WP-Cron is turned off on this site. Scheduled and background exports need a real cron job.', 'open-export' ) : __( 'On. Scheduled and background exports run on their own.', 'open-export' ) ],
-			[ null, __( 'WooCommerce', 'open-export' ), f.woocommerce ? __( 'Active.', 'open-export' ) : __( 'Not active. WooCommerce exports are not offered.', 'open-export' ) ],
+			[ null, __( 'WooCommerce', 'open-export' ), f.woocommerce ? __( 'Active.', 'open-export' ) : __( 'Not active, so Open Export does not offer WooCommerce exports.', 'open-export' ) ],
 			[ null, __( 'Multisite', 'open-export' ), f.multisite ? __( 'On. This site is part of a network.', 'open-export' ) : __( 'Off. This is a single site.', 'open-export' ) ],
 		];
 		return el( 'ul', { class: 'opex-status-list', 'aria-label': __( 'This server', 'open-export' ) }, lines.map( ( line ) => {

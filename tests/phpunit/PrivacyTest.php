@@ -33,7 +33,7 @@ class PrivacyTest extends TestCase {
 		return $prop->getValue();
 	}
 
-	/** Fire only our admin_init callback, not every plugin's. */
+	/** Fire only the Open Export admin_init callback, not every plugin's. */
 	private function fire_admin_init(): void {
 		global $wp_filter;
 		require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';

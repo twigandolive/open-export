@@ -312,7 +312,7 @@ class WooProductCsvPresetTest extends WooSourceCase {
 	/** The product field reads _global_unique_id and has a label people know. */
 	public function test_gtin_field(): void {
 		$labels = OPEX_Catalog::field_ids( 'woo:products' );
-		$this->assertSame( 'GTIN, UPC, EAN or ISBN', $labels['woo:global_unique_id'] );
+		$this->assertSame( 'GTIN, UPC, EAN, or ISBN', $labels['woo:global_unique_id'] );
 		update_post_meta( $this->ids['draft'], '_global_unique_id', '9780306406157' );
 		$values = $this->pluck(
 			'woo:products',

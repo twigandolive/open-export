@@ -51,7 +51,7 @@ class DeliveryEmailTest extends TestCase {
 		$m = $this->mail[0];
 		$this->assertSame( array( 'a@example.com', 'b@example.com' ), $m['to'] );
 		$this->assertStringContainsString( 'Orders May', $m['subject'] );
-		$this->assertStringContainsString( 'This link expires on', $m['message'] );
+		$this->assertStringContainsString( 'The link stops working on', $m['message'] );
 		$this->assertStringContainsString( '2', $m['message'] );
 		$this->assertSame( array(), $m['attachments'] );
 		$this->assertSame( 1, preg_match( '/token=([0-9a-f]{64})/', urldecode( $m['message'] ), $mm ) );

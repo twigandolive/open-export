@@ -69,7 +69,7 @@
 					/* translators: %s: schedule name. */
 					? sprintf( __( '%s is on.', 'open-export' ), saved.name )
 					/* translators: %s: schedule name. */
-					: sprintf( __( '%s is off. It runs only when started by hand or by its trigger URL.', 'open-export' ), saved.name ) );
+					: sprintf( __( '%s is off. It runs only when you start it, or when something calls its trigger URL.', 'open-export' ), saved.name ) );
 			} catch ( err ) {
 				switching.delete( s.id );
 				// Show what the server has: the last saved answer, or the state before the first write.
@@ -82,6 +82,7 @@
 			}
 		}
 
+		// Starts a run of the schedule now.
 		async function run( s ) {
 			const card = cards.get( s.id );
 			card.setRunBusy( true );
@@ -113,6 +114,7 @@
 			}
 		}
 
+		// Reads one schedule again and its last run.
 		function refreshOne( id ) {
 			return api.get( '/schedules/' + encodeURIComponent( id ) ).then( ( saved ) => {
 				put( saved );
@@ -164,6 +166,7 @@
 		}
 
 		const checking = new Set();
+		// Reads the export of a schedule's run once.
 		function fetchJob( jobId, sid ) {
 			if ( checking.has( jobId ) ) {
 				return;
@@ -182,6 +185,7 @@
 			} );
 		}
 
+		// Saves a copy of the schedule, turned off.
 		async function duplicate( s ) {
 			const copyName = sprintf(
 				/* translators: %s: name of the schedule that was copied. */
@@ -212,10 +216,10 @@
 				delete saved.notes;
 				put( saved );
 				if ( lostSecret ) {
-					notes.push( __( 'The webhook secret is never shown, so it was not copied. Enter it on the copy.', 'open-export' ) );
+					notes.push( __( 'Open Export never shows the webhook secret, so it did not copy it. Enter the secret on the copy.', 'open-export' ) );
 				}
 				/* translators: %s: name of the new schedule. */
-				say( notes.length ? 'warning' : 'success', sprintf( __( 'Made %s. It starts switched off.', 'open-export' ), saved.name ), notes );
+				say( notes.length ? 'warning' : 'success', sprintf( __( 'Made %s. It starts turned off.', 'open-export' ), saved.name ), notes );
 				focusCard( saved.id, 'edit' );
 			} catch ( err ) {
 				fail( err );

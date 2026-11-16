@@ -24,7 +24,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * WooCommerce orders, on either storage, and the helpers the other WooCommerce sources share.
+ * WooCommerce orders, on either storage, and the code the other WooCommerce sources share.
  */
 class OPEX_Woo {
 
@@ -56,7 +56,7 @@ class OPEX_Woo {
 	 * 6.8 and is the only supported way to ask. Older WooCommerce predates HPOS
 	 * entirely, so "not available" correctly means legacy. In compatibility mode
 	 * both stores are kept in sync and this returns whichever WooCommerce treats
-	 * as canonical, which is the one we want to read.
+	 * as canonical, which is the one Open Export should read.
 	 *
 	 * @return bool True when orders live in the custom order tables.
 	 */

@@ -32,16 +32,18 @@
 		const tplSelect = el( 'select', { 'aria-label': __( 'Saved templates', 'open-export' ) } );
 		const tplLoad = ui.button( { label: __( 'Load', 'open-export' ), small: true, onClick: loadTemplate } );
 		const tplDelete = ui.linkButton( { label: __( 'Delete', 'open-export' ), danger: true, onClick: deleteTemplate } );
-		const presetSelect = el( 'select', { 'aria-label': __( 'Feed presets for stores', 'open-export' ) } );
+		const presetSelect = el( 'select', { 'aria-label': __( 'Feed preset', 'open-export' ) } );
 		const presetLoad = ui.button( { label: __( 'Load', 'open-export' ), small: true, onClick: loadPreset } );
 		const presetHelp = el( 'p', { class: 'opex-help opex-preset-help', 'aria-live': 'polite' } );
 		const presetBox = el( 'span', { class: 'opex-inline', hidden: true }, [ presetSelect, presetLoad ] );
 		let presets = [];
 
+		// Returns the saved templates.
 		function templates() {
 			return store.get( 'templates' ) || [];
 		}
 
+		// Fills the saved templates select.
 		function fillTemplates() {
 			const list = templates();
 			const keep = tplSelect.value;
@@ -56,6 +58,7 @@
 		}
 		store.subscribe( 'templates', fillTemplates );
 
+		// Reads the saved templates from the server.
 		function loadTemplates() {
 			return app.api.get( '/templates' ).then( ( list ) => store.set( 'templates', Array.isArray( list ) ? list : [] ) ).catch( ( err ) => {
 				if ( ! err.session ) {
@@ -64,10 +67,12 @@
 			} );
 		}
 
+		// Returns the template chosen in the select.
 		function picked() {
 			return templates().find( ( t ) => t.id === tplSelect.value ) || null;
 		}
 
+		// Loads the chosen template into the builder.
 		function loadTemplate() {
 			const t = picked();
 			if ( ! t ) {
@@ -80,6 +85,7 @@
 			o.say( 'success', sprintf( __( 'Loaded the template %s.', 'open-export' ), t.name ) );
 		}
 
+		// Asks first, then deletes the chosen template.
 		function deleteTemplate() {
 			const t = picked();
 			if ( ! t ) {
@@ -90,7 +96,7 @@
 			ui.confirm( {
 				title: __( 'Delete this template?', 'open-export' ),
 				/* translators: %s: template name. */
-				message: sprintf( __( 'The template %s will be deleted. Exports made from it are not affected.', 'open-export' ), t.name ),
+				message: sprintf( __( 'This deletes the template %s. Exports made from it stay as they are.', 'open-export' ), t.name ),
 				confirmLabel: __( 'Delete', 'open-export' ),
 				danger: true,
 			} ).then( ( yes ) => {
@@ -110,6 +116,7 @@
 			} );
 		}
 
+		// Loads the chosen feed preset into the builder.
 		function loadPreset() {
 			const p = presets.find( ( item ) => item.id === presetSelect.value );
 			if ( ! p ) {

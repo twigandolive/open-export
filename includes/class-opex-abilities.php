@@ -65,7 +65,7 @@ class OPEX_Abilities {
 		wp_register_ability(
 			'open-export/get-schema',
 			array(
-				'label'               => __( 'Get the export schema', 'open-export' ),
+				'label'               => __( 'Get the site schema', 'open-export' ),
 				'description'         => __( 'Describes what this site can export: sources, fields, filter operators and date presets. Returns no row data and starts no export.', 'open-export' ),
 				'category'            => self::CATEGORY,
 				'input_schema'        => array(
@@ -85,7 +85,7 @@ class OPEX_Abilities {
 				),
 				'output_schema'       => array(
 					'type'        => 'object',
-					'description' => __( 'The schema document.', 'open-export' ),
+					'description' => __( 'The site schema.', 'open-export' ),
 					'properties'  => array(
 						'opex_schema'    => array( 'type' => 'integer' ),
 						'plugin'         => array( 'type' => 'string' ),

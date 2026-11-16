@@ -1,12 +1,11 @@
 <?php
 /**
- * Codex round 1 fixes in the ACF sources: R1-3.1 (rules inside one location
- * group all apply), R1-3.4 (a row limit cut gets a job note) and R1-3.5 (the
- * users scan keeps to the site's members).
+ * The ACF sources: rules inside one location group all apply, a row limit
+ * cut gets a job note, and the users scan keeps to the site's members.
  *
  * The location checks need nothing. The others need ACF or Secure Custom
  * Fields and skip without it. The members check needs a multisite network
- * and skips on a single site: run it on the multisite lane with
+ * and skips on a single site: run it on a multisite test site with
  * OPEX_TEST_SITE=<multisite site> tests/bin/test.sh --filter CodexSource
  *
  * @package Open_Export
@@ -103,7 +102,7 @@ class CodexSourceAcfTest extends TestCase {
 		OPEX_Acf::reset();
 	}
 
-	/** R1-3.1: every rule in one group must fit the source. Groups are OR. */
+	/** Every rule in one group must fit the source. Groups are OR. */
 	public function test_rules_in_one_group_all_apply(): void {
 		$posts = array( 'type' => 'posts', 'post_type' => 'post' );
 		$pages = array( 'type' => 'posts', 'post_type' => 'page' );
@@ -132,7 +131,7 @@ class CodexSourceAcfTest extends TestCase {
 		$this->assertFalse( OPEX_Acf_Location::applies( array( array( $this->rule( 'user_form', 'all' ) ) ), $posts ) );
 	}
 
-	/** R1-3.1: with ACF, pages get the page definition of a shared field name. */
+	/** With ACF, pages get the page definition of a shared field name. */
 	public function test_pages_get_their_own_definition(): void {
 		$this->needs_acf();
 		$this->group( 'group_opexb1_a_post', array( array( $this->rule( 'post_type', 'post' ), $this->rule( 'post_status', 'publish' ) ) ), 'opexb1_sections', array( 'post_sub' ) );
@@ -145,7 +144,7 @@ class CodexSourceAcfTest extends TestCase {
 		$this->assertSame( array( 'post_sub' ), OPEX_Acf::sub_names( $post ) );
 	}
 
-	/** R1-3.4: a field cut at the row limit keeps 1000 rows and names itself in a job note. */
+	/** A field cut at the row limit keeps 1000 rows and names itself in a job note. */
 	public function test_row_limit_cut_gets_a_note(): void {
 		$this->needs_acf();
 		$location = array( array( $this->rule( 'post_type', 'post' ) ) );
@@ -196,7 +195,7 @@ class CodexSourceAcfTest extends TestCase {
 		$this->assertStringNotContainsString( 'opexb1_few', $text, 'a field under the limit is not named' );
 	}
 
-	/** R1-3.5: on a network, a site admin's spread plan counts only the site's members. */
+	/** On a network, a site admin's spread plan counts only the site's members. */
 	public function test_spread_plan_counts_only_members(): void {
 		if ( ! is_multisite() ) {
 			$this->markTestSkipped( 'Site membership exists only on a multisite network. Run this on the multisite lane.' );

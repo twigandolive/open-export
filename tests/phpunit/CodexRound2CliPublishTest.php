@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R2-1.4: on a filesystem without hard links, --output is still never
+ * On a filesystem without hard links, --output is still never
  * written in place. The finished temporary copy is renamed into the final
  * path, so no reader sees a half-written file.
  *

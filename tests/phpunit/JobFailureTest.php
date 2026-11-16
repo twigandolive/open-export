@@ -79,7 +79,7 @@ class JobFailureTest extends TestCase {
 		$this->assertSame( 'error', $out['status'] );
 		$this->assertStringNotContainsString( '/srv/secret', $out['error'] );
 		$this->assertStringNotContainsString( '/srv/secret', OPEX_Jobs::get( $job['id'] )['error'] );
-		$this->assertSame( __( 'Export failed. Try resuming or starting a new export.', 'open-export' ), $out['error'] );
+		$this->assertSame( __( 'The export failed. Resume it, or start a new export.', 'open-export' ), $out['error'] );
 	}
 
 	public function test_a_message_written_for_people_reaches_them() {

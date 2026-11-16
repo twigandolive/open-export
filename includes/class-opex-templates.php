@@ -47,7 +47,7 @@ class OPEX_Templates {
 	public static function save( string $name, array $config ) {
 		$name = sanitize_text_field( $name );
 		if ( '' === $name ) {
-			return new WP_Error( 'opex_tpl_name', __( 'Template name is required.', 'open-export' ), array( 'status' => 400 ) );
+			return new WP_Error( 'opex_tpl_name', __( 'Give the template a name.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
 		$config = OPEX_Exporter::sanitize_config( $config );

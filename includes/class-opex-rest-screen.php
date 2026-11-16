@@ -87,7 +87,7 @@ class OPEX_Rest_Screen {
 	public static function reset_watermark( WP_REST_Request $request ) {
 		$saved = OPEX_Schedules::reset_watermark( (string) $request['id'] );
 		if ( ! $saved ) {
-			return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That schedule does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 		return rest_ensure_response( OPEX_Schedules::expose( $saved ) );
 	}
@@ -118,8 +118,8 @@ class OPEX_Rest_Screen {
 			'gte'          => '≥',
 			'lt'           => '<',
 			'lte'          => '≤',
-			'in'           => __( 'is one of (comma list)', 'open-export' ),
-			'not_in'       => __( 'is not one of (comma list)', 'open-export' ),
+			'in'           => __( 'is one of (separate with commas)', 'open-export' ),
+			'not_in'       => __( 'is not one of (separate with commas)', 'open-export' ),
 			'empty'        => __( 'is empty', 'open-export' ),
 			'not_empty'    => __( 'is not empty', 'open-export' ),
 		);

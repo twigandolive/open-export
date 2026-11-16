@@ -127,12 +127,12 @@ class OPEX_CLI {
 	}
 
 	/**
-	 * Lists export jobs, newest first.
+	 * Lists exports, newest first.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--status=<status>]
-	 * : Only show jobs with this status, for example running, done, error or paused.
+	 * : Only show exports with this status, for example running, done, error or paused.
 	 *
 	 * [--format=<format>]
 	 * : How to print the list. One of: table, json, csv, ids, count.
@@ -180,7 +180,7 @@ class OPEX_CLI {
 	 * Finds the target by exact id first, then by exact name. A name that
 	 * matches more than one template or schedule is an error that lists the ids.
 	 * A schedule starts as if triggered from the command line, so its delivery
-	 * and incremental settings apply. Exit code 0 on success, 1 on any failure.
+	 * and Changes only settings apply. Exit code 0 on success, 1 on any failure.
 	 * A failed delivery is a failure too: the command prints the file path and
 	 * each delivery error, then exits with code 1. The delivery is still tried
 	 * again later, as for any export.
@@ -203,10 +203,10 @@ class OPEX_CLI {
 	 * that appears at that path while the export runs is not replaced either.
 	 *
 	 * [--since=<datetime>]
-	 * : Only export rows newer than this site-time value, as YYYY-MM-DD or
-	 * YYYY-MM-DD HH:MM:SS. It is passed to the job as its "since" on the
-	 * first date field of the template's source, and the export keeps only
-	 * rows whose date is after it. Not allowed for a schedule, which keeps its own watermark.
+	 * : Only export rows newer than this site-time value, written as YYYY-MM-DD
+	 * or YYYY-MM-DD HH:MM:SS. The value applies to the first date field of the
+	 * template's source, and the export keeps only rows whose date is after it.
+	 * Not allowed for a schedule, which keeps track of its own last run.
 	 *
 	 * [--network]
 	 * : On a multisite network, export the template from every public site
@@ -249,7 +249,7 @@ class OPEX_CLI {
 					$config['format'] = $wanted;
 					$config           = $this->sanitized( $config );
 					if ( $wanted !== $config['format'] ) {
-						WP_CLI::error( sprintf( 'The export engine does not accept the %s format on this site.', $wanted ) );
+						WP_CLI::error( sprintf( 'Open Export cannot write the %s format on this site.', $wanted ) );
 					}
 				}
 				if ( ! empty( $assoc_args['network'] ) ) {
@@ -273,7 +273,7 @@ class OPEX_CLI {
 	/**
 	 * Runs a one-off export from a JSON file.
 	 *
-	 * The file holds either an export config or an assistant recipe (it has an
+	 * The file holds either an export config or an AI recipe (it has an
 	 * "opex_recipe" key). Notes about a recipe print as warnings. Exit code 0
 	 * on success, 1 on any failure.
 	 *
@@ -306,11 +306,11 @@ class OPEX_CLI {
 			$dest = OPEX_CLI_Runner::check_output( $assoc_args );
 			$path = (string) ( $assoc_args['config'] ?? '' );
 			if ( '' === $path ) {
-				WP_CLI::error( 'Pass --config=<file>, or --config=- to read STDIN.' );
+				WP_CLI::error( 'Add --config=<file>, or --config=- to read the JSON from STDIN.' );
 			}
 			$json = '-' === $path ? stream_get_contents( STDIN ) : ( is_readable( $path ) ? file_get_contents( $path ) : false ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file the shell user named.
 			if ( ! is_string( $json ) ) {
-				WP_CLI::error( 'Could not read the config.' );
+				WP_CLI::error( 'Could not read the config file.' );
 			}
 			$data = json_decode( $json, true );
 			if ( ! is_array( $data ) ) {
@@ -343,7 +343,7 @@ class OPEX_CLI {
 	}
 
 	/**
-	 * Prints the capability document as JSON on STDOUT.
+	 * Prints the site schema as JSON on STDOUT.
 	 *
 	 * ## OPTIONS
 	 *
@@ -369,8 +369,8 @@ class OPEX_CLI {
 	/**
 	 * Runs the maintenance sweep and reports what it removed.
 	 *
-	 * Removes expired jobs and their files, restarts stalled background jobs,
-	 * re-arms schedules and sends pending deliveries.
+	 * Removes expired exports and their files, restarts stalled background
+	 * exports, sets the next run of each schedule and sends pending deliveries.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -387,7 +387,7 @@ class OPEX_CLI {
 			// The other steps still ran. The first error says what stopped one of them.
 			OPEX_CLI_Runner::fail_on_exception( $errors[0] );
 		}
-		WP_CLI::success( sprintf( 'Maintenance finished. Removed %d expired job(s).', $removed ) );
+		WP_CLI::success( sprintf( 'Maintenance finished. Removed %d expired export(s).', $removed ) );
 	}
 
 	/**

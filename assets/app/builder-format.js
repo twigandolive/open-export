@@ -13,8 +13,7 @@
  * is a zip already. It is off with a reason when /options features.compress
  * is false.
  *
- * Speed writes batch_size. The three choices are the old screen's batch
- * sizes. A loaded config with another size keeps it as a fourth choice.
+ * Speed writes batch_size: 100, 400 or 2000 rows per batch. A loaded config with another size keeps it as a fourth choice.
  */
 ( function () {
 	'use strict';
@@ -97,6 +96,7 @@
 			ctx.changed( 'format' );
 		} ) );
 
+		// Builds a select for a CSV option that writes its key on change.
 		const select = ( items, key ) => {
 			const node = el( 'select', {}, items.map( ( item ) => el( 'option', { value: item.id }, item.label ) ) );
 			node.addEventListener( 'change', () => {
@@ -126,7 +126,7 @@
 			ui.field( { label: __( 'Line endings', 'open-export' ), control: eol } ).root,
 			enclosures.length ? ui.field( { label: __( 'Quote character', 'open-export' ), control: enclosure } ).root : null,
 			el( 'label', { class: 'opex-checkline' }, [ quoteAll, __( 'Quote every cell', 'open-export' ) ] ),
-			el( 'p', { class: 'opex-help' }, __( 'Without this, only cells that hold the delimiter, a quote, a space or a line break are quoted.', 'open-export' ) ),
+			el( 'p', { class: 'opex-help' }, __( 'Without this, Open Export quotes only the cells that hold the delimiter, a quote, a space or a line break.', 'open-export' ) ),
 		] );
 
 		// Zip compression of the finished file.
@@ -142,7 +142,7 @@
 		const zipBox = el( 'fieldset', { class: 'opex-optgroup' }, [
 			el( 'legend', {}, __( 'Compression', 'open-export' ) ),
 			el( 'label', { class: 'opex-checkline' }, [ zip, __( 'Compress the finished file as a zip', 'open-export' ) ] ),
-			el( 'p', { class: 'opex-help' }, __( 'The download, email attachment, webhook link and server upload get one .zip file that holds the export.', 'open-export' ) ),
+			el( 'p', { class: 'opex-help' }, __( 'The download, email attachment, webhook link and destination upload all get one .zip file that holds the export.', 'open-export' ) ),
 			canZip ? null : el( 'p', { class: 'opex-choice-reason', id: zipReasonId }, [ app.icon( 'warning', { sm: true, cls: 'opex-c-warning' } ), zipReason ] ),
 		] );
 
@@ -189,7 +189,7 @@
 		const xmlBox = el( 'fieldset', { class: 'opex-optgroup' }, [
 			el( 'legend', {}, __( 'XML options', 'open-export' ) ),
 			el( 'label', { class: 'opex-checkline' }, [ useTemplate, __( 'Use a custom XML template', 'open-export' ) ] ),
-			el( 'p', { class: 'opex-help' }, __( 'Without a template, each record is written in the default XML layout.', 'open-export' ) ),
+			el( 'p', { class: 'opex-help' }, __( 'Without a template, Open Export writes each record in the default XML layout.', 'open-export' ) ),
 			areaBox,
 		] );
 
@@ -209,6 +209,7 @@
 			}
 		} );
 
+		// Shows an error when one part of the XML template is too long.
 		function checkPart( part ) {
 			const value = ctx.config.xml_template[ part ] || '';
 			/* translators: %s: most characters. */
@@ -225,6 +226,7 @@
 			return text;
 		}
 
+		// Asks the server to check the XML template and shows the result.
 		function checkTemplate() {
 			app.clear( errorBox );
 			if ( ! ctx.config.xml_template.row.trim() ) {
@@ -247,6 +249,7 @@
 			} );
 		}
 
+		// Shows the template parts when a custom XML template is on.
 		function syncXml() {
 			const t = ctx.config.xml_template;
 			const on = !! ( t.header || t.row || t.footer ) || ( useTemplate.checked && ! stash );
@@ -263,6 +266,7 @@
 
 		const speedList = speeds();
 		const speedBox = el( 'div', { class: 'opex-speed' } );
+		// Draws the speed choices, plus the saved batch size when it is not one of them.
 		function renderSpeed() {
 			app.clear( speedBox );
 			const list = speedList.slice();
@@ -283,9 +287,10 @@
 		const speedFieldset = el( 'fieldset', { class: 'opex-optgroup' }, [
 			el( 'legend', {}, __( 'Speed', 'open-export' ) ),
 			speedBox,
-			el( 'p', { class: 'opex-help' }, __( 'How many rows each step reads. Smaller steps are gentler on the server.', 'open-export' ) ),
+			el( 'p', { class: 'opex-help' }, __( 'How many rows each batch reads. Smaller batches are gentler on the server.', 'open-export' ) ),
 		] );
 
+		// Shows only the options of the chosen format.
 		function syncVisible() {
 			csvBox.hidden = 'csv' !== ctx.config.format;
 			xmlBox.hidden = 'xml' !== ctx.config.format;

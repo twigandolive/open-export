@@ -78,6 +78,7 @@
 		app.append( root, [ tabs.list, top, stage ] );
 		wrap.appendChild( footer() );
 
+		// Shows a tab, building it the first time it opens.
 		function open( id ) {
 			if ( active && mounted[ active ] && mounted[ active ].hide ) {
 				mounted[ active ].hide();
@@ -118,6 +119,7 @@
 			root.setAttribute( 'aria-hidden', 'true' );
 		} );
 
+		// Reads the options from the server, then builds the tabs.
 		function boot() {
 			app.clear( stage ).appendChild( ui.skeleton( 5 ) );
 			tabs.list.hidden = true;

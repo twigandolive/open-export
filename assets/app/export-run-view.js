@@ -73,6 +73,7 @@
 		] );
 		const keys = {};
 
+		// Tells whether a part of the view changed since it was last drawn.
 		function changedKey( part, value ) {
 			const key = JSON.stringify( value );
 			if ( keys[ part ] === key ) {
@@ -82,6 +83,7 @@
 			return true;
 		}
 
+		// Builds the buttons that fit the export's status.
 		function buildButtons( next, driving ) {
 			const list = [];
 			if ( 'done' === next.status ) {
@@ -115,6 +117,7 @@
 			}
 		}
 
+		// Updates the view for the export's latest state.
 		function update( next, driving ) {
 			progress.update( next );
 			let text = sprintf(
@@ -167,6 +170,7 @@
 			}
 		}
 
+		// Shows a message in the progress view.
 		function say( text, type ) {
 			app.clear( message );
 			if ( text ) {

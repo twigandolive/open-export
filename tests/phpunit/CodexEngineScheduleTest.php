@@ -1,10 +1,9 @@
 <?php
 /**
- * Schedule fixes from the Codex review: R1-1.3 (the start time is taken
- * before the count), R1-1.4 (the watermark follows its source, field and
- * generation), R1-1.6 (a start that lost its lock saves no job), R1-1.10
- * (daylight-saving times in both directions) and R1-1.11 (the incremental
- * field must be a date field of the source).
+ * Schedules: the start time is taken before the count, the watermark
+ * follows its source, field and generation, a start that lost its lock saves
+ * no job, daylight-saving changes work in both directions, and the Changes
+ * only field must be a date field of the source.
  *
  * @package Open_Export
  */
@@ -177,7 +176,7 @@ class CodexEngineScheduleTest extends TestCase {
 		$this->assertIsArray( $moved );
 		$this->assertSame( '', $moved['watermark'] );
 		$this->assertCount( 1, $notes );
-		$this->assertStringContainsString( 'watermark was cleared', $notes[0] );
+		$this->assertStringContainsString( 'Open Export forgot where the last run stopped', $notes[0] );
 		$this->assertArrayNotHasKey( 'generation', OPEX_Schedules::expose( $moved ), 'The generation is never shown.' );
 	}
 

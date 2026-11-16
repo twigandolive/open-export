@@ -1,10 +1,10 @@
 <?php
 /**
- * Codex R2-3.1: a CSV record that cannot be built throws, instead of adding
- * an empty record to the file. Codex R2-3.3: a spread ACF column whose sub
+ * A CSV record that cannot be built throws, instead of adding an empty
+ * record to the file. A spread ACF column whose sub
  * field is named "cdata" is a column, not the CDATA modifier.
  *
- * The seam for R2-3.1 is OPEX_Writer_CSV::put_record(): the test writer
+ * The seam for the CSV record test is OPEX_Writer_CSV::put_record(): the test writer
  * below replaces it with one that fails the way fputcsv() does when its
  * stream cannot take the record.
  *
@@ -101,7 +101,7 @@ class CodexRound2WriterTest extends TestCase {
 			$writer->append( array( array( 'a' => '1', 'b' => str_repeat( 'x', 64 ) ) ), true );
 			$this->fail( 'A record that could not be built must throw.' );
 		} catch ( OPEX_User_Error $e ) {
-			$this->assertStringContainsString( 'could not be written', $e->getMessage() );
+			$this->assertStringContainsString( 'could not write the export file', $e->getMessage() );
 		}
 		$this->assertSame( $before, (string) file_get_contents( $this->path . '.csv' ), 'Nothing was added to the file.' );
 	}

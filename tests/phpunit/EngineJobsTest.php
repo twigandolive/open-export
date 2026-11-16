@@ -1,6 +1,7 @@
 <?php
 /**
- * Engine fixes for the job state machine: S-1, S-2, S-4, S-6, S-7, S-9, S-13, S-25.
+ * The job state machine: database errors, replayed batches, deletes during
+ * a batch, the lock, pause and resume, old records, PHP errors and retention.
  *
  * @package Open_Export
  */
@@ -45,7 +46,7 @@ class EngineJobsTest extends TestCase {
 		) );
 		$this->assertIsArray( $config, is_wp_error( $config ) ? $config->get_error_message() : '' );
 		if ( 'xlsx' === ( $over['format'] ?? '' ) ) {
-			$config['format'] = 'xlsx'; // sanitize_config learns this format in the feature pass.
+			$config['format'] = 'xlsx'; // sanitize_config already keeps xlsx. This line makes the format explicit for the test.
 		}
 		$job = OPEX_Exporter::create( $config, $label );
 		$this->assertIsArray( $job, is_wp_error( $job ) ? $job->get_error_message() : '' );
@@ -88,7 +89,7 @@ class EngineJobsTest extends TestCase {
 		return (string) file_get_contents( OPEX_Jobs::file_path( OPEX_Jobs::get( $id ) ) );
 	}
 
-	/** S-1: a database error mid-export fails the job and it resumes from its cursor. */
+	/** A database error mid-export fails the job and it resumes from its cursor. */
 	public function test_database_error_fails_job_and_resumes(): void {
 		global $wpdb;
 		$this->make_table( 25 );
@@ -114,7 +115,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertCount( 26, $lines, 'header plus every row exactly once' );
 	}
 
-	/** S-1: a failing count stops job creation instead of making an empty export. */
+	/** A failing count stops job creation instead of making an empty export. */
 	public function test_database_error_in_count_is_thrown(): void {
 		global $wpdb;
 		$this->make_table( 3 );
@@ -133,7 +134,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertSame( 'opex_db', $created->get_error_code() );
 	}
 
-	/** S-1: an error from an unrelated earlier query does not trip the next one. */
+	/** An error from an unrelated earlier query does not trip the next one. */
 	public function test_old_database_error_does_not_leak(): void {
 		global $wpdb;
 		$wpdb->suppress_errors( true );
@@ -163,7 +164,7 @@ class EngineJobsTest extends TestCase {
 	}
 
 	/**
-	 * S-2: a batch that was written but never saved is cut off and written again,
+	 * A batch that was written but never saved is cut off and written again,
 	 * so no row is doubled.
 	 *
 	 * @param string $format Output format.
@@ -191,7 +192,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertSame( $this->normalized( $clean['id'] ), $this->normalized( $crash['id'] ) );
 	}
 
-	/** S-2: a JSON job replayed from its first batch keeps valid JSON. */
+	/** A JSON job replayed from its first batch keeps valid JSON. */
 	public function test_replayed_first_json_batch_stays_valid(): void {
 		$crash = $this->job( array( 'format' => 'json' ), 'json crash' );
 		$rec   = OPEX_Jobs::get( $crash['id'] );
@@ -203,7 +204,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertCount( 60, $data );
 	}
 
-	/** S-2: finish() runs inside the try block, so a failure ends in the error status and can be retried. */
+	/** Finish() runs inside the try block, so a failure ends in the error status and can be retried. */
 	public function test_finish_failure_is_an_error_not_a_fatal(): void {
 		if ( ! class_exists( 'ZipArchive' ) ) {
 			$this->markTestSkipped( 'ZipArchive is not available.' );
@@ -223,7 +224,7 @@ class EngineJobsTest extends TestCase {
 		$zip->close();
 	}
 
-	/** S-4: deleting a job while a batch runs does not bring it back. */
+	/** Deleting a job while a batch runs does not bring it back. */
 	public function test_delete_during_run_stays_deleted(): void {
 		$job  = $this->job( array( 'fields' => array( 'core:ID', 'computed:permalink' ), 'batch_size' => 10 ), 'deleted' );
 		$path = OPEX_Jobs::file_path( OPEX_Jobs::get( $job['id'] ) );
@@ -240,7 +241,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertFileDoesNotExist( $path );
 	}
 
-	/** S-6: the lock is one atomic option row. */
+	/** The lock is one atomic option row. */
 	public function test_lock_is_an_atomic_option(): void {
 		global $wpdb;
 		$name  = 'jtestlock' . wp_rand( 1000, 9999 );
@@ -260,7 +261,7 @@ class EngineJobsTest extends TestCase {
 		OPEX_Lock::release( $name, $again );
 	}
 
-	/** S-6: an expired lock is taken over, and refresh pushes the expiry out. */
+	/** An expired lock is taken over, and refresh pushes the expiry out. */
 	public function test_stale_lock_is_taken_over_and_refresh_extends(): void {
 		global $wpdb;
 		$name  = 'jtestlock' . wp_rand( 1000, 9999 );
@@ -333,7 +334,7 @@ class EngineJobsTest extends TestCase {
 		OPEX_Lock::force_release( $id );
 	}
 
-	/** S-6: a caller locked out does not change the job's status. */
+	/** A caller locked out does not change the job's status. */
 	public function test_locked_out_caller_leaves_status_alone(): void {
 		$job = $this->job();
 		OPEX_Exporter::pause( $job['id'] );
@@ -354,7 +355,7 @@ class EngineJobsTest extends TestCase {
 		OPEX_Jobs::release_lock( $job['id'] );
 	}
 
-	/** S-6: the lock is refreshed while a batch assembles its rows. */
+	/** The lock is refreshed while a batch assembles its rows. */
 	public function test_lock_is_refreshed_during_a_batch(): void {
 		$ticks  = 0;
 		$config = OPEX_Exporter::sanitize_config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'batch_size' => 250 ) );
@@ -364,7 +365,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertGreaterThanOrEqual( 1, $ticks );
 	}
 
-	/** S-7: only an explicit resume continues a paused job, over REST too. */
+	/** Only an explicit resume continues a paused job, over REST too. */
 	public function test_rest_run_resumes_only_with_the_flag(): void {
 		$job = $this->job();
 		OPEX_Exporter::pause( $job['id'] );
@@ -384,7 +385,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertGreaterThan( 0, $out['processed'] );
 	}
 
-	/** S-7: the background runner leaves a paused job alone. */
+	/** The background runner leaves a paused job alone. */
 	public function test_runner_does_not_unpause(): void {
 		$job = $this->job();
 		OPEX_Exporter::pause( $job['id'] );
@@ -393,7 +394,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertSame( 0, $out['processed'] );
 	}
 
-	/** S-9: an old record with only the shipped keys loads with every key and still runs. */
+	/** An old record with only the shipped keys loads with every key and still runs. */
 	public function test_old_job_record_gets_defaults_and_runs(): void {
 		$job  = $this->job();
 		$jobs = (array) get_option( 'opex_jobs' );
@@ -419,7 +420,7 @@ class EngineJobsTest extends TestCase {
 		$this->jobs[] = $rerun['id'];
 	}
 
-	/** S-13: an Error (not an Exception) in the query layer ends in the error status. */
+	/** An Error (not an Exception) in the query layer ends in the error status. */
 	public function test_throwable_is_caught(): void {
 		$job  = $this->job();
 		$jobs = (array) get_option( 'opex_jobs' );
@@ -432,7 +433,7 @@ class EngineJobsTest extends TestCase {
 		$this->assertFalse( OPEX_Lock::is_held( $job['id'] ), 'the lock is released' );
 	}
 
-	/** S-25: the sweep uses the retention setting, and the hourly maintenance run calls it. */
+	/** The sweep uses the retention setting, and the hourly maintenance run calls it. */
 	public function test_maintenance_sweeps_by_retention_setting(): void {
 		OPEX_Settings::save( array( 'retention_days' => 2 ) );
 		$old = $this->job( array(), 'old' );

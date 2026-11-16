@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex R3-1.2 (and SO-1): a scheduled job is saved as done with the mark
+ * A scheduled job is saved as done with the mark
  * schedule_owed in the same write, on every completion path, and the mark
  * is cleared only after the schedule's bookkeeping was saved. So even when
  * the schedule save fails and every later job save fails too (a write

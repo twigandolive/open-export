@@ -9,7 +9,7 @@
  * @package Open_Export
  */
 
-// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+// No strict_types here on purpose: strict types would change how this code coerces arguments.
 
 defined( 'ABSPATH' ) || exit;
 
@@ -120,7 +120,7 @@ class OPEX_Rest_Jobs {
 	public static function get_job( WP_REST_Request $request ) {
 		$job = OPEX_Jobs::get( (string) $request['id'] );
 		if ( ! $job ) {
-			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_missing', __( 'That export does not exist.', 'open-export' ), array( 'status' => 404 ) );
 		}
 		return rest_ensure_response( OPEX_Jobs::expose_detail( $job ) );
 	}
@@ -148,8 +148,8 @@ class OPEX_Rest_Jobs {
 	}
 
 	/**
-	 * Stream a finished file. Capability + nonce were already enforced by
-	 * the permission callback and REST cookie auth before we got here.
+	 * Stream a finished file. The permission callback and REST cookie auth
+	 * check the capability and the nonce before this runs.
 	 *
 	 * @param WP_REST_Request $request Request with the job id.
 	 * @return void|WP_Error Nothing when the file streams, or an error when it cannot.
@@ -157,15 +157,15 @@ class OPEX_Rest_Jobs {
 	public static function download( WP_REST_Request $request ) {
 		$job = OPEX_Jobs::get( (string) $request['id'] );
 		if ( ! $job || 'done' !== $job['status'] ) {
-			return new WP_Error( 'opex_not_ready', __( 'Export is not ready.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_not_ready', __( 'The export is not finished yet.', 'open-export' ), array( 'status' => 404 ) );
 		}
 
 		$path = OPEX_Jobs::file_path( $job );
 		if ( ! file_exists( $path ) ) {
-			return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
+			return new WP_Error( 'opex_gone', __( 'The export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
 		}
 
 		OPEX_Download::stream( $job, OPEX_Download::file_name( $job ) );
-		return new WP_Error( 'opex_gone', __( 'Export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
+		return new WP_Error( 'opex_gone', __( 'The export file no longer exists.', 'open-export' ), array( 'status' => 404 ) );
 	}
 }

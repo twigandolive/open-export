@@ -1,10 +1,9 @@
 <?php
 /**
- * Batch run fixes from the Codex review: R1-1.2 (a file lock keeps a second
- * worker out of a file the first one still writes), R1-1.8 (a throwing
- * opex_job_done listener cannot turn a finished job into an error) and
- * R1-1.5 (a failed existence query on a network site is an error, not an
- * empty site).
+ * Batch runs: a file lock keeps a second worker out of a file the first one
+ * still writes, a throwing opex_job_done listener cannot turn a finished job
+ * into an error, and a failed existence query on a network site is an
+ * error, not an empty site.
  *
  * @package Open_Export
  */

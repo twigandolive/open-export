@@ -1,6 +1,6 @@
 <?php
 /**
- * Codex round 1 fixes for dates: R1-2.5 (DATE columns) and R1-2.6 (days whose midnight does not exist).
+ * Dates: DATE columns, and days whose midnight does not exist.
  *
  * @package Open_Export
  */
@@ -75,7 +75,7 @@ class CodexQueryDatesTest extends TestCase {
 		return $ids;
 	}
 
-	/** R1-2.5: ranges, presets, rules and since on a DATE column use whole calendar days. */
+	/** Ranges, presets, rules and since on a DATE column use whole calendar days. */
 	public function test_date_columns_use_calendar_days(): void {
 		$this->zone( 'America/New_York' );
 		$table = $this->date_table();
@@ -106,7 +106,7 @@ class CodexQueryDatesTest extends TestCase {
 		}
 	}
 
-	/** R1-2.6: a day whose midnight does not exist starts at its first moment and ends at the next midnight. */
+	/** A day whose midnight does not exist starts at its first moment and ends at the next midnight. */
 	public function test_days_without_a_midnight(): void {
 		$cases = array(
 			// Zone, day with no midnight, its first moment, the next midnight.

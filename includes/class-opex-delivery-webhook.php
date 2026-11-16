@@ -88,7 +88,7 @@ class OPEX_Delivery_Webhook {
 			)
 		);
 		if ( ! is_string( $body ) ) {
-			return new WP_Error( 'opex_webhook_body', __( 'The webhook message could not be built.', 'open-export' ) );
+			return new WP_Error( 'opex_webhook_body', __( 'Open Export could not build the webhook message.', 'open-export' ) );
 		}
 
 		$headers = array(
@@ -115,7 +115,7 @@ class OPEX_Delivery_Webhook {
 			)
 		);
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'opex_webhook_http', __( 'The webhook could not be reached.', 'open-export' ) );
+			return new WP_Error( 'opex_webhook_http', __( 'Open Export could not reach the webhook.', 'open-export' ) );
 		}
 		$code = (int) wp_remote_retrieve_response_code( $response );
 		if ( $code < 200 || $code > 299 ) {
@@ -152,7 +152,7 @@ class OPEX_Delivery_Webhook {
 		$ip = gethostbyname( $host );
 		if ( $ip === $host || false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
 			// WordPress does not resolve this site's own host either, so the send goes ahead unpinned.
-			return $own ? null : new WP_Error( 'opex_webhook_url', __( 'The webhook host could not be found.', 'open-export' ) );
+			return $own ? null : new WP_Error( 'opex_webhook_url', __( 'Open Export could not find the webhook host.', 'open-export' ) );
 		}
 		$public = false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 		// This is the same opt-in wp_http_validate_url asks before it allows a private address.
@@ -171,8 +171,8 @@ class OPEX_Delivery_Webhook {
 	 * through cURL's CURLOPT_RESOLVE and applies to this one request only: the
 	 * hook matches this URL, and the entry is removed from the cURL handle
 	 * afterward because WordPress reuses that handle. When WordPress uses
-	 * another transport (no cURL extension), the request goes out unpinned,
-	 * as it did before. The TLS check still uses the host name.
+	 * another transport (no cURL extension), the request goes out unpinned.
+	 * The TLS check still uses the host name.
 	 *
 	 * @param string     $url  Webhook URL.
 	 * @param array|null $pin  From pin_for(), or null.

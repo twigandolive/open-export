@@ -44,7 +44,7 @@
 		const disclosure = el( 'button', { type: 'button', class: 'opex-link opex-disclosure', 'aria-expanded': 'false', 'aria-controls': rawId }, [ '', app.icon( 'chevron', { sm: true, cls: 'opex-chev' } ) ] );
 		const caution = el( 'p', { class: 'opex-caution' }, [
 			app.icon( 'warning', { sm: true, cls: 'opex-c-warning' } ),
-			__( 'Caution: raw tables are exported as stored and can include private data. Only their own columns can be exported.', 'open-export' ),
+			__( 'Caution: Open Export copies raw tables as they are stored, and they can include private data. You can export only their own columns.', 'open-export' ),
 		] );
 		const advanced = el( 'div', { hidden: true }, [ disclosure, caution, raw ] );
 		const noMatch = el( 'p', { class: 'opex-help', hidden: true }, __( 'No sources match your search.', 'open-export' ) );
@@ -54,11 +54,13 @@
 		let network = null;
 
 		disclosure.addEventListener( 'click', () => setRaw( raw.hidden ) );
+		// Shows or hides the raw database tables.
 		function setRaw( open ) {
 			raw.hidden = ! open;
 			disclosure.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
 		}
 
+		// Builds the radio tile of one source.
 		function tile( item ) {
 			const input = el( 'input', { class: 'opex-sr', type: 'radio', name, value: item.id } );
 			input.addEventListener( 'change', () => {
@@ -81,6 +83,7 @@
 			return label;
 		}
 
+		// Draws the source groups and the raw tables.
 		function renderGroups() {
 			app.clear( standard );
 			app.clear( raw );
@@ -112,11 +115,12 @@
 			} );
 			advanced.hidden = ! rawCount;
 			if ( false === features.woocommerce ) {
-				status.appendChild( el( 'p', { class: 'opex-help' }, __( 'WooCommerce is not active, so its sources are not listed.', 'open-export' ) ) );
+				status.appendChild( el( 'p', { class: 'opex-help' }, __( 'WooCommerce is not active, so Open Export does not list its sources.', 'open-export' ) ) );
 			}
 			applySearch();
 		}
 
+		// Hides the sources and groups that do not match the search text.
 		function applySearch() {
 			const q = search.value.trim().toLowerCase();
 			let any = false;
@@ -137,6 +141,7 @@
 		}
 		search.addEventListener( 'input', applySearch );
 
+		// Selects the config's source and shows a note when the site does not have it.
 		function sync() {
 			const id = ctx.config.source;
 			radios.forEach( ( input ) => {
@@ -149,7 +154,7 @@
 			app.clear( unknown );
 			if ( id && ctx.sources && ! found ) {
 				/* translators: %s: source id. */
-				unknown.appendChild( ui.notice( 'warning', sprintf( __( 'This setup uses a source this site does not have: %s. Pick another source.', 'open-export' ), id ), { role: 'note', tight: true } ) );
+				unknown.appendChild( ui.notice( 'warning', sprintf( __( 'This setup uses a source this site does not have: %s. Choose another source.', 'open-export' ), id ), { role: 'note', tight: true } ) );
 			}
 			if ( network ) {
 				const blocked = noNetwork( id );
@@ -159,7 +164,7 @@
 				}
 				network.input.checked = !! ctx.config.network;
 				network.help.textContent = blocked
-					? __( 'Users and raw tables cannot be exported across the network.', 'open-export' )
+					? __( 'You cannot export users or raw tables across the network.', 'open-export' )
 					: __( 'Runs this export on every site in turn and adds site_id and site_url columns.', 'open-export' );
 			}
 		}

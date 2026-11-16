@@ -95,7 +95,7 @@ class FormatsTest extends CharacterizationCase {
 	}
 
 	/**
-	 * Values that start with a formula character are quoted in CSV only. A plain number such as -5 is not a formula (S-11).
+	 * Values that start with a formula character are quoted in CSV only. A plain number such as -5 is not a formula.
 	 */
 	public function test_formula_guard_csv(): void {
 		$titles = array( '=SUM(1+1)', '+49 170 1234', '-5', '@mention', 'plain', 'a, "quoted" value', "line1\nline2", 'Ünïcödé' );
