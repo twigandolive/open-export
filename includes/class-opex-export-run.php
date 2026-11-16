@@ -28,6 +28,7 @@ class OPEX_Export_Run {
 	 *
 	 * @param string $id     Job id.
 	 * @param bool   $resume True when a person asked to resume a paused job.
+	 * @return array|WP_Error The job as the screen shows it, or an error.
 	 */
 	public static function run( string $id, bool $resume = false ) {
 		$job = OPEX_Jobs::get( $id );
@@ -60,7 +61,13 @@ class OPEX_Export_Run {
 		}
 	}
 
-	/** The batch itself. Runs only while this process holds the job's lock. */
+	/**
+	 * The batch itself. Runs only while this process holds the job's lock.
+	 *
+	 * @param string $id     Job id.
+	 * @param bool   $resume True when a person asked to resume a paused job.
+	 * @return array|WP_Error The job as the screen shows it, or an error.
+	 */
 	private static function run_locked( string $id, bool $resume ) {
 		// Read again: the job may have changed while we waited for the lock.
 		$job = OPEX_Jobs::get( $id );
@@ -203,6 +210,7 @@ class OPEX_Export_Run {
 	 * @param string $id      Job id.
 	 * @param array  $job     The job as this batch saw it.
 	 * @param array  $changes Keys to set.
+	 * @return array|null The saved job, or null when the job was deleted.
 	 */
 	private static function save_progress( string $id, array $job, array $changes ): ?array {
 		$fresh = OPEX_Jobs::update(
@@ -218,7 +226,11 @@ class OPEX_Export_Run {
 		return $fresh;
 	}
 
-	/** The error for a job that does not exist (or no longer does). */
+	/**
+	 * The error for a job that does not exist (or no longer does).
+	 *
+	 * @return WP_Error The not found error.
+	 */
 	private static function missing(): WP_Error {
 		return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
 	}

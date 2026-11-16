@@ -35,6 +35,7 @@ class OPEX_Schema_Sources {
 	 * @param array  $index     all_sources entries, for the label, tier and count.
 	 * @param bool   $overview  Trim the custom-field list. A single-source
 	 *                          request never trims. The overview says when it did.
+	 * @return array|null The description, or null when the source is unknown.
 	 *
 	 * @internal Called by OPEX_Schema::build only.
 	 */
@@ -115,7 +116,13 @@ class OPEX_Schema_Sources {
 		return $out;
 	}
 
-	/** Coarse type hint so an assistant knows what a field holds. */
+	/**
+	 * Coarse type hint so an assistant knows what a field holds.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id.
+	 * @return string A coarse type, such as text, number, date, url or enum.
+	 */
 	public static function field_type( array $src, string $field ): string {
 		if ( 0 === strpos( $field, 'woo:' ) ) {
 			$provider = OPEX_Sources::for_src( $src );
@@ -173,6 +180,7 @@ class OPEX_Schema_Sources {
 	 * The name a person sees for a source.
 	 *
 	 * @param string $source_id Source id.
+	 * @return string The label, or the id when the source is not listed.
 	 */
 	private static function source_label( string $source_id ): string {
 		foreach ( OPEX_Catalog::sources() as $group ) {
@@ -189,6 +197,10 @@ class OPEX_Schema_Sources {
 	 * Legal values for the handful of fields where guessing wrong yields an
 	 * empty export (statuses, roles, taxonomy terms). Everything else returns
 	 * an empty array rather than paying for a DISTINCT over a large column.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id.
+	 * @return string[] The allowed values, or an empty array when the field is open.
 	 */
 	private static function field_values( array $src, string $field ): array {
 		// Order status, on either storage engine.

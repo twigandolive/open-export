@@ -28,42 +28,74 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	/** The row whose terms a row shows: a variation's parent, or itself. */
 	const OWNER = "(CASE WHEN p.post_type = 'product_variation' THEN p.post_parent ELSE p.ID END)";
 
-	/** The provider when WooCommerce is active, else null. */
+	/**
+	 * The provider when WooCommerce is active, else null.
+	 *
+	 * @return OPEX_Source_Provider|null The provider, or null when WooCommerce is not active.
+	 */
 	public static function resolve(): ?OPEX_Source_Provider {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source id.
+	 */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The post type.
+	 */
 	public function post_type(): string {
 		return 'product';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The base WHERE conditions and the values for their placeholders.
+	 */
 	public function base_where(): array {
 		return array( array( "p.post_type IN ('product', 'product_variation')", "p.post_status <> 'auto-draft'" ), array() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The SQL for the start of the SELECT list.
+	 */
 	protected function base_select(): string {
 		return 'p.*';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The SQL column.
+	 */
 	protected function term_object(): string {
 		return self::OWNER;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source name.
+	 */
 	public function label(): string {
 		return __( 'WooCommerce Products', 'open-export' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array|null The picker entry, or null when the source has none.
+	 */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -73,7 +105,11 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
+	 */
 	public function date_fields(): array {
 		global $wpdb;
 		$epoch = array(
@@ -107,12 +143,23 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int[] $ids Row ids of the batch.
+	 */
 	public function prime( array $ids ): void {
 		OPEX_Source_Woo_Product_Values::prime( $ids );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param object $row   Fetched row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 * @return string|null The cell text, or null when the field is not built in PHP.
+	 */
 	public function compute_value( object $row, string $field, int $id ): ?string {
 		switch ( $field ) {
 			case 'woo:attributes':
@@ -131,7 +178,13 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		return null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @param string $value Stored text.
+	 * @return string The value the field means.
+	 */
 	public function derive_value( string $field, string $value ): string {
 		// A variable product keeps one _price row per distinct variation price.
 		// WooCommerce shows the lowest as its "from" price, so this does too.
@@ -149,12 +202,20 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 		return (string) $low;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array[] Field groups, each with a label and its fields.
+	 */
 	protected function extra_groups(): array {
 		return OPEX_Catalog::grouped_meta( OPEX_Catalog::sample_meta_keys( 'posts', 'product' ), OPEX_Catalog::acf_keys() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Field definitions by field id.
+	 */
 	protected function field_defs(): array {
 		$product  = __( 'Product', 'open-export' );
 		$price    = __( 'Price', 'open-export' );
@@ -372,6 +433,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	 *
 	 * @param string $key    Meta key, a constant in this class.
 	 * @param string $row_id SQL for the row id, a constant in this class.
+	 * @return string The SQL subquery.
 	 */
 	private function meta_sql( string $key, string $row_id ): string {
 		global $wpdb;
@@ -383,6 +445,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	 * else 0. Text compares the same way on SQLite and MySQL.
 	 *
 	 * @param string $slug Term slug, a constant in this class.
+	 * @return string The SQL expression.
 	 */
 	private function visibility_sql( string $slug ): string {
 		global $wpdb;
@@ -391,14 +454,22 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 			" INNER JOIN {$wpdb->terms} vt ON vt.term_id = vx.term_id WHERE vr.object_id = {$owner} AND vx.taxonomy = 'product_visibility' AND vt.slug = '{$slug}') THEN '1' ELSE '0' END)";
 	}
 
-	/** SQL for the visibility WooCommerce derives from two product_visibility terms. */
+	/**
+	 * SQL for the visibility WooCommerce derives from two product_visibility terms.
+	 *
+	 * @return string The SQL expression.
+	 */
 	private function catalog_visibility_sql(): string {
 		$no_shop   = $this->visibility_sql( 'exclude-from-catalog' ) . " = '1'";
 		$no_search = $this->visibility_sql( 'exclude-from-search' ) . " = '1'";
 		return "(CASE WHEN {$no_shop} AND {$no_search} THEN 'hidden' WHEN {$no_shop} THEN 'search' WHEN {$no_search} THEN 'catalog' ELSE 'visible' END)";
 	}
 
-	/** SQL for the product type: a variation, or the product_type term (simple when there is none). */
+	/**
+	 * SQL for the product type: a variation, or the product_type term (simple when there is none).
+	 *
+	 * @return string The SQL expression.
+	 */
 	private function type_sql(): string {
 		global $wpdb;
 		return "(CASE WHEN p.post_type = 'product_variation' THEN 'variation' ELSE COALESCE((SELECT tt1.slug FROM {$wpdb->term_relationships} tr1" .
@@ -406,7 +477,11 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 			" WHERE tr1.object_id = p.ID AND tx1.taxonomy = 'product_type' ORDER BY tt1.term_id LIMIT 1), 'simple') END)";
 	}
 
-	/** SQL for the description. A variation keeps its own in meta, as WooCommerce does. */
+	/**
+	 * SQL for the description. A variation keeps its own in meta, as WooCommerce does.
+	 *
+	 * @return string The SQL expression.
+	 */
 	private function description_sql(): string {
 		return "(CASE WHEN p.post_type = 'product_variation' THEN COALESCE(" . $this->meta_sql( '_variation_description', 'p.ID' ) . ", '') ELSE p.post_content END)";
 	}

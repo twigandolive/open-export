@@ -20,12 +20,20 @@ class OPEX_Schedules {
 	public const MAX     = 50;
 	private const HOOK   = 'opex_run_schedule';
 
-	/** Default values for every key of a schedule record. See OPEX_Schedule_Rules. */
+	/**
+	 * Default values for every key of a schedule record. See OPEX_Schedule_Rules.
+	 *
+	 * @return array A schedule record with every key at its default.
+	 */
 	public static function defaults(): array {
 		return OPEX_Schedule_Rules::defaults();
 	}
 
-	/** All schedules keyed by id, defaults filled. */
+	/**
+	 * All schedules keyed by id, defaults filled.
+	 *
+	 * @return array Every schedule keyed by id.
+	 */
 	public static function all(): array {
 		return self::filled( OPEX_Store::read( self::OPTION ) );
 	}
@@ -34,6 +42,7 @@ class OPEX_Schedules {
 	 * Every usable record of a stored registry, defaults filled.
 	 *
 	 * @param array $raw The option as stored.
+	 * @return array Every usable schedule keyed by id.
 	 */
 	private static function filled( array $raw ): array {
 		$out = array();
@@ -45,13 +54,24 @@ class OPEX_Schedules {
 		return $out;
 	}
 
-	/** One schedule or null. */
+	/**
+	 * One schedule or null.
+	 *
+	 * @param string $id Schedule id.
+	 * @return array|null The schedule, or null when there is none.
+	 */
 	public static function get( string $id ): ?array {
 		$all = self::all();
 		return $all[ $id ] ?? null;
 	}
 
-	/** Fill missing keys so an old or partial record never causes a notice. */
+	/**
+	 * Fill missing keys so an old or partial record never causes a notice.
+	 *
+	 * @param array  $rec Schedule record as stored.
+	 * @param string $id  Id to use when the record has none.
+	 * @return array The record with every key present.
+	 */
 	private static function fill( array $rec, string $id ): array {
 		$def = self::defaults();
 		$out = array_merge( $def, $rec );
@@ -134,7 +154,11 @@ class OPEX_Schedules {
 		);
 	}
 
-	/** Delete a schedule and its cron event. */
+	/**
+	 * Delete a schedule and its cron event.
+	 *
+	 * @param string $id Schedule id.
+	 */
 	public static function delete( string $id ): void {
 		self::disarm( $id );
 		OPEX_Store::change(
@@ -145,7 +169,12 @@ class OPEX_Schedules {
 		);
 	}
 
-	/** Public shape: no key, no webhook secret, plus the trigger URL. */
+	/**
+	 * Public shape: no key, no webhook secret, plus the trigger URL.
+	 *
+	 * @param array $schedule Schedule record.
+	 * @return array The schedule as the screen shows it.
+	 */
 	public static function expose( array $schedule ): array {
 		$s   = self::fill( $schedule, (string) ( $schedule['id'] ?? '' ) );
 		$key = (string) $s['trigger_key'];
@@ -156,12 +185,23 @@ class OPEX_Schedules {
 		return $s;
 	}
 
-	/** Next run as a UTC timestamp. See OPEX_Schedule_Clock. */
+	/**
+	 * Next run as a UTC timestamp. See OPEX_Schedule_Clock.
+	 *
+	 * @param array             $schedule Schedule record.
+	 * @param int               $now      Current time as a UTC timestamp.
+	 * @param DateTimeZone|null $tz       Timezone to plan in. The site's timezone when null.
+	 * @return int The next run as a UTC timestamp, or 0 when the schedule does not run by itself.
+	 */
 	public static function next_run( array $schedule, int $now, ?DateTimeZone $tz = null ): int {
 		return OPEX_Schedule_Clock::next_run( $schedule, $now, $tz );
 	}
 
-	/** Schedule one cron event at next_run, replacing any existing one. */
+	/**
+	 * Schedule one cron event at next_run, replacing any existing one.
+	 *
+	 * @param array $schedule Schedule record, with its next_run set.
+	 */
 	public static function arm( array $schedule ): void {
 		$id = (string) ( $schedule['id'] ?? '' );
 		if ( '' === $id ) {
@@ -174,12 +214,21 @@ class OPEX_Schedules {
 		}
 	}
 
-	/** Remove the cron event for a schedule. */
+	/**
+	 * Remove the cron event for a schedule.
+	 *
+	 * @param string $id Schedule id.
+	 */
 	public static function disarm( string $id ): void {
 		wp_clear_scheduled_hook( self::HOOK, array( $id ) );
 	}
 
-	/** Recompute next_run from now, store it and re-arm. Returns the record. */
+	/**
+	 * Recompute next_run from now, store it and re-arm. Returns the record.
+	 *
+	 * @param array $schedule Schedule record.
+	 * @return array The record with its new next_run.
+	 */
 	public static function refresh( array $schedule ): array {
 		$saved = self::rearm( (string) ( $schedule['id'] ?? '' ), null );
 		if ( null !== $saved ) {
@@ -267,7 +316,11 @@ class OPEX_Schedules {
 		return $job;
 	}
 
-	/** The error for a schedule that is already running. */
+	/**
+	 * The error for a schedule that is already running.
+	 *
+	 * @return WP_Error The error to return.
+	 */
 	private static function busy(): WP_Error {
 		return new WP_Error( 'opex_busy', __( 'This schedule is still running.', 'open-export' ), array( 'status' => 409 ) );
 	}
@@ -277,6 +330,7 @@ class OPEX_Schedules {
 	 *
 	 * @param array  $s      Schedule record.
 	 * @param string $origin Who started it.
+	 * @return array Extra job settings: mode, origin, delivery, file name and since.
 	 */
 	private static function job_extra( array $s, string $origin ): array {
 		$extra = array(
@@ -307,6 +361,8 @@ class OPEX_Schedules {
 	/**
 	 * Hook for `opex_job_done`. Updates last_run and, on success, the watermark
 	 * to the job's start time so rows changed during the run are picked up next time.
+	 *
+	 * @param array $job Finished job record.
 	 */
 	public static function on_job_done( array $job ): void {
 		$sid = (string) ( $job['schedule_id'] ?? '' );
@@ -357,6 +413,7 @@ class OPEX_Schedules {
 	 * The last_run block for a job.
 	 *
 	 * @param array $job Job record.
+	 * @return array The time, job id, status and row count of the run.
 	 */
 	private static function last_run_of( array $job ): array {
 		return array(

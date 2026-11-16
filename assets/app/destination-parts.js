@@ -19,6 +19,13 @@
 	const el = app.el;
 	const ui = app.ui;
 
+	/**
+	 * Builds every input of the destination form and its row, filled from a saved record.
+	 *
+	 * @param {Object|null} record Saved destination, or null for a new one.
+	 * @param {Array}       types  Destination types from /options.
+	 * @return {Object} The inputs by name, plus rows.
+	 */
 	function fields( record, types ) {
 		const r = record || {};
 		const f = {};
@@ -64,6 +71,11 @@
 		return f;
 	}
 
+	/**
+	 * Builds the SFTP fingerprint row with its reset button.
+	 *
+	 * @return {Object} { row, update( record ) }.
+	 */
 	function fingerprint( o ) {
 		const code = el( 'code', { class: 'opex-fingerprint' } );
 		const none = el( 'p', {}, __( 'None saved yet.', 'open-export' ) );
@@ -112,6 +124,9 @@
 		}
 	}
 
+	/**
+	 * Builds the status line for a saved test result.
+	 */
 	function lastTest( test ) {
 		const when = app.formatDate( test.time );
 		return el( 'div', {}, [

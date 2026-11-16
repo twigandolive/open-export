@@ -17,6 +17,8 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 /**
  * Whether the current site asked to keep its data when the plugin is
  * deleted (setting keep_data_on_uninstall in the opex_settings option).
+ *
+ * @return bool True when this site keeps its data on uninstall.
  */
 function opex_uninstall_keeps_data(): bool {
 	$settings = get_option( 'opex_settings', array() );

@@ -201,6 +201,8 @@ class OPEX_Rest {
 
 	/**
 	 * GET /sources: the sources this person may export, grouped for the picker.
+	 *
+	 * @return WP_REST_Response The source groups.
 	 */
 	public static function sources(): WP_REST_Response {
 		return rest_ensure_response( OPEX_Catalog::sources() );
@@ -210,6 +212,9 @@ class OPEX_Rest {
 	 * Field groups for a source, plus everything the date-range control needs:
 	 * which columns are real dates for this source and what the presets are
 	 * called. One round trip instead of three.
+	 *
+	 * @param WP_REST_Request $request Request with the source id.
+	 * @return WP_REST_Response The field groups, the date fields and the date presets.
 	 */
 	public static function fields( WP_REST_Request $request ): WP_REST_Response {
 		$source = (string) $request['source'];
@@ -246,6 +251,9 @@ class OPEX_Rest {
 	/**
 	 * The site's export surface as JSON, for handing to an AI assistant.
 	 * ?scope=all describes every source, which is large on a busy site.
+	 *
+	 * @param WP_REST_Request $request Request with the optional source and scope.
+	 * @return WP_REST_Response The capability document.
 	 */
 	public static function schema( WP_REST_Request $request ): WP_REST_Response {
 		return rest_ensure_response(
@@ -256,6 +264,9 @@ class OPEX_Rest {
 	/**
 	 * Turn an assistant's recipe into a validated config for the UI to apply.
 	 * This configures the screen. It does not start an export.
+	 *
+	 * @param WP_REST_Request $request Request with the recipe text.
+	 * @return WP_REST_Response|WP_Error The config and report, or an error when the recipe cannot be read.
 	 */
 	public static function recipe( WP_REST_Request $request ) {
 		$body = $request->get_json_params();
@@ -299,6 +310,8 @@ class OPEX_Rest {
 
 	/**
 	 * GET /jobs: every job, newest first.
+	 *
+	 * @return WP_REST_Response The jobs as the screen shows them.
 	 */
 	public static function jobs(): WP_REST_Response {
 		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
@@ -417,6 +430,7 @@ class OPEX_Rest {
 	 * DELETE /jobs/{id}: removes the job and its file.
 	 *
 	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response Confirmation that the job is gone.
 	 */
 	public static function delete_job( WP_REST_Request $request ): WP_REST_Response {
 		OPEX_Jobs::delete( (string) $request['id'] );
@@ -426,6 +440,9 @@ class OPEX_Rest {
 	/**
 	 * Stream a finished file. Capability + nonce were already enforced by
 	 * the permission callback and REST cookie auth before we got here.
+	 *
+	 * @param WP_REST_Request $request Request with the job id.
+	 * @return void|WP_Error Nothing when the file streams, or an error when it cannot.
 	 */
 	public static function download( WP_REST_Request $request ) {
 		$job = OPEX_Jobs::get( (string) $request['id'] );
@@ -444,6 +461,8 @@ class OPEX_Rest {
 
 	/**
 	 * GET /templates: every template, most recently changed first.
+	 *
+	 * @return WP_REST_Response The templates as the screen shows them.
 	 */
 	public static function templates(): WP_REST_Response {
 		$list = array_map( array( 'OPEX_Templates', 'expose' ), array_values( OPEX_Templates::all() ) );
@@ -474,6 +493,7 @@ class OPEX_Rest {
 	 * DELETE /templates/{id}.
 	 *
 	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response Confirmation that the template is gone.
 	 */
 	public static function delete_template( WP_REST_Request $request ): WP_REST_Response {
 		OPEX_Templates::delete( (string) $request['id'] );

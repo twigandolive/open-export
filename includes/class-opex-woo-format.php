@@ -36,6 +36,7 @@ class OPEX_Woo_Format {
 	 * @param string $field Canonical field id, such as `woo:total`.
 	 * @param string $value Value as read from the database.
 	 * @param bool   $hpos  True when it came from the custom order tables.
+	 * @return string The text people see.
 	 */
 	public static function value( string $field, string $value, bool $hpos ): string {
 		if ( in_array( $field, self::MONEY, true ) ) {
@@ -52,6 +53,8 @@ class OPEX_Woo_Format {
 
 	/**
 	 * Decimals the store shows for prices.
+	 *
+	 * @return int Number of decimals.
 	 */
 	public static function price_decimals(): int {
 		return function_exists( 'wc_get_price_decimals' ) ? max( 0, (int) wc_get_price_decimals() ) : 2;
@@ -61,6 +64,7 @@ class OPEX_Woo_Format {
 	 * Turns a stored flag into yes or no. Empty means no.
 	 *
 	 * @param string $value Stored text.
+	 * @return string yes or no.
 	 */
 	public static function flag( string $value ): string {
 		return in_array( strtolower( trim( $value ) ), array( '1', 'yes', 'true', 'on' ), true ) ? 'yes' : 'no';
@@ -72,6 +76,7 @@ class OPEX_Woo_Format {
 	 *
 	 * @param string $value  Stored text or UNIX timestamp.
 	 * @param bool   $is_utc True when a datetime string is in UTC.
+	 * @return string The date in site time, or the stored text when it is not a date.
 	 */
 	public static function site_date( string $value, bool $is_utc ): string {
 		$value = trim( $value );

@@ -34,6 +34,12 @@
 		opex_destination_path: 'path',
 	};
 
+	/**
+	 * Builds the add and edit form for one destination, with save, test and fingerprint reset.
+	 *
+	 * @param {Object} o Record, notes and callbacks.
+	 * @return {Object} { root, focus() }.
+	 */
 	app.destinationForm = function ( o ) {
 		let record = o.record || null;
 		const types = ( app.store.get( 'options' ) || {} ).destination_types || [];

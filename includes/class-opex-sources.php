@@ -54,6 +54,7 @@ class OPEX_Sources {
 	 * One shared object per provider class.
 	 *
 	 * @param string $class_name Provider class name.
+	 * @return OPEX_Source_Provider The shared provider.
 	 */
 	public static function instance( string $class_name ): OPEX_Source_Provider {
 		if ( ! isset( self::$instances[ $class_name ] ) ) {
@@ -67,6 +68,7 @@ class OPEX_Sources {
 	 * source or the source is not available on this site.
 	 *
 	 * @param string $source_id Source id.
+	 * @return OPEX_Source_Provider|null The provider, or null.
 	 */
 	public static function get( string $source_id ): ?OPEX_Source_Provider {
 		$resolvers = self::resolvers();
@@ -97,6 +99,7 @@ class OPEX_Sources {
 	 * The parsed source for a registered source id, or null.
 	 *
 	 * @param string $source_id Source id.
+	 * @return array|null The parsed source, or null.
 	 */
 	public static function parse( string $source_id ): ?array {
 		$provider = self::get( $source_id );
@@ -107,6 +110,7 @@ class OPEX_Sources {
 	 * The provider that built a parsed source, or null for sources without one.
 	 *
 	 * @param array $src Parsed source.
+	 * @return OPEX_Source_Provider|null The provider, or null.
 	 */
 	public static function for_src( array $src ): ?OPEX_Source_Provider {
 		if ( empty( $src['provider_class'] ) ) {
@@ -121,6 +125,7 @@ class OPEX_Sources {
 	 * replaces (so the raw shop_order source shares the order status values).
 	 *
 	 * @param array $src Parsed source.
+	 * @return OPEX_Source_Provider|null The provider, or null when no provider covers the source.
 	 */
 	public static function for_values( array $src ): ?OPEX_Source_Provider {
 		$provider = self::for_src( $src );

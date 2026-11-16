@@ -25,6 +25,8 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 
 	/**
 	 * Path of the sidecar that holds the row XML.
+	 *
+	 * @return string The sidecar path.
 	 */
 	private function rows_path(): string {
 		return $this->path . '.rows';
@@ -32,6 +34,8 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 
 	/**
 	 * Path of the small file that holds the next row number.
+	 *
+	 * @return string The counter file path.
 	 */
 	private function counter_path(): string {
 		return $this->path . '.rows.n';
@@ -56,6 +60,8 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	/**
 	 * Sizes of the output file and the sidecar, plus the next row number.
 	 * The output file stays empty until finish() builds the zip.
+	 *
+	 * @return array The file sizes and the next row number.
 	 */
 	public function checkpoint(): array {
 		$counter = $this->counter_path();
@@ -203,6 +209,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 * @param int   $n      Row number, starting at 1.
 	 * @param array $values Cell values.
 	 * @param bool  $header True to apply the bold style.
+	 * @return string The row element.
 	 */
 	private function row_xml( int $n, array $values, bool $header ): string {
 		$xml   = '<row r="' . $n . '">';
@@ -228,6 +235,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 * Converts a zero-based column index to letters (0 = A, 26 = AA).
 	 *
 	 * @param int $index Column index.
+	 * @return string The column letters.
 	 */
 	private static function column_name( int $index ): string {
 		$name = '';
@@ -253,7 +261,11 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 		}
 	}
 
-	/** Package content types part. */
+	/**
+	 * Package content types part.
+	 *
+	 * @return string The XML of the part.
+	 */
 	private static function content_types(): string {
 		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
 			. '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -265,7 +277,11 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			. '</Types>';
 	}
 
-	/** Root relationships part. */
+	/**
+	 * Root relationships part.
+	 *
+	 * @return string The XML of the part.
+	 */
 	private static function root_rels(): string {
 		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
 			. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -273,14 +289,22 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			. '</Relationships>';
 	}
 
-	/** Workbook part. */
+	/**
+	 * Workbook part.
+	 *
+	 * @return string The XML of the part.
+	 */
 	private static function workbook(): string {
 		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
 			. '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
 			. '<sheets><sheet name="Export" sheetId="1" r:id="rId1"/></sheets></workbook>';
 	}
 
-	/** Workbook relationships part. */
+	/**
+	 * Workbook relationships part.
+	 *
+	 * @return string The XML of the part.
+	 */
 	private static function workbook_rels(): string {
 		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
 			. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -289,7 +313,11 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			. '</Relationships>';
 	}
 
-	/** Styles part: style 0 is plain, style 1 is bold. */
+	/**
+	 * Styles part: style 0 is plain, style 1 is bold.
+	 *
+	 * @return string The XML of the part.
+	 */
 	private static function styles(): string {
 		return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
 			. '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'

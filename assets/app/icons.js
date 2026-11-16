@@ -46,6 +46,13 @@
 
 	app.icons = icons;
 
+	/**
+	 * Builds an inline SVG icon. Without a label it is hidden from screen readers.
+	 *
+	 * @param {string} name Icon name.
+	 * @param {Object} opts sm for the small size, cls for extra classes, label for a spoken name.
+	 * @return {Element} The SVG element.
+	 */
 	app.icon = function ( name, opts ) {
 		const o = opts || {};
 		const svg = document.createElementNS( NS, 'svg' );

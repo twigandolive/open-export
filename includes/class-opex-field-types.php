@@ -72,6 +72,7 @@ class OPEX_Field_Types {
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id.
 	 * @param string $known Capability document type when the source already knows it.
+	 * @return string The type the screen uses: text, number, date or bool.
 	 */
 	public static function ui_type( array $src, string $field, string $known = '' ): string {
 		$type = '' !== $known ? $known : OPEX_Schema::field_type( $src, $field );
@@ -95,6 +96,7 @@ class OPEX_Field_Types {
 	 * SEO) become a slug of themselves.
 	 *
 	 * @param string $label Group label as shown.
+	 * @return string The stable group id.
 	 */
 	public static function group_id( string $label ): string {
 		$id = array_search( $label, self::known_labels(), true );

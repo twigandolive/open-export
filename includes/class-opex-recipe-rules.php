@@ -145,6 +145,7 @@ class OPEX_Recipe_Rules {
 	 * A scalar as text. Anything else becomes ''.
 	 *
 	 * @param mixed $value Raw value.
+	 * @return string The value as text, or '' when it is not a scalar.
 	 */
 	private static function text( $value ): string {
 		return is_scalar( $value ) ? (string) $value : '';

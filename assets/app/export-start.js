@@ -21,6 +21,12 @@
 	const ui = app.ui;
 	const store = app.store;
 
+	/**
+	 * Builds the "Start from" row: saved templates, feed presets and the AI recipe toggle.
+	 *
+	 * @param {Object} o Callbacks: onLoad( config, name ), say( type, text ), and extra content.
+	 * @return {Object} { root, loadTemplates() }.
+	 */
 	app.exportStart = function ( o ) {
 		const labelId = app.uid( 'opex-start' );
 		const tplSelect = el( 'select', { 'aria-label': __( 'Saved templates', 'open-export' ) } );

@@ -93,6 +93,11 @@
 		return node;
 	};
 
+	/**
+	 * Removes every child of a node.
+	 *
+	 * @return {Element} The same node, now empty.
+	 */
 	app.clear = function ( node ) {
 		while ( node.firstChild ) {
 			node.removeChild( node.firstChild );
@@ -101,6 +106,9 @@
 	};
 
 	let counter = 0;
+	/**
+	 * Makes an id that is unique on the page, for labels and aria links.
+	 */
 	app.uid = function ( prefix ) {
 		counter += 1;
 		return ( prefix || 'opex' ) + '-' + counter;
@@ -114,6 +122,9 @@
 		numberFormat = new Intl.NumberFormat();
 	}
 
+	/**
+	 * Formats a number for the site's language.
+	 */
 	app.formatNumber = function ( n ) {
 		return numberFormat.format( Number( n ) || 0 );
 	};
@@ -139,6 +150,9 @@
 		return new Date( seconds * 1000 ).toLocaleString( lang );
 	};
 
+	/**
+	 * Formats a byte count as bytes, KB, MB or GB.
+	 */
 	app.formatSize = function ( bytes ) {
 		const n = Number( bytes ) || 0;
 		if ( n < 1024 ) {
@@ -160,6 +174,12 @@
 	 * the empty panel and may return { show(), hide() } hooks.
 	 */
 	app.tabModules = app.tabModules || {};
+	/**
+	 * Registers a tab so the shell can mount it the first time it opens.
+	 *
+	 * @param {string} id  Tab id.
+	 * @param {Object} def Tab definition with mount( panel ).
+	 */
 	app.registerTab = function ( id, def ) {
 		app.tabModules[ id ] = def;
 	};
@@ -176,16 +196,25 @@
 		return items.filter( Boolean ).join( _x( ', ', 'list separator', 'open-export' ) );
 	};
 
+	/**
+	 * Puts a detail in parentheses after a name, in a way translators can reorder.
+	 */
 	app.paren = function ( main, note ) {
 		/* translators: 1: a name, 2: a detail about it, such as an id or a type. */
 		return sprintf( _x( '%1$s (%2$s)', 'name and detail', 'open-export' ), main, note );
 	};
 
+	/**
+	 * Puts a message after what it is about, in a way translators can reorder.
+	 */
 	app.labeled = function ( name, text ) {
 		/* translators: 1: what a message is about, 2: the message. */
 		return sprintf( _x( '%1$s: %2$s', 'subject and message', 'open-export' ), name, text );
 	};
 
+	/**
+	 * Gives a row count as text, such as "1 row" or "25 rows".
+	 */
 	app.rows = function ( n ) {
 		/* translators: %s: a number of rows. */
 		return sprintf( _n( '%s row', '%s rows', Number( n ) || 0, 'open-export' ), app.formatNumber( n ) );

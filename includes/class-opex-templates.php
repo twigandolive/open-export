@@ -17,6 +17,8 @@ class OPEX_Templates {
 
 	/**
 	 * Every saved template, by id.
+	 *
+	 * @return array Templates keyed by id.
 	 */
 	public static function all(): array {
 		$templates = get_option( self::OPTION, array() );
@@ -27,13 +29,20 @@ class OPEX_Templates {
 	 * One template, or null.
 	 *
 	 * @param string $id Template id.
+	 * @return array|null The template, or null.
 	 */
 	public static function get( string $id ): ?array {
 		$templates = self::all();
 		return $templates[ $id ] ?? null;
 	}
 
-	/** Save or update a named template. Returns the stored record. */
+	/**
+	 * Save or update a named template. Returns the stored record.
+	 *
+	 * @param string $name   Template name people see.
+	 * @param array  $config Export config to save.
+	 * @return array|WP_Error The template as the screen shows it, or an error.
+	 */
 	public static function save( string $name, array $config ) {
 		$name = sanitize_text_field( $name );
 		if ( '' === $name ) {

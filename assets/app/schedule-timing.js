@@ -24,6 +24,11 @@
 	const parts = app.scheduleParts;
 	const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+	/**
+	 * Builds the timetable and "changes only" rows of the schedule form.
+	 *
+	 * @param {Object} o Record and callbacks.
+	 */
 	app.scheduleTiming = function ( o ) {
 		const options = app.store.get( 'options' ) || {};
 		let record = o.record || null;

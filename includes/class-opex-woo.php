@@ -37,7 +37,11 @@ class OPEX_Woo {
 	 */
 	public const DRAFT_STATUS_SQL = "'auto-draft', 'checkout-draft', 'wc-checkout-draft'";
 
-	/** True when WooCommerce is present and loaded. */
+	/**
+	 * True when WooCommerce is present and loaded.
+	 *
+	 * @return bool True when WooCommerce is loaded.
+	 */
 	public static function is_active(): bool {
 		return class_exists( 'WooCommerce' ) || defined( 'WC_VERSION' );
 	}
@@ -50,6 +54,8 @@ class OPEX_Woo {
 	 * entirely, so "not available" correctly means legacy. In compatibility mode
 	 * both stores are kept in sync and this returns whichever WooCommerce treats
 	 * as canonical, which is the one we want to read.
+	 *
+	 * @return bool True when orders live in the custom order tables.
 	 */
 	public static function hpos_enabled(): bool {
 		if ( ! self::is_active() ) {
@@ -64,7 +70,12 @@ class OPEX_Woo {
 		return false;
 	}
 
-	/** Fully-qualified HPOS table names. */
+	/**
+	 * Fully-qualified HPOS table names.
+	 *
+	 * @param string $which Short table name: orders, addresses, operational or meta.
+	 * @return string The full table name.
+	 */
 	public static function table( string $which ): string {
 		global $wpdb;
 
@@ -82,6 +93,8 @@ class OPEX_Woo {
 	 * True when the HPOS tables actually exist. HPOS can be switched on while a
 	 * migration is still pending, and a missing table would otherwise surface as
 	 * a raw SQL error mid-export.
+	 *
+	 * @return bool True when every table exists.
 	 */
 	public static function hpos_tables_ready(): bool {
 		foreach ( array( 'orders', 'addresses', 'operational' ) as $which ) {
@@ -92,7 +105,11 @@ class OPEX_Woo {
 		return true;
 	}
 
-	/** Whether the joined HPOS query should be used for this request. */
+	/**
+	 * Whether the joined HPOS query should be used for this request.
+	 *
+	 * @return bool True when the joined query should be used.
+	 */
 	public static function use_hpos(): bool {
 		return self::hpos_enabled() && self::hpos_tables_ready();
 	}
@@ -205,7 +222,12 @@ class OPEX_Woo {
 		return $map;
 	}
 
-	/** Whether a field id is one of ours. */
+	/**
+	 * Whether a field id is one of ours.
+	 *
+	 * @param string $field Field id.
+	 * @return bool True when the field is a WooCommerce order field.
+	 */
 	public static function is_woo_field( string $field ): bool {
 		return isset( self::field_map()[ $field ] );
 	}
@@ -258,6 +280,8 @@ class OPEX_Woo {
 	 * holding a UNIX timestamp, so they compare as integers against epochs
 	 * computed in PHP, never against a datetime literal, and never through
 	 * MySQL's UNIX_TIMESTAMP(), whose result depends on the session timezone.
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
 	 */
 	public static function legacy_date_fields(): array {
 		global $wpdb;
@@ -296,13 +320,23 @@ class OPEX_Woo {
 		);
 	}
 
-	/** The core:/meta: field id a woo: id means when orders live in wp_posts. */
+	/**
+	 * The core:/meta: field id a woo: id means when orders live in wp_posts.
+	 *
+	 * @param string $field Canonical field id.
+	 * @return string The field id on post storage, or '' when there is none.
+	 */
 	public static function legacy_field( string $field ): string {
 		$map = self::field_map();
 		return $map[ $field ]['legacy'] ?? '';
 	}
 
-	/** Coarse type hint for the capability document. */
+	/**
+	 * Coarse type hint for the capability document.
+	 *
+	 * @param string $field Field id.
+	 * @return string A coarse type, such as text, number, date, boolean or enum.
+	 */
 	public static function field_type( string $field ): string {
 		$name = substr( $field, 4 );
 
@@ -328,6 +362,8 @@ class OPEX_Woo {
 	 * FROM clause for the HPOS query. Every join is many-to-one (one billing
 	 * row, one shipping row, one operational row per order), so the result is
 	 * exactly one row per order and keyset paging on o.id stays sound.
+	 *
+	 * @return string The FROM clause.
 	 */
 	public static function from_clause(): string {
 		$orders    = self::table( 'orders' );
@@ -344,6 +380,8 @@ class OPEX_Woo {
 	 * Explicit aliased SELECT list. The joined tables are narrow and there is
 	 * one row per order, so selecting the full set costs little and keeps the
 	 * SQL free of any per-request string building.
+	 *
+	 * @return string The SELECT list.
 	 */
 	public static function select_list(): string {
 		// Aliased as `id` so the shared keyset-paging code can read the cursor
@@ -362,7 +400,11 @@ class OPEX_Woo {
 		return implode( ', ', $parts );
 	}
 
-	/** Field groups for the picker, in a sensible reading order. */
+	/**
+	 * Field groups for the picker, in a sensible reading order.
+	 *
+	 * @return array[] Field groups, each with a label and its fields.
+	 */
 	public static function fields(): array {
 		$order_of_groups = array(
 			__( 'Order', 'open-export' ),
@@ -413,6 +455,8 @@ class OPEX_Woo {
 	/**
 	 * Order meta keys, sampled and cached like every other source's keys.
 	 * HPOS keeps them in wc_orders_meta. Legacy storage keeps them in postmeta.
+	 *
+	 * @return array[] Field groups for order meta, or an empty array when there is none.
 	 */
 	private static function meta_groups(): array {
 		global $wpdb;
@@ -462,7 +506,11 @@ class OPEX_Woo {
 		);
 	}
 
-	/** Source-picker entry, with a live order count. */
+	/**
+	 * Source-picker entry, with a live order count.
+	 *
+	 * @return array|null The picker entry, or null when the source is not available.
+	 */
 	public static function source_item(): ?array {
 		global $wpdb;
 

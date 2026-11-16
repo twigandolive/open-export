@@ -58,6 +58,7 @@ class OPEX_Writer_XML extends OPEX_Writer {
 	 * a name becomes an underscore, and a name may not start with a digit.
 	 *
 	 * @param string $label Column label.
+	 * @return string The element name.
 	 */
 	private function element_name( string $label ): string {
 		$name = preg_replace( '/[^A-Za-z0-9_\-]/', '_', $label );

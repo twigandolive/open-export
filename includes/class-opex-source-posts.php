@@ -17,10 +17,18 @@ defined( 'ABSPATH' ) || exit;
  */
 abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 
-	/** The post type this source reads. */
+	/**
+	 * The post type this source reads.
+	 *
+	 * @return string The post type.
+	 */
 	abstract public function post_type(): string;
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The parsed source.
+	 */
 	public function src(): array {
 		return array(
 			'type'           => 'posts',
@@ -30,45 +38,78 @@ abstract class OPEX_Source_Posts extends OPEX_Source_Provider {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The FROM clause.
+	 */
 	public function from(): string {
 		global $wpdb;
 		return "{$wpdb->posts} p";
 	}
 
-	/** Extra base conditions beyond the post type and auto-drafts. */
+	/**
+	 * Extra base conditions beyond the post type and auto-drafts.
+	 *
+	 * @return string[] Extra SQL conditions.
+	 */
 	protected function extra_where(): array {
 		return array();
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The base WHERE conditions and the values for their placeholders.
+	 */
 	public function base_where(): array {
 		$base = array_merge( array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" ), $this->extra_where() );
 		return array( $base, array( $this->post_type() ) );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key column for cursor paging.
+	 */
 	public function primary_key(): string {
 		return 'p.ID';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key property name on a fetched row.
+	 */
 	public function id_prop(): string {
 		return 'ID';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string[] $fields Field ids the export asked for.
+	 * @return string The SELECT list.
+	 */
 	public function select_list( array $fields ): string {
 		return 'p.*';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array|null The meta table, its foreign key and the outer id, or null when the source has no meta.
+	 */
 	public function meta_table(): ?array {
 		global $wpdb;
 		return array( $wpdb->postmeta, 'post_id', 'p.ID' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
+	 */
 	public function date_fields(): array {
 		return OPEX_Query_Dates::date_fields(
 			array(

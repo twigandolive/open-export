@@ -292,6 +292,7 @@ class OPEX_Presets {
 	 * character references so they can never read as a placeholder.
 	 *
 	 * @param string $text Text.
+	 * @return string The text, safe to place in the XML template.
 	 */
 	private static function xml_text( string $text ): string {
 		$text = htmlspecialchars( wp_strip_all_tags( $text ), ENT_XML1 | ENT_QUOTES, 'UTF-8' );

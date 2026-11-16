@@ -22,10 +22,18 @@
 	// Dashicon names from the server become a class, so only plain names pass.
 	const ICON = /^dashicons-[a-z0-9-]+$/;
 
+	/**
+	 * Tells whether a source can never run across a network: users and raw tables.
+	 */
 	function noNetwork( id ) {
 		return 'users' === id || 0 === String( id ).indexOf( 'table:' );
 	}
 
+	/**
+	 * Builds the Source card: the source tiles, the raw tables behind a disclosure, and the network switch.
+	 *
+	 * @param {Object} ctx Builder context.
+	 */
 	function build( ctx ) {
 		const name = app.uid( 'opex-source' );
 		const features = ctx.options.features || {};

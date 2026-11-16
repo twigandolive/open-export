@@ -25,6 +25,7 @@ class OPEX_Money {
 	 * @param string $value    Amount such as "82.5" or "82.50000000".
 	 * @param int    $decimals Places to keep, 0 to 8.
 	 * @param bool   $use_bc   Allow bcmath. Tests pass false to cover the fallback.
+	 * @return string The amount with exactly that many places, or the input when it is not a number.
 	 */
 	public static function format( string $value, int $decimals, bool $use_bc = true ): string {
 		$value = trim( $value );
@@ -54,6 +55,7 @@ class OPEX_Money {
 	 *
 	 * @param string $value    Unsigned decimal text.
 	 * @param int    $decimals Places.
+	 * @return string The rounded amount.
 	 */
 	private static function round_bc( string $value, int $decimals ): string {
 		return bcadd( $value, '0.' . str_repeat( '0', $decimals ) . '5', $decimals );
@@ -64,6 +66,7 @@ class OPEX_Money {
 	 *
 	 * @param string $value    Unsigned decimal text.
 	 * @param int    $decimals Places.
+	 * @return string The rounded amount.
 	 */
 	private static function round_string( string $value, int $decimals ): string {
 		$parts  = explode( '.', $value, 2 );
@@ -87,6 +90,7 @@ class OPEX_Money {
 	 * Adds one to a string of digits.
 	 *
 	 * @param string $digits Digits only.
+	 * @return string The digits plus one.
 	 */
 	private static function increment( string $digits ): string {
 		for ( $i = strlen( $digits ) - 1; $i >= 0; $i-- ) {

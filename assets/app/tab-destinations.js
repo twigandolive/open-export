@@ -19,6 +19,11 @@
 	// The most destinations the server keeps (/options limits.destinations).
 	const max = () => app.store.limit( 'destinations', 20 );
 
+	/**
+	 * Builds the Destinations tab: the list of saved servers and the form below it.
+	 *
+	 * @param {Element} panel Tab panel.
+	 */
 	function mount( panel ) {
 		const options = store.get( 'options' ) || {};
 		const features = options.features || {};

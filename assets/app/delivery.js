@@ -28,6 +28,9 @@
 	const maxSecret = () => store.limit( 'webhook_secret', 256 );
 	const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+	/**
+	 * Turns delivery settings from the server or a template into the full shape the block edits.
+	 */
 	function normalize( raw ) {
 		const v = raw && 'object' === typeof raw ? raw : {};
 		const email = v.email || {};
@@ -42,6 +45,11 @@
 
 	const split = ( text ) => String( text ).split( /[\s,;]+/ ).map( ( s ) => s.trim() ).filter( Boolean );
 
+	/**
+	 * Builds the delivery block: email, webhook and destination, each behind its own switch.
+	 *
+	 * @param {Object} opts The starting value and callbacks.
+	 */
 	app.delivery = function ( opts ) {
 		const o = opts || {};
 		const features = ( store.get( 'options' ) || {} ).features || {};

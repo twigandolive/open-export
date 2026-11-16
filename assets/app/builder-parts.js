@@ -23,6 +23,9 @@
 	const el = app.el;
 	const B = ( app.builder = app.builder || {} );
 	B.sections = B.sections || [];
+	/**
+	 * Adds a builder card and keeps the cards in their display order.
+	 */
 	B.register = function ( def ) {
 		B.sections.push( def );
 		B.sections.sort( ( a, b ) => a.order - b.order );
@@ -31,6 +34,9 @@
 	const isObj = ( v ) => !! v && 'object' === typeof v && ! Array.isArray( v );
 	const str = ( v ) => ( null === v || undefined === v ? '' : String( v ) );
 
+	/**
+	 * Gives a new export config with every setting at its default.
+	 */
 	B.defaults = function () {
 		return {
 			source: '',
@@ -54,6 +60,9 @@
 		};
 	};
 
+	/**
+	 * Turns a loaded filter tree into the shape the builder edits, dropping anything that is not a rule or a group.
+	 */
 	function normalizeTree( node ) {
 		const group = isObj( node ) ? node : {};
 		return {

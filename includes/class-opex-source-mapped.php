@@ -42,15 +42,27 @@ trait OPEX_Source_Mapped {
 	 */
 	abstract protected function field_defs(): array;
 
-	/** The part of the SELECT list every batch needs, before the mapped expressions. */
+	/**
+	 * The part of the SELECT list every batch needs, before the mapped expressions.
+	 *
+	 * @return string The SQL for the start of the SELECT list.
+	 */
 	abstract protected function base_select(): string;
 
-	/** Groups listed after the mapped ones, such as custom fields. */
+	/**
+	 * Groups listed after the mapped ones, such as custom fields.
+	 *
+	 * @return array[] Field groups, each with a label and its fields.
+	 */
 	protected function extra_groups(): array {
 		return array();
 	}
 
-	/** SQL for the row id a term-list field reads its terms from. */
+	/**
+	 * SQL for the row id a term-list field reads its terms from.
+	 *
+	 * @return string The SQL column.
+	 */
 	protected function term_object(): string {
 		return 'p.ID';
 	}
@@ -58,6 +70,8 @@ trait OPEX_Source_Mapped {
 	/**
 	 * What the definitions depend on. They name tables, so a switch to another
 	 * site of a network must build them again.
+	 *
+	 * @return string A key that changes when the definitions must be built again.
 	 */
 	protected function defs_key(): string {
 		global $wpdb;
@@ -81,28 +95,49 @@ trait OPEX_Source_Mapped {
 	 * The definition of a field, or null when the map does not have it.
 	 *
 	 * @param string $field Field id.
+	 * @return array|null The definition, or null when the field is not mapped.
 	 */
 	protected function def( string $field ): ?array {
 		return $this->defs()[ $field ] ?? null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return bool True when the source offers the field.
+	 */
 	public function has_field( string $field ): bool {
 		return null !== $this->def( $field );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return string A coarse type, such as text, number, date or bool.
+	 */
 	public function field_type( string $field ): string {
 		return (string) ( $this->def( $field )['type'] ?? 'text' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Canonical field id.
+	 * @return string The field id that holds the value on this storage.
+	 */
 	public function resolve_field( string $field ): string {
 		$def = $this->def( $field );
 		return isset( $def['read'] ) ? (string) $def['read'] : $field;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return string|null The SQL to filter on, or null when the field has none.
+	 */
 	public function filter_expr( string $field ): ?string {
 		$def = $this->def( $field );
 		if ( isset( $def['filter'] ) ) {
@@ -111,13 +146,26 @@ trait OPEX_Source_Mapped {
 		return isset( $def['sql'] ) ? (string) $def['sql'] : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return bool True when a rule may filter on the field.
+	 */
 	public function is_filterable( string $field ): bool {
 		$def = $this->def( $field );
 		return ! isset( $def['php'] ) || isset( $def['filter'] ) || isset( $def['terms'] );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @param string $op    Filter operator.
+	 * @param string $value Filter value.
+	 * @param array  $args  Receives the values for the SQL placeholders.
+	 * @return string|null The SQL condition, or null to use the plain comparison.
+	 */
 	public function filter_clause( string $field, string $op, string $value, array &$args ): ?string {
 		$def = $this->def( $field );
 		if ( null === $def ) {
@@ -133,7 +181,12 @@ trait OPEX_Source_Mapped {
 		return null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return string|null SQL that is true when the flag is yes, or null when the field is not a flag.
+	 */
 	public function flag_sql( string $field ): ?string {
 		$def = $this->def( $field );
 		if ( null === $def || 'boolean' !== ( $def['type'] ?? '' ) ) {
@@ -157,13 +210,23 @@ trait OPEX_Source_Mapped {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return string|null The column alias in the SELECT list, or null when the field is not selected there.
+	 */
 	public function row_alias( string $field ): ?string {
 		$def = $this->def( $field );
 		return isset( $def['sql'] ) ? 'wf_' . substr( $field, 4 ) : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string[] $fields Field ids the export asked for.
+	 * @return string The SELECT list.
+	 */
 	public function select_list( array $fields ): string {
 		$parts = array( $this->base_select() );
 		$seen  = array();
@@ -180,7 +243,13 @@ trait OPEX_Source_Mapped {
 		return implode( ', ', $parts );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @param string $value Raw cell text.
+	 * @return string The cell text people see.
+	 */
 	public function format_value( string $field, string $value ): string {
 		$def = $this->def( $field );
 		if ( null === $def ) {
@@ -203,7 +272,11 @@ trait OPEX_Source_Mapped {
 		return $value;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array[] Field groups, each with a label and its fields.
+	 */
 	public function field_groups(): array {
 		$buckets = array();
 		foreach ( $this->defs() as $id => $def ) {
@@ -223,7 +296,12 @@ trait OPEX_Source_Mapped {
 		return array_merge( $groups, $this->extra_groups() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id.
+	 * @return string[] The allowed values, or an empty array when the field is open.
+	 */
 	public function field_values( string $field ): array {
 		return array_values( (array) ( $this->def( $field )['values'] ?? array() ) );
 	}
@@ -232,6 +310,7 @@ trait OPEX_Source_Mapped {
 	 * A stored list (comma text or a JSON array from a serialized value) as names joined with ", ".
 	 *
 	 * @param string $value Stored text.
+	 * @return string The names, or '' when the list is empty.
 	 */
 	private static function list_text( string $value ): string {
 		$value = trim( $value );

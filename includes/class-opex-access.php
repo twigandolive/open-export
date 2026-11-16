@@ -33,12 +33,20 @@ class OPEX_Access {
 	 */
 	private static $wide = false;
 
-	/** Whether the caller itself may reach the whole network: not multisite, a super admin, or WP-CLI. */
+	/**
+	 * Whether the caller itself may reach the whole network: not multisite, a super admin, or WP-CLI.
+	 *
+	 * @return bool True when the caller may reach every site of the network.
+	 */
 	public static function caller_unrestricted(): bool {
 		return ! is_multisite() || is_super_admin() || ( defined( 'WP_CLI' ) && WP_CLI );
 	}
 
-	/** Whether the current request must stay inside the current site. */
+	/**
+	 * Whether the current request must stay inside the current site.
+	 *
+	 * @return bool True when the request must stay inside the current site.
+	 */
 	public static function restricted(): bool {
 		return ! self::$wide && ! self::caller_unrestricted();
 	}
@@ -66,6 +74,7 @@ class OPEX_Access {
 	 * caller who is not restricted, when the source reaches shared data.
 	 *
 	 * @param array $src Parsed source.
+	 * @return bool True when the export may reach data shared across the network.
 	 */
 	public static function wide_for( array $src ): bool {
 		if ( ! is_multisite() || ! self::caller_unrestricted() ) {
@@ -116,7 +125,11 @@ class OPEX_Access {
 		);
 	}
 
-	/** The users tile count, with the same scope as the export. */
+	/**
+	 * The users tile count, with the same scope as the export.
+	 *
+	 * @return int Number of users the export would include.
+	 */
 	public static function user_count(): int {
 		global $wpdb;
 		list( $terms, $args ) = self::users_scope();
@@ -130,6 +143,7 @@ class OPEX_Access {
 	 * validation both ask here.
 	 *
 	 * @param string $table Table name.
+	 * @return bool True when the caller may export this table.
 	 */
 	public static function table_allowed( string $table ): bool {
 		return ! self::restricted() || self::site_table( $table );
@@ -139,6 +153,7 @@ class OPEX_Access {
 	 * Table status rows the caller may see.
 	 *
 	 * @param array $rows Rows with a name key.
+	 * @return array The rows for tables the caller may export, in their original order.
 	 */
 	public static function visible_tables( array $rows ): array {
 		return array_values(
@@ -156,6 +171,7 @@ class OPEX_Access {
 	 *
 	 * @param array  $src Parsed source.
 	 * @param string $key Meta key.
+	 * @return bool True when the key may be offered and exported.
 	 */
 	public static function meta_allowed( array $src, string $key ): bool {
 		return 'users' !== ( $src['type'] ?? '' ) || ! self::restricted() || ! self::other_site_key( $key );
@@ -184,6 +200,7 @@ class OPEX_Access {
 	 * site's table (the main prefix is the base that "wp_2_" also starts with).
 	 *
 	 * @param string $table Table name.
+	 * @return bool True when the table belongs to the current site.
 	 */
 	private static function site_table( string $table ): bool {
 		global $wpdb;
@@ -200,6 +217,7 @@ class OPEX_Access {
 	 * site's) seen from a sub-site.
 	 *
 	 * @param string $key Meta key.
+	 * @return bool True when the key belongs to another site of the network.
 	 */
 	private static function other_site_key( string $key ): bool {
 		global $wpdb;

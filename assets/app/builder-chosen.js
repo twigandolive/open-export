@@ -40,6 +40,13 @@
 		}
 	};
 
+	/**
+	 * Builds the ordered list of chosen columns, with header labels, transform panels, reordering and remove buttons.
+	 *
+	 * @param {Object} ctx Builder context.
+	 * @param {Object} o   Callbacks: onChange( reason ) and onEmpty().
+	 * @return {Object} { root, rebuild(), focusError( problem ) }.
+	 */
 	B.chosen = function ( ctx, o ) {
 		const open = new Set();
 		const panels = new Map();

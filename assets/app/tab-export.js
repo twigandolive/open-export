@@ -23,6 +23,11 @@
 	const ui = app.ui;
 	const store = app.store;
 
+	/**
+	 * Builds the Export tab: "Start from", the builder, the Run card and the sticky bar.
+	 *
+	 * @param {Element} panel Tab panel.
+	 */
 	function mount( panel ) {
 		const messages = el( 'div', { class: 'opex-messages', 'aria-live': 'polite' } );
 		const cards = el( 'div', { class: 'opex-builder' } );

@@ -21,6 +21,12 @@ class OPEX_Query_Rows {
 	 * meta and taxonomy values for the batch in one query each.
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array         $src    Parsed source.
+	 * @param array         $rows   Database rows.
+	 * @param string[]      $fields Field ids in output order.
+	 * @param callable|null $tick   Called during long batches so the job lock stays fresh.
+	 * @return array[] One item per row, keyed by field id.
 	 */
 	public static function assemble( array $src, array $rows, array $fields, $tick = null ): array {
 		if ( ! $rows ) {
@@ -84,6 +90,14 @@ class OPEX_Query_Rows {
 
 	/**
 	 * One cell. Order money, dates and flags get the same text on both storage engines.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param object $row   Database row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 * @param array  $meta  Meta values of the batch, by row id and key.
+	 * @param array  $tax   Term names of the batch, by taxonomy and row id.
+	 * @return string The cell text.
 	 */
 	private static function field_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
 		$value    = self::raw_value( $src, $row, $field, $id, $meta, $tax );
@@ -100,6 +114,7 @@ class OPEX_Query_Rows {
 	 * @param int    $id    Row id.
 	 * @param array  $meta  Meta values of the batch, by row id and key.
 	 * @param array  $tax   Term names of the batch, by row id and taxonomy.
+	 * @return string The cell text before transforms.
 	 */
 	private static function raw_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
 		$provider = OPEX_Sources::for_src( $src );
@@ -124,7 +139,17 @@ class OPEX_Query_Rows {
 		return $provider ? $provider->derive_value( $field, $value ) : $value;
 	}
 
-	/** One cell read by its storage id (core, col, meta, tax or computed). */
+	/**
+	 * One cell read by its storage id (core, col, meta, tax or computed).
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param object $row   Database row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 * @param array  $meta  Meta values of the batch, by row id and key.
+	 * @param array  $tax   Term names of the batch, by taxonomy and row id.
+	 * @return string The cell text.
+	 */
 	private static function resolved_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
@@ -155,6 +180,7 @@ class OPEX_Query_Rows {
 	 * @param object $row  Database row.
 	 * @param string $what Computed field name, without the prefix.
 	 * @param int    $id   Row id.
+	 * @return string The cell text.
 	 */
 	private static function computed_value( array $src, object $row, string $what, int $id ): string {
 		switch ( $what ) {
@@ -179,7 +205,14 @@ class OPEX_Query_Rows {
 		return '';
 	}
 
-	/** One query fetches every requested meta value for the whole batch. */
+	/**
+	 * One query fetches every requested meta value for the whole batch.
+	 *
+	 * @param array    $src  Parsed source, which names the meta table.
+	 * @param int[]    $ids  Row ids of the batch.
+	 * @param string[] $keys Meta keys the export needs.
+	 * @return array Meta values by row id and key.
+	 */
 	private static function prefetch_meta( array $src, array $ids, array $keys ): array {
 		global $wpdb;
 
@@ -223,7 +256,13 @@ class OPEX_Query_Rows {
 		return $out;
 	}
 
-	/** Term names per object id for one taxonomy, one query per batch. */
+	/**
+	 * Term names per object id for one taxonomy, one query per batch.
+	 *
+	 * @param int[]  $ids      Object ids of the batch.
+	 * @param string $taxonomy Taxonomy name.
+	 * @return array<int, string[]> Term names by object id.
+	 */
 	private static function prefetch_terms( array $ids, string $taxonomy ): array {
 		if ( ! $ids || ! taxonomy_exists( $taxonomy ) ) {
 			return array();
@@ -241,7 +280,12 @@ class OPEX_Query_Rows {
 		return $out;
 	}
 
-	/** Decode serialized values to JSON for readable output. */
+	/**
+	 * Decode serialized values to JSON for readable output.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return string The value as text, with arrays and objects as JSON.
+	 */
 	private static function flatten( $value ): string {
 		if ( is_null( $value ) ) {
 			return '';
@@ -254,9 +298,10 @@ class OPEX_Query_Rows {
 	}
 
 	/**
-	 * Several values in one cell, joined with a comma.
+	 * Several values in one cell, joined with " | ".
 	 *
 	 * @param array $values Values.
+	 * @return string The values in one cell.
 	 */
 	private static function flatten_many( array $values ): string {
 		return implode( ' | ', array_map( array( __CLASS__, 'flatten' ), $values ) );

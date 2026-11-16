@@ -27,6 +27,7 @@ class OPEX_Lock {
 	 * Option name for a lock.
 	 *
 	 * @param string $name Lock name, such as a job id.
+	 * @return string The option that stores the lock.
 	 */
 	public static function option_name( string $name ): string {
 		return 'opex_lock_' . $name;
@@ -150,6 +151,7 @@ class OPEX_Lock {
 	 *
 	 * @param string $name  Lock name.
 	 * @param string $token Owner token.
+	 * @return bool True when this token holds the lock.
 	 */
 	public static function owns( string $name, string $token ): bool {
 		global $wpdb;
@@ -163,6 +165,7 @@ class OPEX_Lock {
 	 * Whether a live lock exists.
 	 *
 	 * @param string $name Lock name.
+	 * @return bool True when someone holds the lock and it has not expired.
 	 */
 	public static function is_held( string $name ): bool {
 		global $wpdb;

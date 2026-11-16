@@ -32,6 +32,9 @@
 	const types = ( ctx ) => ctx.options.transforms || {};
 	const maxSteps = ( ctx ) => Number( ctx.limits.transform_steps ) || 8;
 
+	/**
+	 * Makes a new step of a type, with each argument at the server's starting value.
+	 */
 	function newStep( ctx, type ) {
 		const def = types( ctx )[ type ] || { args: {} };
 		const step = { type };
@@ -49,6 +52,11 @@
 		return step;
 	}
 
+	/**
+	 * Checks one step against its type's rules.
+	 *
+	 * @return {Object} Problems keyed by argument name. Empty when the step is fine.
+	 */
 	function check( step, ctx ) {
 		const def = types( ctx )[ step.type ];
 		const out = {};
@@ -103,6 +111,9 @@
 		return out;
 	}
 
+	/**
+	 * Collects the problems in every column's steps, so the screen can show them before the export starts.
+	 */
 	function errors( ctx ) {
 		const list = [];
 		const max = maxSteps( ctx );
@@ -126,6 +137,9 @@
 		return list;
 	}
 
+	/**
+	 * Builds the select that lists the step types, keeping an unknown value visible.
+	 */
 	function typeSelect( ctx, value, label ) {
 		const select = el( 'select', { 'aria-label': label } );
 		const defs = types( ctx );
@@ -137,6 +151,13 @@
 		return select;
 	}
 
+	/**
+	 * Builds the step editor of one column: its steps, their arguments, and add, move and remove buttons.
+	 *
+	 * @param {Object}   ctx      Builder context.
+	 * @param {string}   fieldId  Column the steps belong to.
+	 * @param {Function} onChange Called after each change.
+	 */
 	function panel( ctx, fieldId, onChange ) {
 		const root = el( 'div', { class: 'opex-transform' } );
 		const count = el( 'p', { class: 'opex-help opex-steps-count' } );

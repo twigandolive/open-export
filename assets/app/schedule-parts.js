@@ -26,15 +26,24 @@
 
 	const TOKENS = [ 'label', 'source', 'date', 'time', 'datetime', 'id', 'site' ];
 
+	/**
+	 * Gives the /options answer from the store.
+	 */
 	function options() {
 		return store.get( 'options' ) || {};
 	}
 
+	/**
+	 * Gives the label of a frequency, or its id when it is unknown.
+	 */
 	function frequencyLabel( id ) {
 		const found = ( options().frequencies || [] ).find( ( item ) => item.id === id );
 		return found ? found.label : String( id || '' );
 	}
 
+	/**
+	 * Gives the name of a weekday number, or the number when it is unknown.
+	 */
 	function weekdayLabel( value ) {
 		const found = ( options().weekdays || [] ).find( ( item ) => Number( item.value ) === Number( value ) );
 		return found ? found.label : String( value );
@@ -96,6 +105,9 @@
 		return frequencyLabel( s.frequency );
 	}
 
+	/**
+	 * Says when a schedule runs next, or why it does not run.
+	 */
 	function nextRun( s ) {
 		if ( 'manual' === s.frequency ) {
 			return __( 'Not scheduled, runs only when started', 'open-export' );
@@ -106,6 +118,11 @@
 		return Number( s.next_run ) > 0 ? app.formatDate( s.next_run ) : __( 'Not scheduled', 'open-export' );
 	}
 
+	/**
+	 * Turns a stored watermark, written in UTC, into a timestamp.
+	 *
+	 * @return {number} Seconds since the epoch, or 0 when the text is not a date.
+	 */
 	function watermarkTime( mark ) {
 		const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec( String( mark || '' ) );
 		if ( ! m ) {
@@ -143,6 +160,9 @@
 		];
 	}
 
+	/**
+	 * Builds the list of delivery channels a schedule has on.
+	 */
 	function deliveryList( delivery ) {
 		const d = delivery || {};
 		const on = [
@@ -156,6 +176,9 @@
 		return on.map( ( item ) => el( 'span', {}, [ app.icon( item[ 1 ], { sm: true } ), item[ 2 ] ] ) );
 	}
 
+	/**
+	 * Adds a leading zero to a number below 10.
+	 */
 	function pad( n ) {
 		return ( n < 10 ? '0' : '' ) + n;
 	}
@@ -206,6 +229,11 @@
 		return ( name || 'export' ) + ( ctx.extension ? '.' + ctx.extension : '' );
 	}
 
+	/**
+	 * Finds the running or paused job of a schedule.
+	 *
+	 * @return {Object|null} The job, or null when there is none.
+	 */
 	function activeJob( id ) {
 		return ( store.get( 'jobs' ) || [] ).find( ( job ) => job.schedule_id === id && app.jobs.isActive( job ) ) || null;
 	}

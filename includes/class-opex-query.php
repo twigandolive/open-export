@@ -49,7 +49,11 @@ class OPEX_Query {
 	/** Pattern that strips the prefix from a field id. */
 	private const FIELD_PREFIX_PATTERN = '/^(core|meta|tax|computed|col|woo|acf):/';
 
-	/** The filter operators this plugin understands. */
+	/**
+	 * The filter operators this plugin understands.
+	 *
+	 * @return string[] Operator ids.
+	 */
 	public static function ops(): array {
 		return self::OPS;
 	}
@@ -58,27 +62,48 @@ class OPEX_Query {
 	 * Whether an operator is one the filter rules know.
 	 *
 	 * @param string $op Operator id.
+	 * @return bool True when the operator is known.
 	 */
 	public static function is_valid_op( string $op ): bool {
 		return in_array( $op, self::OPS, true );
 	}
 
-	/** Whether text looks like a field id (a known prefix and a name). */
+	/**
+	 * Whether text looks like a field id (a known prefix and a name).
+	 *
+	 * @param string $field Text to check.
+	 * @return bool True when the text looks like a field id.
+	 */
 	public static function is_field_id( string $field ): bool {
 		return 1 === preg_match( self::FIELD_ID_PATTERN, $field );
 	}
 
-	/** A field id without its prefix: "meta:_sku" becomes "_sku". */
+	/**
+	 * A field id without its prefix: "meta:_sku" becomes "_sku".
+	 *
+	 * @param string $field Field id.
+	 * @return string The name part of the id.
+	 */
 	public static function field_name( string $field ): string {
 		return (string) preg_replace( self::FIELD_PREFIX_PATTERN, '', $field );
 	}
 
-	/** Reduce any relation value to "OR" or "AND". */
+	/**
+	 * Reduce any relation value to "OR" or "AND".
+	 *
+	 * @param mixed $relation Relation from a request.
+	 * @return string OR or AND.
+	 */
 	public static function normalize_relation( $relation ): string {
 		return 'OR' === strtoupper( (string) $relation ) ? 'OR' : 'AND';
 	}
 
-	/** Whether a meta key holds credentials that must never be exported or filtered on. */
+	/**
+	 * Whether a meta key holds credentials that must never be exported or filtered on.
+	 *
+	 * @param string $key Meta key.
+	 * @return bool True when the key holds credentials.
+	 */
 	public static function is_credential_meta( string $key ): bool {
 		return in_array( $key, self::CREDENTIAL_META_KEYS, true );
 	}
@@ -89,6 +114,7 @@ class OPEX_Query {
 	 *
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id asked for.
+	 * @return string The date field id to use, or '' when the source has none.
 	 */
 	public static function date_field_or_default( array $src, string $field ): string {
 		$defs = self::date_fields( $src );
@@ -128,6 +154,10 @@ class OPEX_Query {
 	 * the capability document never change, only where they are read from.
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Canonical field id.
+	 * @return string The field id that holds the value on this storage.
 	 */
 	public static function resolve_field( array $src, string $field ): string {
 		if ( 0 !== strpos( $field, 'woo:' ) ) {
@@ -146,6 +176,10 @@ class OPEX_Query {
 	 *
 	 * Meta keys always pass: any key may exist on any row, and absence is a
 	 * blank cell rather than a mistake.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id to check.
+	 * @return bool True when the field resolves to a value for this source.
 	 */
 	public static function is_valid_field( array $src, string $field ): bool {
 		$field = self::resolve_field( $src, $field );
@@ -190,6 +224,10 @@ class OPEX_Query {
 	/**
 	 * Whether a rule may filter on this field. Computed values (a permalink,
 	 * an author name) are not stored anywhere, so only the role list qualifies.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id to check.
+	 * @return bool True when a rule may filter on the field.
 	 */
 	public static function is_filterable_field( array $src, string $field ): bool {
 		if ( ! self::is_valid_field( $src, $field ) ) {
@@ -203,7 +241,12 @@ class OPEX_Query {
 		return ( 0 !== strpos( $resolved, 'computed:' ) || 'computed:roles' === $resolved ) && 0 !== strpos( $resolved, 'acf:' );
 	}
 
-	/** Whether a column name is blocked from every export path (core, col, filters). */
+	/**
+	 * Whether a column name is blocked from every export path (core, col, filters).
+	 *
+	 * @param string $col Column name.
+	 * @return bool True when the column must never be exported.
+	 */
 	public static function is_forbidden_column( string $col ): bool {
 		return in_array( $col, self::FORBIDDEN, true );
 	}
@@ -211,6 +254,9 @@ class OPEX_Query {
 	/**
 	 * Validate and decompose a source id like "posts:product" or "table:wp_options".
 	 * Returns null for unknown sources, so downstream code never trusts raw input.
+	 *
+	 * @param string $source_id Source id from a request.
+	 * @return array|null The parsed source, or null when the source is unknown.
 	 */
 	public static function parse_source( string $source_id ): ?array {
 		// A registered provider serves its own ids. The order provider keeps
@@ -255,6 +301,7 @@ class OPEX_Query {
 	 * is stored. This doubles as the allowlist: a range naming anything not in
 	 * here is dropped, so no caller-supplied string ever reaches the SQL.
 	 *
+	 * @param array $src Parsed source.
 	 * @return array<string, array{label: string, tz: string, sql: string}>
 	 */
 	public static function date_fields( array $src ): array {
@@ -263,6 +310,9 @@ class OPEX_Query {
 
 	/**
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param string $type Source type: posts, users, comments or terms.
+	 * @return string The table alias the SQL uses for that type.
 	 */
 	public static function alias( string $type ): string {
 		return array(
@@ -275,6 +325,10 @@ class OPEX_Query {
 
 	/**
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param string $type Source type: posts, users, comments or terms.
+	 * @param string $col  Column name to check.
+	 * @return bool True when the column is a known core column of that type.
 	 */
 	public static function valid_core_col( string $type, string $col ): bool {
 		if ( self::is_forbidden_column( $col ) ) {
@@ -285,6 +339,10 @@ class OPEX_Query {
 
 	/**
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param string $table Table name, already checked.
+	 * @param string $col   Column name to check.
+	 * @return bool True when the table has that column.
 	 */
 	public static function valid_table_col( string $table, string $col ): bool {
 		if ( self::is_forbidden_column( $col ) ) {
@@ -302,6 +360,7 @@ class OPEX_Query {
 	 * Total row count for a config, used for the progress bar. See OPEX_Query_Fetch.
 	 *
 	 * @param array $config Export config.
+	 * @return int Number of rows the export would hold.
 	 */
 	public static function count( array $config ): int {
 		return OPEX_Query_Fetch::count( $config );
@@ -315,6 +374,7 @@ class OPEX_Query {
 	 * @param int           $limit  Rows to fetch.
 	 * @param callable|null $tick   Called now and then while rows are assembled, so a
 	 *                              long batch can refresh its lock.
+	 * @return array The rows, the cursor for the next call, and whether the source is used up.
 	 * @throws RuntimeException When the database reports an error.
 	 */
 	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {

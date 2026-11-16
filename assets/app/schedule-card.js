@@ -22,6 +22,12 @@
 	const parts = app.scheduleParts;
 	const view = app.historyView;
 
+	/**
+	 * Builds one schedule card and keeps its controls, so updates never take focus away.
+	 *
+	 * @param {Object} schedule Exposed schedule.
+	 * @param {Object} h        Handlers for the card's actions.
+	 */
 	app.scheduleCard = function ( schedule, h ) {
 		let s = schedule;
 		const titleId = app.uid( 'opex-sched' );

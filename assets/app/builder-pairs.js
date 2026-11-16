@@ -24,6 +24,9 @@
 	// /options limits.map_pair_length (OPEX_Transforms::MAX_PAIR_LEN).
 	const maxLength = () => app.store.limit( 'map_pair_length', 200 );
 
+	/**
+	 * Gives the editable rows of a map argument, read from the step once and kept for later edits.
+	 */
 	function rows( step, name ) {
 		if ( ! pairRows.has( step ) ) {
 			// PHP sends pairs whose "from" values are 0, 1, 2 and so on as a JSON list. Read the list's positions as those values.
@@ -34,6 +37,9 @@
 		return pairRows.get( step );
 	}
 
+	/**
+	 * Builds the pairs table of a "Map values" step and writes the rows back to the step as the person edits.
+	 */
 	function editor( step, name, n, validate ) {
 		const rows = B.pairs.rows( step, name );
 		const tbody = el( 'tbody', {} );

@@ -40,6 +40,7 @@ class OPEX_Schema {
 	 * @param string $source_id Source to describe in full. Empty means none.
 	 * @param bool   $all       Describe every source in full. Large sites will
 	 *                          produce a big document, so the caller opts in.
+	 * @return array The capability document.
 	 */
 	public static function build( string $source_id = '', bool $all = false ): array {
 		$groups = OPEX_Catalog::sources();
@@ -106,6 +107,8 @@ class OPEX_Schema {
 
 	/**
 	 * The site's name, address, time zone and versions, so a recipe is written for this site.
+	 *
+	 * @return array The site details.
 	 */
 	private static function site_info(): array {
 		$info = array(
@@ -122,7 +125,11 @@ class OPEX_Schema {
 		return $info;
 	}
 
-	/** Prose the assistant reads before writing a recipe. */
+	/**
+	 * Prose the assistant reads before writing a recipe.
+	 *
+	 * @return string The instructions as one paragraph.
+	 */
 	private static function instructions(): string {
 		return implode(
 			' ',
@@ -144,7 +151,11 @@ class OPEX_Schema {
 		);
 	}
 
-	/** The shape of the object the assistant should send back. */
+	/**
+	 * The shape of the object the assistant should send back.
+	 *
+	 * @return array Each recipe key with a hint of the value it takes.
+	 */
 	private static function recipe_format(): array {
 		return array(
 			'opex_recipe'   => self::RECIPE_VERSION,
@@ -175,6 +186,8 @@ class OPEX_Schema {
 
 	/**
 	 * The filter operators with a short meaning for each, for the assistant.
+	 *
+	 * @return array[] One entry per operator, with its id and meaning.
 	 */
 	private static function operators(): array {
 		$labels = array(
@@ -207,6 +220,8 @@ class OPEX_Schema {
 
 	/**
 	 * The date range presets with their meanings.
+	 *
+	 * @return array[] One entry per preset, with its id and meaning.
 	 */
 	private static function date_presets(): array {
 		$out = array();
@@ -224,6 +239,7 @@ class OPEX_Schema {
 	 *
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id.
+	 * @return string A coarse type, such as text, number, date, url or enum.
 	 */
 	public static function field_type( array $src, string $field ): string {
 		return OPEX_Schema_Sources::field_type( $src, $field );
@@ -235,6 +251,7 @@ class OPEX_Schema {
 	 *
 	 * @param array $recipe The recipe an assistant wrote.
 	 * @param array $notes  Receives notes.
+	 * @return array|WP_Error The config, the report and the notes, or an error when the source is missing or unknown.
 	 */
 	public static function recipe_to_config( array $recipe, array &$notes = array() ) {
 		return OPEX_Schema_Resolver::recipe_to_config( $recipe, $notes );
@@ -245,6 +262,7 @@ class OPEX_Schema {
 	 *
 	 * @param string $wanted     The id the assistant wrote.
 	 * @param array  $candidates Ids that exist.
+	 * @return string The closest id, or '' when none is close enough.
 	 */
 	public static function suggest( string $wanted, array $candidates ): string {
 		return OPEX_Schema_Resolver::suggest( $wanted, $candidates );

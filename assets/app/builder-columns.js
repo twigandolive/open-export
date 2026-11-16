@@ -18,6 +18,11 @@
 	const ui = app.ui;
 	const B = app.builder;
 
+	/**
+	 * Builds the Columns card: the field picker, the chosen list and the custom column form.
+	 *
+	 * @param {Object} ctx Builder context.
+	 */
 	function build( ctx ) {
 		const search = el( 'input', { type: 'search', class: 'opex-w-full opex-fieldsearch', placeholder: __( 'Search fields', 'open-export' ), 'aria-label': __( 'Search fields', 'open-export' ) } );
 		const pane = el( 'div', { class: 'opex-pane' } );

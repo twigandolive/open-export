@@ -26,6 +26,11 @@
 	const MAX_NAME = 100;
 	const MAX_PATTERN = 200;
 
+	/**
+	 * Builds the add and edit form of a schedule.
+	 *
+	 * @param {Object} o Record and callbacks.
+	 */
 	app.scheduleForm = function ( o ) {
 		const record = o.record || null;
 		const options = app.store.get( 'options' ) || {};

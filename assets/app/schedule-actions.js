@@ -21,6 +21,12 @@
 	const jobs = app.jobs;
 	const parts = app.scheduleParts;
 
+	/**
+	 * Builds the list actions of the Schedules tab: the on and off switch, Run now, Duplicate, and following runs until they end.
+	 *
+	 * @param {Object} o say, fail, put, list, cards and focusCard from the Schedules tab.
+	 * @return {Object} { toggle( s, on, input ), run( s ), duplicate( s ), onJobs() }.
+	 */
 	app.scheduleActions = function ( o ) {
 		const { say, fail, put, list, cards, focusCard } = o;
 		// Job id to schedule id, for jobs seen running.

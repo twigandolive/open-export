@@ -48,6 +48,7 @@ class OPEX_Source_Woo_Product_Values {
 	 *
 	 * @param object $row      Fetched post row.
 	 * @param string $taxonomy Taxonomy name.
+	 * @return string The names, or '' when there are none.
 	 */
 	public static function term_names( object $row, string $taxonomy ): string {
 		$terms = get_the_terms( self::owner_id( $row ), $taxonomy );
@@ -67,6 +68,7 @@ class OPEX_Source_Woo_Product_Values {
 	 * URL of the row's own image, or ''.
 	 *
 	 * @param int $id Product or variation id.
+	 * @return string The URL, or ''.
 	 */
 	public static function image_url( int $id ): string {
 		$thumb = (int) get_post_meta( $id, '_thumbnail_id', true );
@@ -77,6 +79,7 @@ class OPEX_Source_Woo_Product_Values {
 	 * Gallery image URLs joined with ", ".
 	 *
 	 * @param int $id Product id.
+	 * @return string The URLs, or '' when there are none.
 	 */
 	public static function gallery_urls( int $id ): string {
 		$urls = array();
@@ -93,6 +96,7 @@ class OPEX_Source_Woo_Product_Values {
 	 * The product page. A variation's link carries its attribute choices, as WooCommerce builds it.
 	 *
 	 * @param int $id Product or variation id.
+	 * @return string The product page URL.
 	 */
 	public static function permalink( int $id ): string {
 		$product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
@@ -105,6 +109,7 @@ class OPEX_Source_Woo_Product_Values {
 	 * empty value means the variation matches any value.
 	 *
 	 * @param int $id Product or variation id.
+	 * @return string The JSON text, or '' when there are no attributes.
 	 */
 	public static function attributes_json( int $id ): string {
 		$product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
@@ -136,6 +141,7 @@ class OPEX_Source_Woo_Product_Values {
 	 * The row whose categories, tags and visibility a row shows: a variation's parent, or itself.
 	 *
 	 * @param object $row Fetched post row.
+	 * @return int The id of the owner row.
 	 */
 	public static function owner_id( object $row ): int {
 		$is_variation = 'product_variation' === (string) ( $row->post_type ?? '' );

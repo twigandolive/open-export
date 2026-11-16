@@ -150,6 +150,11 @@
 		} );
 	};
 
+	/**
+	 * Builds a table with a hidden caption and column headers.
+	 *
+	 * @param {Object} o Caption, columns and an optional class.
+	 */
 	ui.table = function ( o ) {
 		const head = el( 'tr', {}, o.columns.map( ( col ) => el( 'th', {
 			scope: 'col',

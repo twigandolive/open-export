@@ -67,6 +67,12 @@
 		return { code, message, status, params };
 	}
 
+	/**
+	 * Tells whether a failed request means the login or the nonce has expired, so the screen can ask the person to log in again.
+	 *
+	 * @param {Object} err Normalized error with a status and a code.
+	 * @return {boolean} True when the session is gone.
+	 */
 	function isSessionError( err ) {
 		if ( 401 === err.status ) {
 			return true;
@@ -95,14 +101,23 @@
 		} );
 	}
 
+	/**
+	 * Sends a GET request to a plugin route.
+	 */
 	function get( path ) {
 		return request( { path, method: 'GET' } );
 	}
 
+	/**
+	 * Sends a POST request to a plugin route, with an empty body when there is no data.
+	 */
 	function post( path, data ) {
 		return request( { path, method: 'POST', data: data || {} } );
 	}
 
+	/**
+	 * Sends a DELETE request to a plugin route.
+	 */
 	function del( path ) {
 		return request( { path, method: 'DELETE' } );
 	}

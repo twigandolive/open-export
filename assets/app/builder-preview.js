@@ -19,6 +19,11 @@
 	const ui = app.ui;
 	const B = app.builder;
 
+	/**
+	 * Builds the Preview card: the button, the match count, the sample rows and the notes.
+	 *
+	 * @param {Object} ctx Builder context.
+	 */
 	function build( ctx ) {
 		const count = el( 'span', { class: 'opex-preview-count', role: 'status', 'aria-live': 'polite' } );
 		const button = ui.button( { label: __( 'Preview', 'open-export' ), action: 'preview', onClick: run } );

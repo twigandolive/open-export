@@ -28,6 +28,11 @@
 	];
 	const ids = TABS.map( ( tab ) => tab.id );
 
+	/**
+	 * Reads the tab id from the URL hash.
+	 *
+	 * @return {string|null} The tab id, or null when the hash names no tab.
+	 */
 	function fromHash() {
 		const id = String( window.location.hash || '' ).replace( /^#/, '' );
 		return ids.indexOf( id ) > -1 ? id : null;
@@ -50,6 +55,9 @@
 		return el( 'p', { class: 'opex-footer' }, [ parts[ 0 ] || '', link, parts.slice( 1 ).join( '' ) ] );
 	}
 
+	/**
+	 * Builds the shell, loads /options, then opens the tab the URL names, or Export.
+	 */
 	function start() {
 		const root = document.getElementById( 'opex-app' );
 		if ( ! root ) {
@@ -88,6 +96,12 @@
 			}
 		}
 
+		/**
+		 * Opens a tab, for parts that send people to another tab.
+		 *
+		 * @param {string}  id    Tab id.
+		 * @param {boolean} focus True to move focus to the tab.
+		 */
 		app.showTab = function ( id, focus ) {
 			tabs.select( id, !! focus );
 		};

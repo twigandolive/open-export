@@ -97,6 +97,7 @@ class OPEX_Writer_HTML extends OPEX_Writer {
 	 * breaks become <br> so they show.
 	 *
 	 * @param string $value Raw text.
+	 * @return string The cell as HTML.
 	 */
 	private static function cell( string $value ): string {
 		$value = wp_check_invalid_utf8( $value, true );
@@ -108,6 +109,8 @@ class OPEX_Writer_HTML extends OPEX_Writer {
 	/**
 	 * A small style sheet: readable on screen, and on paper the header row
 	 * repeats on every page and no row splits across two pages.
+	 *
+	 * @return string The CSS text.
 	 */
 	private static function style(): string {
 		return 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:14px;color:#1d2327;background:#fff;margin:24px}'

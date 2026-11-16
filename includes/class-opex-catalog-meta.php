@@ -119,6 +119,10 @@ class OPEX_Catalog_Meta {
 	/**
 	 * Distinct meta keys for a source, sampled with a hard LIMIT so a
 	 * 10M-row postmeta table can't stall the picker. Cached 5 minutes.
+	 *
+	 * @param string $type  Source type the keys belong to: posts, users, comments or terms.
+	 * @param string $scope Post type or taxonomy that limits the sample, or '' for none.
+	 * @return string[] Distinct meta keys, sorted.
 	 */
 	public static function sample_meta_keys( string $type, string $scope = '' ): array {
 		global $wpdb;
@@ -171,6 +175,8 @@ class OPEX_Catalog_Meta {
 	 * ACF stores every value twice: `field_name` and `_field_name` where the
 	 * underscored twin holds a `field_abc123` reference. Any key whose twin
 	 * looks like that is an ACF field.
+	 *
+	 * @return string[] Meta keys that hold ACF values.
 	 */
 	public static function acf_keys(): array {
 		global $wpdb;
@@ -196,6 +202,10 @@ class OPEX_Catalog_Meta {
 	/**
 	 * Sort raw meta keys into labelled groups: known plugins first, then
 	 * Custom Fields, with underscored/technical keys tucked in last.
+	 *
+	 * @param string[] $keys     Meta keys to sort into groups.
+	 * @param string[] $acf_keys Keys that belong to ACF fields, so they land in the ACF group.
+	 * @return array[] Field groups, each with a label and its fields.
 	 */
 	public static function grouped_meta( array $keys, array $acf_keys ): array {
 		$buckets = array();
@@ -252,6 +262,7 @@ class OPEX_Catalog_Meta {
 	 *
 	 * @param string   $key      Meta key.
 	 * @param string[] $acf_keys Keys ACF owns on this source.
+	 * @return string The label of the group the key belongs in.
 	 */
 	private static function classify_key( string $key, array $acf_keys ): string {
 		if ( isset( $acf_keys[ $key ] ) ) {

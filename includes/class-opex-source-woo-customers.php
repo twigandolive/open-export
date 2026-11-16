@@ -35,64 +35,112 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 	 */
 	private $totals = array();
 
-	/** The provider when WooCommerce is active, else null. */
+	/**
+	 * The provider when WooCommerce is active, else null.
+	 *
+	 * @return OPEX_Source_Provider|null The provider, or null when WooCommerce is not active.
+	 */
 	public static function resolve(): ?OPEX_Source_Provider {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source id.
+	 */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source type.
+	 */
 	public function src_type(): string {
 		return 'woo_customers';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string A key that changes when the definitions must be built again.
+	 */
 	protected function defs_key(): string {
 		global $wpdb;
 		// The order count reads the orders table of the current storage engine.
 		return $wpdb->prefix . ( OPEX_Woo::use_hpos() ? '|hpos' : '|legacy' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return bool True when the source can be used on this site.
+	 */
 	public function is_available(): bool {
 		return OPEX_Catalog::table_exists( self::lookup_table() ) && OPEX_Catalog::table_exists( self::stats_table() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The FROM clause.
+	 */
 	public function from(): string {
 		return '`' . self::lookup_table() . '` c';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The base WHERE conditions and the values for their placeholders.
+	 */
 	public function base_where(): array {
 		return array( array(), array() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key column for cursor paging.
+	 */
 	public function primary_key(): string {
 		return 'c.customer_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key property name on a fetched row.
+	 */
 	public function id_prop(): string {
 		return 'customer_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The SQL for the start of the SELECT list.
+	 */
 	protected function base_select(): string {
 		return 'c.customer_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source name.
+	 */
 	public function label(): string {
 		return __( 'WooCommerce Customers', 'open-export' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array|null The picker entry, or null when the source has none.
+	 */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -102,7 +150,11 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
+	 */
 	public function date_fields(): array {
 		// WooCommerce writes the registered date in site time and the last
 		// active date in UTC.
@@ -122,7 +174,11 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int[] $ids Row ids of the batch.
+	 */
 	public function prime( array $ids ): void {
 		global $wpdb;
 		$this->totals = array();
@@ -157,7 +213,14 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		}
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param object $row   Fetched row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 * @return string|null The cell text, or null when the field is not built in PHP.
+	 */
 	public function compute_value( object $row, string $field, int $id ): ?string {
 		if ( 'woo:total_spend' !== $field && 'woo:avg_order_value' !== $field ) {
 			return null;
@@ -173,7 +236,11 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		return $totals['count'] > 0 ? OPEX_Decimal::divide( $totals['spend'], $totals['count'], OPEX_Woo_Format::price_decimals() ) : '';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Field definitions by field id.
+	 */
 	protected function field_defs(): array {
 		$who   = __( 'Customer', 'open-export' );
 		$where = __( 'Location', 'open-export' );
@@ -280,6 +347,8 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 	 * SQL that is 1 for a stats row that counts as an order, as WooCommerce
 	 * decides it: a row with no parent is an order, a refund is not, and a
 	 * parented row counts only when the source order really is an order.
+	 *
+	 * @return string The SQL expression.
 	 */
 	private function countable_sql(): string {
 		global $wpdb;
@@ -315,13 +384,21 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 		return array( 's.status NOT IN (' . implode( ',', array_fill( 0, count( $stored ), '%s' ) ) . ')', $stored );
 	}
 
-	/** Full name of the customer lookup table. */
+	/**
+	 * Full name of the customer lookup table.
+	 *
+	 * @return string The table name.
+	 */
 	private static function lookup_table(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'wc_customer_lookup';
 	}
 
-	/** Full name of the order stats table. */
+	/**
+	 * Full name of the order stats table.
+	 *
+	 * @return string The table name.
+	 */
 	private static function stats_table(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'wc_order_stats';

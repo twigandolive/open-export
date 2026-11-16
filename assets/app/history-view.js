@@ -29,10 +29,16 @@
 	// A background job with no batch for this long is restarted by the hourly maintenance task.
 	const stallSeconds = () => app.store.limit( 'stall_seconds', 600 );
 
+	/**
+	 * Gives the badge kind for a job status. An error shows as failed.
+	 */
 	function statusKind( job ) {
 		return 'error' === job.status ? 'failed' : job.status;
 	}
 
+	/**
+	 * Gives the label people see for a job status.
+	 */
 	function statusLabel( status ) {
 		switch ( status ) {
 			case 'running':
@@ -47,10 +53,16 @@
 		return String( status || '' );
 	}
 
+	/**
+	 * Builds the status badge of a job.
+	 */
 	function statusBadge( job ) {
 		return ui.status( statusKind( job ), statusLabel( job.status ) );
 	}
 
+	/**
+	 * Gives how far a job has come, from 0 to 100.
+	 */
 	function percent( job ) {
 		if ( 'done' === job.status ) {
 			return 100;
@@ -58,10 +70,16 @@
 		return job.total > 0 ? ( job.processed / job.total ) * 100 : 0;
 	}
 
+	/**
+	 * Gives the progress bar style for a job status.
+	 */
 	function barKind( job ) {
 		return { paused: 'paused', done: 'done', error: 'failed' }[ job.status ] || '';
 	}
 
+	/**
+	 * Gives the "processed of total" text for a job.
+	 */
 	function progressText( job ) {
 		/* translators: 1: rows processed so far, 2: total rows. */
 		return sprintf( __( '%1$s of %2$s', 'open-export' ), app.formatNumber( job.processed ), app.formatNumber( job.total ) );
@@ -89,6 +107,9 @@
 		return { root, update };
 	}
 
+	/**
+	 * Gives the file size of a finished job, or why there is no file yet.
+	 */
 	function sizeText( job ) {
 		if ( 'done' === job.status ) {
 			return app.formatSize( job.filesize );
@@ -114,6 +135,9 @@
 		return found ? found.name : '';
 	}
 
+	/**
+	 * Says what started a job: a schedule, cron, a trigger URL, the command line or a person.
+	 */
 	function startedBy( job ) {
 		if ( job.schedule_id ) {
 			const name = scheduleName( job );
@@ -131,6 +155,9 @@
 		return __( 'Manual', 'open-export' );
 	}
 
+	/**
+	 * Gives the name of a job's file format.
+	 */
 	function formatLabel( job ) {
 		const formats = ( app.store.get( 'options' ) || {} ).formats || {};
 		const def = formats[ job.format ];
@@ -139,6 +166,9 @@
 
 	const CHANNEL_ICONS = { email: 'mail', webhook: 'link', destination: 'server' };
 
+	/**
+	 * Gives the name of a delivery channel.
+	 */
 	function channelLabel( channel ) {
 		if ( 'email' === channel ) {
 			return __( 'Email', 'open-export' );
@@ -152,6 +182,9 @@
 		return channel;
 	}
 
+	/**
+	 * Builds the status badge of one delivery.
+	 */
 	function deliveryStatus( item ) {
 		if ( 'sent' === item.status ) {
 			return ui.status( 'sent', __( 'Sent', 'open-export' ) );
@@ -188,6 +221,9 @@
 		return parts.join( ' ' );
 	}
 
+	/**
+	 * Tells whether a background job has gone quiet for longer than the maintenance task waits before it restarts the job.
+	 */
 	function isStalled( job ) {
 		const beat = Number( job.heartbeat ) || 0;
 		return 'background' === job.mode && 'running' === job.status && beat > 0 && Date.now() / 1000 - beat > stallSeconds();
@@ -199,6 +235,9 @@
 		return 'done' === job.status && ( job.deliveries || [] ).some( ( item ) => 'sent' !== item.status );
 	}
 
+	/**
+	 * Builds the detail panel of a job: its error, a stall warning, the deliveries and the notes.
+	 */
 	function detail( job, ctx ) {
 		const deliveries = job.deliveries || [];
 		const notes = job.notes || [];
@@ -249,6 +288,9 @@
 		return el( 'div', {}, [ top, el( 'div', { class: 'opex-detail-grid' }, [ deliveryBlock, notesBlock ] ) ] );
 	}
 
+	/**
+	 * Gives a key that changes whenever the detail panel would look different, so the panel is rebuilt only then.
+	 */
 	function detailKey( job, extra ) {
 		return JSON.stringify( [ job.status, job.error, job.deliveries, job.notes, job.finished || 0, isStalled( job ), extra || '' ] );
 	}

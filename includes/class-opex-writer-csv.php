@@ -143,6 +143,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * One record as fputcsv writes it, with only the cells that need it quoted.
 	 *
 	 * @param array $fields Cell values.
+	 * @return string The line as fputcsv writes it.
 	 * @throws RuntimeException When no temporary stream can be opened.
 	 */
 	private function csv_line( array $fields ): string {
@@ -163,6 +164,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * is how every spreadsheet reads it back.
 	 *
 	 * @param array $fields Cell values.
+	 * @return string The line, ending with a line break.
 	 */
 	private function quoted_line( array $fields ): string {
 		$q     = $this->enclosure;
@@ -178,6 +180,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 *
 	 * @param string $text UTF-8 text.
 	 * @param string $to   Target encoding.
+	 * @return string The converted text.
 	 */
 	private function convert( string $text, string $to ): string {
 		if ( function_exists( 'mb_convert_encoding' ) ) {
@@ -192,6 +195,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * The rest of the line is never dropped.
 	 *
 	 * @param string $line UTF-8 line.
+	 * @return string The line in Windows-1252.
 	 */
 	private function to_win1252( string $line ): string {
 		if ( ! preg_match( '/[^\x00-\x7F]/', $line ) ) {
@@ -213,6 +217,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * Maps one non-ASCII character to Windows-1252.
 	 *
 	 * @param string $char One UTF-8 character.
+	 * @return string The character in Windows-1252, or a stand-in.
 	 */
 	private function char_to_win1252( string $char ): string {
 		static $cache = array();

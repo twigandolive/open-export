@@ -24,7 +24,11 @@ class OPEX_Catalog {
 		'auto-draft',
 	);
 
-	/** Everything that can be exported, grouped for the picker UI. */
+	/**
+	 * Everything that can be exported, grouped for the picker UI.
+	 *
+	 * @return array[] Source groups, each with an id, tier, label and items.
+	 */
 	public static function sources(): array {
 		global $wpdb;
 
@@ -153,6 +157,9 @@ class OPEX_Catalog {
 	 * LIMIT, so this list is complete for core, computed, taxonomy and column
 	 * fields but NOT for meta. Callers must treat a missing meta: id as
 	 * "unknown", never as "invalid".
+	 *
+	 * @param string $source_id Source to list the fields of.
+	 * @return array<string, string> Field labels by field id. Empty for an unknown source.
 	 */
 	public static function field_ids( string $source_id ): array {
 		$out = array();
@@ -166,7 +173,11 @@ class OPEX_Catalog {
 		return $out;
 	}
 
-	/** All tables in the database with approximate row counts. */
+	/**
+	 * All tables in the database with approximate row counts.
+	 *
+	 * @return array[] One row per table, with its name and approximate row count.
+	 */
 	public static function table_status(): array {
 		global $wpdb;
 
@@ -203,7 +214,11 @@ class OPEX_Catalog {
 	 */
 	private static $column_memo = array();
 
-	/** Forget the table list and every column list. A site switch keeps the per-site transient. */
+	/**
+	 * Forget the table list and every column list. A site switch keeps the per-site transient.
+	 *
+	 * @param bool $memory_only True to keep the stored table list and clear only what this request holds.
+	 */
 	public static function reset_cache( bool $memory_only = false ): void {
 		self::$table_names = null;
 		self::$column_memo = array();
@@ -212,7 +227,12 @@ class OPEX_Catalog {
 		}
 	}
 
-	/** True when the named table actually exists in this database. */
+	/**
+	 * True when the named table actually exists in this database.
+	 *
+	 * @param string $table Table name to look up.
+	 * @return bool True when the table exists and the caller may export it.
+	 */
 	public static function table_exists( string $table ): bool {
 		if ( null === self::$table_names ) {
 			self::$table_names = array();
@@ -223,7 +243,12 @@ class OPEX_Catalog {
 		return isset( self::$table_names[ $table ] ) && OPEX_Access::table_allowed( $table );
 	}
 
-	/** Column definitions for a validated table name. Read once per request. */
+	/**
+	 * Column definitions for a validated table name. Read once per request.
+	 *
+	 * @param string $table Table name, already checked.
+	 * @return array[] One entry per column, with its name and type.
+	 */
 	public static function table_columns( string $table ): array {
 		global $wpdb;
 
@@ -253,6 +278,9 @@ class OPEX_Catalog {
 	/**
 	 * Field groups for a source, ready for the picker UI. Each field:
 	 * { id: "core:post_title" | "meta:_sku" | "tax:category" | "computed:permalink" | "col:option_name", label }
+	 *
+	 * @param string $source_id Source to list the fields of.
+	 * @return array[] Field groups for the picker. Empty for an unknown source.
 	 */
 	public static function fields( string $source_id ): array {
 		$src = OPEX_Query::parse_source( $source_id );
@@ -284,6 +312,7 @@ class OPEX_Catalog {
 	 * Field groups of a post type: core columns, computed fields, taxonomies and meta.
 	 *
 	 * @param string $post_type Post type.
+	 * @return array[] Field groups for the picker.
 	 */
 	private static function post_fields( string $post_type ): array {
 		$core = OPEX_Core_Columns::for_type( 'posts' );
@@ -342,6 +371,8 @@ class OPEX_Catalog {
 
 	/**
 	 * Field groups of users. Credential columns are left out.
+	 *
+	 * @return array[] Field groups for the picker.
 	 */
 	private static function user_fields(): array {
 		$core = OPEX_Core_Columns::for_type( 'users' );
@@ -366,6 +397,8 @@ class OPEX_Catalog {
 
 	/**
 	 * Field groups of comments.
+	 *
+	 * @return array[] Field groups for the picker.
 	 */
 	private static function comment_fields(): array {
 		$core = OPEX_Core_Columns::for_type( 'comments' );
@@ -383,6 +416,7 @@ class OPEX_Catalog {
 	 * Field groups of a taxonomy.
 	 *
 	 * @param string $taxonomy Taxonomy name.
+	 * @return array[] Field groups for the picker.
 	 */
 	private static function term_fields( string $taxonomy ): array {
 		$core = OPEX_Core_Columns::for_type( 'terms' );
@@ -400,6 +434,7 @@ class OPEX_Catalog {
 	 * The one field group of a raw table: its columns.
 	 *
 	 * @param string $table Table name, already checked.
+	 * @return array[] Field groups for the picker.
 	 */
 	private static function table_fields( string $table ): array {
 		$fields = array();
@@ -424,6 +459,7 @@ class OPEX_Catalog {
 	 * A picker entry for a core column.
 	 *
 	 * @param string $col Column name.
+	 * @return array Picker entry with the field id and label.
 	 */
 	private static function core_field( string $col ): array {
 		return array(
@@ -437,12 +473,17 @@ class OPEX_Catalog {
 	 *
 	 * @param string $type  Source type: posts, users, comments or terms.
 	 * @param string $scope Post type or taxonomy, where the type has one.
+	 * @return string[] Distinct meta keys, sorted.
 	 */
 	public static function sample_meta_keys( string $type, string $scope = '' ): array {
 		return OPEX_Catalog_Meta::sample_meta_keys( $type, $scope );
 	}
 
-	/** Meta keys that belong to ACF fields. See OPEX_Catalog_Meta. */
+	/**
+	 * Meta keys that belong to ACF fields. See OPEX_Catalog_Meta.
+	 *
+	 * @return string[] Meta keys that hold ACF values.
+	 */
 	public static function acf_keys(): array {
 		return OPEX_Catalog_Meta::acf_keys();
 	}
@@ -452,6 +493,7 @@ class OPEX_Catalog {
 	 *
 	 * @param array $keys     Raw meta keys.
 	 * @param array $acf_keys Keys that belong to ACF fields.
+	 * @return array[] Field groups, each with a label and its fields.
 	 */
 	public static function grouped_meta( array $keys, array $acf_keys ): array {
 		return OPEX_Catalog_Meta::grouped_meta( $keys, $acf_keys );

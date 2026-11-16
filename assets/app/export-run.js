@@ -23,6 +23,11 @@
 	const store = app.store;
 	const jobs = app.jobs;
 
+	/**
+	 * Builds the Run card of the Export tab: name, background switch, delivery, "Save as template" and "Start export".
+	 *
+	 * @param {Object} o The builder and say().
+	 */
 	app.exportRun = function ( o ) {
 		const builder = o.builder;
 		const features = ( store.get( 'options' ) || {} ).features || {};

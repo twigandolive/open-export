@@ -27,6 +27,9 @@
 	const el = app.el;
 	const ui = ( app.ui = app.ui || {} );
 
+	/**
+	 * Builds a button from options: label, icon, style, action and click handler.
+	 */
 	ui.button = function ( o ) {
 		const cls = [ 'opex-btn', o.primary ? 'opex-btn-primary' : '', o.small ? 'opex-btn-sm' : '', o.cls || '' ].join( ' ' ).trim();
 		return el( 'button', {
@@ -39,6 +42,9 @@
 		}, [ o.icon ? app.icon( o.icon, { sm: true } ) : null, o.label ] );
 	};
 
+	/**
+	 * Builds a button that looks like a link.
+	 */
 	ui.linkButton = function ( o ) {
 		return el( 'button', {
 			type: 'button',
@@ -54,6 +60,9 @@
 
 	const NOTICE_ICONS = { success: 'check', warning: 'warning', error: 'error', info: 'info' };
 
+	/**
+	 * Gives the spoken name of a notice's icon, which tells screen reader users what kind of notice it is.
+	 */
 	function noticeLabel( type ) {
 		if ( 'success' === type ) {
 			return __( 'Success', 'open-export' );
@@ -67,6 +76,13 @@
 		return __( 'Information', 'open-export' );
 	}
 
+	/**
+	 * Builds a notice with an icon, a message and an optional action button.
+	 *
+	 * @param {string} type    success, warning, error or info.
+	 * @param {string} message Text to show.
+	 * @param {Object} opts    tight, role and action.
+	 */
 	ui.notice = function ( type, message, opts ) {
 		const o = opts || {};
 		const kind = NOTICE_ICONS[ type ] ? type : 'info';
@@ -82,6 +98,9 @@
 
 	const STATUS_ICONS = { running: 'sync', paused: 'pause', done: 'check', sent: 'check', ok: 'check', failed: 'error', waiting: 'clock' };
 
+	/**
+	 * Builds a status badge with an icon and a label.
+	 */
 	ui.status = function ( kind, label ) {
 		return el( 'span', { class: 'opex-status opex-status-' + kind }, [
 			app.icon( STATUS_ICONS[ kind ] || 'info', { sm: true } ),
@@ -89,6 +108,13 @@
 		] );
 	};
 
+	/**
+	 * Builds a progress bar that screen readers announce.
+	 *
+	 * @param {number} percent From 0 to 100.
+	 * @param {string} kind    Bar style, such as paused, done or failed.
+	 * @param {string} label   Spoken name of the bar.
+	 */
 	ui.bar = function ( percent, kind, label ) {
 		const value = Math.max( 0, Math.min( 100, Math.round( Number( percent ) || 0 ) ) );
 		const fill = el( 'span', {} );
@@ -103,6 +129,11 @@
 		}, fill );
 	};
 
+	/**
+	 * Builds a card with an optional heading.
+	 *
+	 * @return {Object} { root, body, head }.
+	 */
 	ui.card = function ( o ) {
 		const body = el( 'div', { class: 'opex-pad' } );
 		const head = o.title ? el( o.level || 'h2', { class: 'opex-statichead' }, o.title ) : null;
@@ -160,6 +191,9 @@
 		return { root, setError, help, input: target };
 	};
 
+	/**
+	 * Builds an on and off switch with its label.
+	 */
 	ui.switchControl = function ( o ) {
 		const input = el( 'input', {
 			type: 'checkbox',
@@ -173,6 +207,11 @@
 		return { root, input };
 	};
 
+	/**
+	 * Builds the line that shows the result of an action.
+	 *
+	 * @return {Object} { root, set( kind, text ), clear() }.
+	 */
 	ui.result = function () {
 		const root = el( 'p', { class: 'opex-result', role: 'status', 'aria-live': 'polite' } );
 		function set( kind, text ) {
@@ -188,6 +227,9 @@
 		return { root, set, clear };
 	};
 
+	/**
+	 * Builds a loading placeholder with the given number of lines.
+	 */
 	ui.skeleton = function ( lines ) {
 		const bars = [];
 		for ( let i = 0; i < ( lines || 3 ); i++ ) {
@@ -199,6 +241,9 @@
 		] );
 	};
 
+	/**
+	 * Builds the empty state of a list: a title, some text and an optional button.
+	 */
 	ui.empty = function ( o ) {
 		return el( 'div', { class: 'opex-empty' }, [
 			el( 'strong', {}, o.title ),
@@ -207,6 +252,9 @@
 		] );
 	};
 
+	/**
+	 * Builds the error shown when a list cannot load, with a "Try again" button.
+	 */
 	ui.loadError = function ( error, onRetry ) {
 		return ui.notice( 'error', error && error.message ? error.message : __( 'Something went wrong. Try again.', 'open-export' ), {
 			role: 'alert',

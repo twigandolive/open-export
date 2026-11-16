@@ -371,13 +371,24 @@ class OPEX_CLI {
 		WP_CLI::success( sprintf( 'Maintenance finished. Removed %d expired job(s).', $removed ) );
 	}
 
-	/** Print rows in the chosen display format. */
+	/**
+	 * Print rows in the chosen display format.
+	 *
+	 * @param array    $items      Rows to print.
+	 * @param string[] $fields     Columns to show, in order.
+	 * @param array    $assoc_args Named command line arguments, read for --format.
+	 */
 	private function print_items( array $items, array $fields, array $assoc_args ): void {
 		$format = (string) ( $assoc_args['format'] ?? 'table' );
 		\WP_CLI\Utils\format_items( $format, $items, $fields );
 	}
 
-	/** Sanitize a config, stopping on error. */
+	/**
+	 * Sanitize a config, stopping on error.
+	 *
+	 * @param array $config Raw config to clean.
+	 * @return array The clean config.
+	 */
 	private function sanitized( array $config ): array {
 		$notes = array();
 		$clean = OPEX_Exporter::sanitize_config( $config, $notes );

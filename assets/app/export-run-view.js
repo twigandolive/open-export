@@ -19,10 +19,16 @@
 	const view = app.historyView;
 	const COUNTERPART = { pause: 'resume', resume: 'pause' };
 
+	/**
+	 * Gives the name of a delivery channel.
+	 */
 	function channelLabel( channel ) {
 		return { email: __( 'Email', 'open-export' ), webhook: __( 'Webhook', 'open-export' ), destination: __( 'Destination', 'open-export' ) }[ channel ] || channel;
 	}
 
+	/**
+	 * Builds the status badge of one delivery.
+	 */
 	function deliveryBadge( item ) {
 		const name = channelLabel( item.channel );
 		if ( 'sent' === item.status ) {
@@ -37,6 +43,13 @@
 		return ui.status( 'waiting', sprintf( __( '%s waiting', 'open-export' ), name ) );
 	}
 
+	/**
+	 * Builds the progress view of one job and updates it in place as the job moves.
+	 *
+	 * @param {Object} job     Exposed job.
+	 * @param {Object} actions pause() and resume().
+	 * @return {Object} { root, update( job, driving ), say( message ) }.
+	 */
 	app.exportRunView = function ( job, actions ) {
 		const name = el( 'span', { class: 'opex-run-name' }, job.label );
 		const status = el( 'span', {} );

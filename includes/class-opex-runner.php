@@ -46,7 +46,11 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Cron entry for a schedule event. */
+	/**
+	 * Cron entry for a schedule event.
+	 *
+	 * @param string $id Schedule id from the cron event.
+	 */
 	public static function on_schedule( $id ): void {
 		OPEX_Schedules::start( (string) $id, 'cron' );
 	}
@@ -55,6 +59,8 @@ class OPEX_Runner {
 	 * Run batches until done, errored, paused or out of time. At least one batch
 	 * runs so a tiny budget still makes progress.
 	 *
+	 * @param string $job_id  Job id.
+	 * @param int    $seconds Time budget in seconds.
 	 * @return array|WP_Error Exposed job or error.
 	 */
 	public static function work( string $job_id, int $seconds = 20 ) {
@@ -82,7 +88,11 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Records when the last batch ran, so a stalled background job can be spotted. */
+	/**
+	 * Records when the last batch ran, so a stalled background job can be spotted.
+	 *
+	 * @param string $job_id Job id.
+	 */
 	private static function stamp( string $job_id ): void {
 		OPEX_Jobs::update(
 			$job_id,
@@ -93,7 +103,11 @@ class OPEX_Runner {
 		);
 	}
 
-	/** Schedule an immediate background run of a job, once. */
+	/**
+	 * Schedule an immediate background run of a job, once.
+	 *
+	 * @param string $job_id Job id.
+	 */
 	public static function dispatch( string $job_id ): void {
 		if ( ! wp_next_scheduled( 'opex_run_job', array( $job_id ) ) ) {
 			wp_schedule_single_event( time(), 'opex_run_job', array( $job_id ) );
@@ -101,7 +115,11 @@ class OPEX_Runner {
 		spawn_cron();
 	}
 
-	/** Cron entry for a job. Only background jobs run here. */
+	/**
+	 * Cron entry for a job. Only background jobs run here.
+	 *
+	 * @param string $job_id Job id from the cron event.
+	 */
 	public static function on_cron( $job_id ): void {
 		$job_id = (string) $job_id;
 		$job    = OPEX_Jobs::get( $job_id );
@@ -167,7 +185,12 @@ class OPEX_Runner {
 		}
 	}
 
-	/** Whether a job has a delivery item that can still be tried (new, or failed with attempts left). */
+	/**
+	 * Whether a job has a delivery item that can still be tried (new, or failed with attempts left).
+	 *
+	 * @param array|null $job Job record, or null when there is none.
+	 * @return bool True when a delivery can still be tried.
+	 */
 	private static function has_pending( ?array $job ): bool {
 		foreach ( (array) ( $job['deliveries'] ?? array() ) as $item ) {
 			if ( in_array( $item['status'] ?? '', array( 'pending', 'failed' ), true ) && (int) ( $item['attempts'] ?? 0 ) < OPEX_Delivery::MAX_ATTEMPTS ) {
@@ -196,6 +219,8 @@ class OPEX_Runner {
 	 * Cron entry: run the pending deliveries of one job. A lock keeps cron and
 	 * the command line from both sending. The job is read again under the lock,
 	 * and the next try is queued for when the earliest failed item is due.
+	 *
+	 * @param string $job_id Job id from the cron event.
 	 */
 	public static function deliver( $job_id ): void {
 		$job_id = (string) $job_id;

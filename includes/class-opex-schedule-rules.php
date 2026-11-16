@@ -17,7 +17,11 @@ class OPEX_Schedule_Rules {
 
 	private const FREQUENCIES = array( 'manual', 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' );
 
-	/** Default values for every key of a schedule record. */
+	/**
+	 * Default values for every key of a schedule record.
+	 *
+	 * @return array A schedule record with every key at its default.
+	 */
 	public static function defaults(): array {
 		return array(
 			'id'          => '',
@@ -48,7 +52,11 @@ class OPEX_Schedule_Rules {
 		);
 	}
 
-	/** Delivery block with everything off. */
+	/**
+	 * Delivery block with everything off.
+	 *
+	 * @return array The delivery settings with every channel off.
+	 */
 	private static function default_delivery(): array {
 		return array(
 			'email'       => array(
@@ -175,7 +183,12 @@ class OPEX_Schedule_Rules {
 		return $rec;
 	}
 
-	/** Build a 400 error. */
+	/**
+	 * Build a 400 error.
+	 *
+	 * @param string $message What is wrong, for the person who sent it.
+	 * @return WP_Error The error to return.
+	 */
 	private static function invalid( string $message ): WP_Error {
 		return new WP_Error( 'opex_invalid', $message, array( 'status' => 400 ) );
 	}
@@ -188,6 +201,7 @@ class OPEX_Schedule_Rules {
 	 * @param array $base         Stored settings, used to keep a webhook secret left blank.
 	 * @param bool  $clear_secret True to remove the stored webhook secret.
 	 * @param array $notes        Receives notes, such as a channel turned off.
+	 * @return array The clean delivery settings.
 	 */
 	private static function sanitize_delivery( array $raw, array $base, bool $clear_secret, array &$notes ): array {
 		if ( $clear_secret ) {

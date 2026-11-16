@@ -23,10 +23,18 @@
 	const values = Object.create( null );
 	const listeners = Object.create( null );
 
+	/**
+	 * Reads a value from the store.
+	 */
 	function get( key ) {
 		return values[ key ];
 	}
 
+	/**
+	 * Writes a value and tells every listener of its key. A listener that throws does not stop the others.
+	 *
+	 * @return {*} The value.
+	 */
 	function set( key, value ) {
 		values[ key ] = value;
 		( listeners[ key ] || [] ).slice().forEach( ( fn ) => {
@@ -40,10 +48,18 @@
 		return value;
 	}
 
+	/**
+	 * Changes a value with a function of the old one.
+	 */
 	function update( key, fn ) {
 		return set( key, fn( values[ key ] ) );
 	}
 
+	/**
+	 * Calls a function whenever a key changes.
+	 *
+	 * @return {Function} Call it to stop listening.
+	 */
 	function subscribe( key, fn ) {
 		( listeners[ key ] = listeners[ key ] || [] ).push( fn );
 		return function unsubscribe() {

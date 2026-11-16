@@ -21,6 +21,7 @@ class OPEX_Query_Dates {
 	 * is stored. This doubles as the allowlist: a range naming anything not in
 	 * here is dropped, so no caller-supplied string ever reaches the SQL.
 	 *
+	 * @param array $src Parsed source.
 	 * @return array<string, array{label: string, tz: string, sql: string}>
 	 */
 	public static function date_fields( array $src ): array {
@@ -40,6 +41,7 @@ class OPEX_Query_Dates {
 	 * memo wraps every branch.
 	 *
 	 * @param array $src Parsed source.
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
 	 */
 	private static function build_date_fields( array $src ): array {
 		$provider = OPEX_Sources::for_src( $src );
@@ -129,6 +131,11 @@ class OPEX_Query_Dates {
 	 * by MySQL to 2026-03-31 00:00:00 and drops that entire day's rows.
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array $src   Parsed source.
+	 * @param array $range Clean date range: field, preset, from and to.
+	 * @param array $args  Receives the values for the SQL placeholders.
+	 * @return string The SQL condition, or '' when the range is off.
 	 */
 	public static function date_range_clause( array $src, array $range, array &$args ): string {
 		$field  = (string) ( $range['field'] ?? '' );
@@ -229,6 +236,12 @@ class OPEX_Query_Dates {
 	 * does not depend on the database session timezone the way UNIX_TIMESTAMP()
 	 * would. EXISTS also means an order with no such meta row is excluded,
 	 * which is right: an unpaid order has no paid date to fall inside a range.
+	 *
+	 * @param array  $def  Date field definition, which names the meta table and key.
+	 * @param string $from Start date as Y-m-d, or '' for an open start.
+	 * @param string $to   End date as Y-m-d, or '' for an open end.
+	 * @param array  $args Receives the values for the SQL placeholders.
+	 * @return string The SQL condition, or '' when neither end is set.
 	 */
 	private static function meta_epoch_range( array $def, string $from, string $to, array &$args ): string {
 		$inner = array( 'm.meta_key = %s', "m.meta_value <> ''" );
@@ -270,6 +283,12 @@ class OPEX_Query_Dates {
 	 * back to ordinary string comparison.
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array  $def   Date field definition with its SQL column and how it stores time.
+	 * @param string $op    Filter operator.
+	 * @param string $value Filter value.
+	 * @param array  $args  Receives the values for the SQL placeholders.
+	 * @return string|null The SQL condition, or null when the value is not a date.
 	 */
 	public static function date_condition( array $def, string $op, string $value, array &$args ): ?string {
 		if ( ! in_array( $op, array( 'eq', 'neq', 'gt', 'gte', 'lt', 'lte' ), true ) ) {
@@ -350,6 +369,7 @@ class OPEX_Query_Dates {
 	 * @param string $op    Operator.
 	 * @param string $value Rule value, relative tokens already resolved.
 	 * @param array  $args  Receives prepare() values.
+	 * @return string|null The SQL condition, or null when the value is not a date.
 	 */
 	public static function epoch_condition( array $def, string $op, string $value, array &$args ): ?string {
 		if ( 'meta_epoch' !== ( $def['kind'] ?? '' ) || ! in_array( $op, array( 'eq', 'neq', 'gt', 'gte', 'lt', 'lte' ), true ) ) {

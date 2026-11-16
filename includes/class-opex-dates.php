@@ -46,7 +46,11 @@ class OPEX_Dates {
 		'custom',
 	);
 
-	/** The site's timezone as configured in Settings, General, DST-aware. */
+	/**
+	 * The site's timezone as configured in Settings, General, DST-aware.
+	 *
+	 * @return DateTimeZone The site's timezone.
+	 */
 	public static function site_timezone(): DateTimeZone {
 		return wp_timezone();
 	}
@@ -55,6 +59,9 @@ class OPEX_Dates {
 	 * Accept only a plain Y-m-d calendar date that really exists.
 	 * Returns '' for anything else, so a bad value disables that end of the
 	 * range instead of silently shifting it.
+	 *
+	 * @param string $value Date text to check.
+	 * @return string The date as Y-m-d, or '' when it is not a real date.
 	 */
 	public static function normalize_date( string $value ): string {
 		$value = trim( $value );
@@ -99,6 +106,10 @@ class OPEX_Dates {
 	 * Re-express a site-local datetime string in a column's own timezone.
 	 * Values a user types, and the datetimes relative tokens resolve to, are
 	 * always site-local. A *_gmt column needs them shifted.
+	 *
+	 * @param string $local_datetime Datetime in site time.
+	 * @param string $tz_mode        How the column stores time: local, gmt or unix.
+	 * @return string The datetime in the column's timezone, or '' when the input is not a date.
 	 */
 	public static function to_column( string $local_datetime, string $tz_mode ): string {
 		$local_datetime = trim( $local_datetime );
@@ -124,6 +135,10 @@ class OPEX_Dates {
 	 * Epoch seconds for a calendar date's midnight in the site's timezone.
 	 * Used for meta values that store a UNIX timestamp, where comparing
 	 * against a datetime literal would be meaningless.
+	 *
+	 * @param string $date       Calendar date as Y-m-d.
+	 * @param int    $day_offset Whole days to move the date by.
+	 * @return int|null Seconds since the epoch, or null when the date is not valid.
 	 */
 	public static function epoch( string $date, int $day_offset = 0 ): ?int {
 		$date = self::normalize_date( $date );
@@ -142,6 +157,7 @@ class OPEX_Dates {
 	 *
 	 * @param string $date       A date that passed normalize_date().
 	 * @param int    $day_offset Days to add (may be negative).
+	 * @return DateTimeImmutable|null Midnight of that day, or null when the date is not valid.
 	 */
 	private static function midnight( string $date, int $day_offset ): ?DateTimeImmutable {
 		try {
@@ -160,6 +176,10 @@ class OPEX_Dates {
 	 * Split a filter value into a comparable moment.
 	 * Returns array( sql_value, is_whole_day ), or null when the value is not a
 	 * date at all and should be left to ordinary string comparison.
+	 *
+	 * @param string $value   Filter value a person typed.
+	 * @param string $tz_mode How the column stores time: local, gmt or unix.
+	 * @return array|null The SQL value and whether it is a whole day, or null when the value is not a date.
 	 */
 	public static function parse_value( string $value, string $tz_mode ): ?array {
 		$value = trim( $value );
@@ -194,6 +214,9 @@ class OPEX_Dates {
 	 * Resolve a preset to a pair of inclusive site-local calendar dates.
 	 * Returns array( from, to ). Either may be '' for an open end, and
 	 * 'all_time' returns two empty strings.
+	 *
+	 * @param string $preset Preset id, such as last_month.
+	 * @return string[] The from and to dates as Y-m-d. An open end is ''.
 	 */
 	public static function preset_range( string $preset ): array {
 		if ( 'all_time' === $preset || 'custom' === $preset || ! in_array( $preset, self::PRESETS, true ) ) {
@@ -269,6 +292,9 @@ class OPEX_Dates {
 	/**
 	 * Start of the week containing $day, honoring the site's
 	 * "Week Starts On" setting rather than assuming Monday.
+	 *
+	 * @param DateTimeImmutable $day Any day in the week.
+	 * @return DateTimeImmutable The first day of that week.
 	 */
 	private static function week_start( DateTimeImmutable $day ): DateTimeImmutable {
 		$start_of_week = (int) get_option( 'start_of_week', 1 ); // 0 = Sunday.
@@ -279,7 +305,12 @@ class OPEX_Dates {
 		return $start instanceof DateTimeImmutable ? $start : $day;
 	}
 
-	/** First day of the calendar quarter containing $day. */
+	/**
+	 * First day of the calendar quarter containing $day.
+	 *
+	 * @param DateTimeImmutable $day Any day in the quarter.
+	 * @return DateTimeImmutable The first day of that quarter.
+	 */
 	private static function quarter_start( DateTimeImmutable $day ): DateTimeImmutable {
 		$month = (int) $day->format( 'n' );
 		$first = $month - ( ( $month - 1 ) % 3 );
@@ -291,6 +322,9 @@ class OPEX_Dates {
 	/**
 	 * Human label for a preset. Kept here so PHP and the REST payload agree
 	 * on the wording the JS renders.
+	 *
+	 * @param string $preset Preset id.
+	 * @return string The label people see, or the id when the preset is unknown.
 	 */
 	public static function preset_label( string $preset ): string {
 		$labels = array(

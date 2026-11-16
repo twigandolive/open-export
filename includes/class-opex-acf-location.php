@@ -34,6 +34,7 @@ class OPEX_Acf_Location {
 	 *
 	 * @param array $location ACF location: a list of rule sets, each a list of rules.
 	 * @param array $src      Parsed source.
+	 * @return bool True when any rule set of the location matches the source.
 	 */
 	public static function applies( array $location, array $src ): bool {
 		foreach ( $location as $rules ) {
@@ -51,6 +52,7 @@ class OPEX_Acf_Location {
 	 *
 	 * @param array $rule ACF rule: param, operator, value.
 	 * @param array $src  Parsed source.
+	 * @return bool True when the rule matches records of the source.
 	 */
 	private static function rule_applies( array $rule, array $src ): bool {
 		$param = (string) ( $rule['param'] ?? '' );

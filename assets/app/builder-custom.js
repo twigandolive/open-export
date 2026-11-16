@@ -28,6 +28,9 @@
 	const maxLabel = ( ctx ) => Number( ctx.limits.custom_label ) || 100;
 	const maxTemplate = ( ctx ) => Number( ctx.limits.custom_template ) || 500;
 
+	/**
+	 * Makes a custom column id from its label that no other column uses.
+	 */
 	function newId( label, ctx ) {
 		const base = 'custom:' + ( String( label ).toLowerCase().replace( /[^a-z0-9]+/g, '-' ).replace( /^-+|-+$/g, '' ).slice( 0, 40 ) || 'column' );
 		const taken = new Set( ctx.config.custom_columns.map( ( col ) => col.id ).concat( ctx.config.fields ) );
@@ -38,6 +41,11 @@
 		return id;
 	}
 
+	/**
+	 * Checks a custom column label against the server's rules.
+	 *
+	 * @return {string} The problem to show, or '' when the label is fine.
+	 */
 	function checkLabel( label, ctx ) {
 		if ( ! label.trim() ) {
 			return __( 'Give the column a label.', 'open-export' );
@@ -46,6 +54,11 @@
 		return label.length > maxLabel( ctx ) ? sprintf( __( 'Use at most %s characters for the label.', 'open-export' ), app.formatNumber( maxLabel( ctx ) ) ) : '';
 	}
 
+	/**
+	 * Checks a custom column template against the server's rules.
+	 *
+	 * @return {string} The problem to show, or '' when the template is fine.
+	 */
 	function checkTemplate( template, ctx ) {
 		if ( ! template.trim() ) {
 			return __( 'Write a template, for example {core:post_title}.', 'open-export' );
@@ -77,10 +90,16 @@
 		return bad.length ? sprintf( __( 'These stay as plain text because they are not fields of this source: %s. A custom column cannot use another custom column.', 'open-export' ), bad.join( ', ' ) ) : '';
 	}
 
+	/**
+	 * Lists the source's fields for the "Insert field" menu.
+	 */
 	function fieldItems( ctx ) {
 		return Object.keys( ctx.fieldIndex ).map( ( id ) => ctx.fieldIndex[ id ] );
 	}
 
+	/**
+	 * Collects the problems in every custom column, so the screen can show them before the export starts.
+	 */
 	function errors( ctx ) {
 		const list = [];
 		ctx.config.custom_columns.forEach( ( col ) => {
@@ -101,6 +120,9 @@
 		return list;
 	}
 
+	/**
+	 * Builds a template input with its "Insert field" menu and a warning line for unknown fields.
+	 */
 	function templateBox( ctx, value, describedBy ) {
 		const input = el( 'input', { type: 'text', class: 'opex-mono opex-w-full', value } );
 		const warn = el( 'p', { class: 'opex-help opex-warnline', id: app.uid( 'opex-warn' ), hidden: true } );
@@ -116,6 +138,9 @@
 		return { input, warn, insert, sync };
 	}
 
+	/**
+	 * Builds the template editor of one custom column in the chosen list, checking it as the person types.
+	 */
 	function templateEditor( ctx, col, onChange ) {
 		const error = el( 'p', { class: 'opex-field-error', id: app.uid( 'opex-err' ), hidden: true } );
 		const box = templateBox( ctx, col.template, error.id );
@@ -136,6 +161,12 @@
 		return { root: el( 'div', { class: 'opex-custom-edit' }, [ label, box.input, error, box.warn, el( 'div', { class: 'opex-mt' }, box.insert.root ) ] ), input: box.input };
 	}
 
+	/**
+	 * Builds the form that adds a custom column.
+	 *
+	 * @param {Object}   ctx     Builder context.
+	 * @param {Function} onAdded Called after a column is added.
+	 */
 	function addForm( ctx, onAdded ) {
 		const result = ui.result();
 		const labelInput = el( 'input', { type: 'text', class: 'opex-w-md' } );

@@ -18,6 +18,12 @@
 	const el = app.el;
 	const ui = app.ui;
 
+	/**
+	 * Builds the Trigger URL box, with copy and "Make a new URL".
+	 *
+	 * @param {Object} o Record and onRecord().
+	 * @return {Object} { root, setRecord( record ) }.
+	 */
 	app.scheduleTrigger = function ( o ) {
 		let record = o.record || null;
 		const card = ui.card( { title: __( 'Trigger URL', 'open-export' ), level: 'h3' } );

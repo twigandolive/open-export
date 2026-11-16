@@ -287,6 +287,7 @@ class OPEX_Destinations {
 	 * @param array $old        Stored record.
 	 * @param array $next       Record about to be saved.
 	 * @param bool  $new_secret True when a new password or key was given.
+	 * @return bool True when the saved test still applies.
 	 */
 	private static function same_connection( array $old, array $next, bool $new_secret ): bool {
 		foreach ( array( 'type', 'host', 'port', 'username', 'auth', 'path', 'passive', 'host_key' ) as $key ) {

@@ -25,6 +25,7 @@ class OPEX_Decimal {
 	 * turned into plain digits by moving the decimal point in the text.
 	 *
 	 * @param string $value Number as text.
+	 * @return string|null Plain decimal text, or null when the value is not a number.
 	 */
 	public static function normalize( string $value ): ?string {
 		$value = trim( $value );
@@ -60,6 +61,7 @@ class OPEX_Decimal {
 	 * @param string $a      Plain decimal.
 	 * @param string $b      Plain decimal.
 	 * @param bool   $use_bc Allow bcmath. Tests pass false to cover the fallback.
+	 * @return string The exact sum as plain decimal text.
 	 */
 	public static function add( string $a, string $b, bool $use_bc = true ): string {
 		$scale = max( self::places( $a ), self::places( $b ) );
@@ -85,6 +87,7 @@ class OPEX_Decimal {
 	 *
 	 * @param string $a Plain decimal.
 	 * @param string $b Plain decimal.
+	 * @return int -1 when a is smaller, 0 when equal, 1 when a is larger.
 	 */
 	public static function compare( string $a, string $b ): int {
 		$negated = 0 === strpos( $b, '-' ) ? substr( $b, 1 ) : '-' . $b;
@@ -102,6 +105,7 @@ class OPEX_Decimal {
 	 * @param int    $divisor  Whole number above zero.
 	 * @param int    $decimals Places to keep.
 	 * @param bool   $use_bc   Allow bcmath. Tests pass false to cover the fallback.
+	 * @return string The quotient, rounded to the requested places.
 	 */
 	public static function divide( string $value, int $divisor, int $decimals, bool $use_bc = true ): string {
 		$divisor  = max( 1, $divisor );
@@ -125,6 +129,7 @@ class OPEX_Decimal {
 	 * Places after the decimal point.
 	 *
 	 * @param string $value Plain decimal.
+	 * @return int Number of digits after the decimal point.
 	 */
 	private static function places( string $value ): int {
 		$dot = strpos( $value, '.' );
@@ -151,6 +156,7 @@ class OPEX_Decimal {
 	 * @param bool   $negative Sign.
 	 * @param string $digits   Digits.
 	 * @param int    $scale    Places.
+	 * @return string Plain decimal text.
 	 */
 	private static function unscale( bool $negative, string $digits, int $scale ): string {
 		$digits = str_pad( $digits, $scale + 1, '0', STR_PAD_LEFT );
@@ -164,6 +170,7 @@ class OPEX_Decimal {
 	 *
 	 * @param string $a Digits.
 	 * @param string $b Digits.
+	 * @return string The sum as a digit string.
 	 */
 	private static function add_digits( string $a, string $b ): string {
 		$len   = max( strlen( $a ), strlen( $b ) );
@@ -184,6 +191,7 @@ class OPEX_Decimal {
 	 *
 	 * @param string $a Digits.
 	 * @param string $b Digits.
+	 * @return string The difference as a digit string.
 	 */
 	private static function sub_digits( string $a, string $b ): string {
 		$len    = strlen( $a );
@@ -204,6 +212,7 @@ class OPEX_Decimal {
 	 *
 	 * @param string $a Digits.
 	 * @param string $b Digits.
+	 * @return int -1 when a is smaller, 0 when equal, 1 when a is larger.
 	 */
 	private static function compare_digits( string $a, string $b ): int {
 		$a = ltrim( $a, '0' );
@@ -219,6 +228,7 @@ class OPEX_Decimal {
 	 *
 	 * @param string $digits  Digits.
 	 * @param int    $divisor Whole number above zero.
+	 * @return string The quotient as a digit string.
 	 */
 	private static function div_digits( string $digits, int $divisor ): string {
 		$out  = '';

@@ -20,6 +20,11 @@ class OPEX_Query_Filters {
 	 * Compile one filter rule into SQL, appending its values to $args.
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array $src  Parsed source.
+	 * @param array $rule Filter rule: field, op and value.
+	 * @param array $args Receives the values for the SQL placeholders.
+	 * @return string The SQL condition, or '' when the rule is dropped.
 	 */
 	public static function rule_clause( array $src, array $rule, array &$args ): string {
 		global $wpdb;
@@ -141,6 +146,11 @@ class OPEX_Query_Filters {
 
 	/**
 	 * Role rule for users. The list operators take several roles.
+	 *
+	 * @param string $op    Filter operator.
+	 * @param string $value Role, or a comma-separated list of roles.
+	 * @param array  $args  Receives the values for the SQL placeholders.
+	 * @return string The SQL condition.
 	 */
 	private static function roles_clause( string $op, string $value, array &$args ): string {
 		global $wpdb;
@@ -168,6 +178,9 @@ class OPEX_Query_Filters {
 	 * those, so the rule compares the stored value as before.
 	 *
 	 * @param string $flag_sql SQL that is true when the flag is yes.
+	 * @param string $op       Filter operator.
+	 * @param string $value    Filter value, such as yes or no.
+	 * @return string|null The SQL condition, or null when the value is not yes or no.
 	 */
 	private static function flag_clause( string $flag_sql, string $op, string $value ): ?string {
 		if ( ! in_array( $op, array( 'eq', 'neq', 'in', 'not_in' ), true ) ) {
@@ -210,6 +223,9 @@ class OPEX_Query_Filters {
 	 *
 	 * For a *_gmt column, use the date-range control instead - it knows which
 	 * columns are UTC and converts accordingly.
+	 *
+	 * @param string $value Filter value a person typed.
+	 * @return string The value with any relative date turned into a datetime.
 	 */
 	private static function resolve_filter_value( string $value ): string {
 		$value = trim( $value );
@@ -265,6 +281,13 @@ class OPEX_Query_Filters {
 	 * $textual forbids the numeric branch below. Casting a DATETIME column to
 	 * DECIMAL yields the year and nothing else, so a date column must never
 	 * take that path however numeric the value happens to look.
+	 *
+	 * @param string $lhs     Column reference, already checked.
+	 * @param string $op      Filter operator.
+	 * @param string $value   Filter value.
+	 * @param array  $args    Receives the values for the SQL placeholders.
+	 * @param bool   $textual True to always compare as text, as date columns need.
+	 * @return string The SQL condition.
 	 */
 	private static function value_condition( string $lhs, string $op, string $value, array &$args, bool $textual = false ): string {
 		global $wpdb;
@@ -336,6 +359,13 @@ class OPEX_Query_Filters {
 	/**
 	 * Meta comparisons run as EXISTS subqueries. Negative operators become
 	 * NOT EXISTS of the positive form, so rows without the meta key also match.
+	 *
+	 * @param array  $src   Parsed source, which names the meta table.
+	 * @param string $key   Meta key.
+	 * @param string $op    Filter operator.
+	 * @param string $value Filter value.
+	 * @param array  $args  Receives the values for the SQL placeholders.
+	 * @return string The SQL condition, or '' when the source has no meta.
 	 */
 	private static function meta_clause( array $src, string $key, string $op, string $value, array &$args ): string {
 		global $wpdb;
@@ -394,17 +424,27 @@ class OPEX_Query_Filters {
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
 	 *
-	 * @param string $tax    Taxonomy, from a provider constant.
-	 * @param string $op     Operator.
-	 * @param string $value  Rule value.
-	 * @param array  $args   Receives prepare() values.
+	 * @param string $tax        Taxonomy, from a provider constant.
+	 * @param string $op         Operator.
+	 * @param string $value      Rule value.
+	 * @param array  $args       Receives prepare() values.
 	 * @param string $object_sql SQL for the object id the terms belong to, from a provider constant.
+	 * @return string The SQL condition.
 	 */
 	public static function term_clause( string $tax, string $op, string $value, array &$args, string $object_sql ): string {
 		return self::tax_clause( $tax, $op, $value, $args, $object_sql );
 	}
 
-	/** Taxonomy membership tests match term slug or name. */
+	/**
+	 * Taxonomy membership tests match term slug or name.
+	 *
+	 * @param string $tax        Taxonomy name.
+	 * @param string $op         Filter operator.
+	 * @param string $value      Term slug or name, or a comma-separated list.
+	 * @param array  $args       Receives the values for the SQL placeholders.
+	 * @param string $object_sql Column that holds the object id the terms belong to.
+	 * @return string The SQL condition.
+	 */
 	private static function tax_clause( string $tax, string $op, string $value, array &$args, string $object_sql = 'p.ID' ): string {
 		global $wpdb;
 

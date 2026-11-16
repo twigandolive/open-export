@@ -113,6 +113,8 @@ require_once OPEX_DIR . 'includes/class-opex-cli.php';
 /**
  * Capability check for all screens, endpoints, and downloads. Administrator
  * level by default, because the plugin exposes raw table access.
+ *
+ * @return string The capability a user needs to use the plugin.
  */
 function opex_capability(): string {
 	return apply_filters( 'opex_capability', 'manage_options' );
@@ -122,6 +124,8 @@ function opex_capability(): string {
  * Export directory under uploads, created on demand. Files in it have
  * random names, and the folder carries deny rules for the web servers that
  * read them. nginx reads neither file and needs its own rule (see readme).
+ *
+ * @return string Full path of the export folder, with a trailing slash.
  */
 function opex_export_dir(): string {
 	static $guarded = array();

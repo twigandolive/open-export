@@ -21,6 +21,7 @@ class OPEX_Source_Woo_Orders_Rules {
 	 * @param string $field Field id of the rule.
 	 * @param string $op    Operator.
 	 * @param string $value Rule value.
+	 * @return string The value the rule compares.
 	 */
 	public static function filter_value( string $field, string $op, string $value ): string {
 		if ( 'woo:status' !== $field ) {
@@ -44,6 +45,7 @@ class OPEX_Source_Woo_Orders_Rules {
 	 *
 	 * @param string $field Field id.
 	 * @param string $value Stored text.
+	 * @return string yes or no for the guest flag, else the stored text.
 	 */
 	public static function derive( string $field, string $value ): string {
 		if ( 'woo:is_guest' !== $field ) {
@@ -57,6 +59,7 @@ class OPEX_Source_Woo_Orders_Rules {
 	 * Legal values of the status field, on either storage engine.
 	 *
 	 * @param string $field Field id.
+	 * @return string[] The status ids, or an empty array for any other field.
 	 */
 	public static function values( string $field ): array {
 		if ( ( 'woo:status' === $field || 'core:post_status' === $field ) && function_exists( 'wc_get_order_statuses' ) ) {

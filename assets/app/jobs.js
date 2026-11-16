@@ -31,18 +31,32 @@
 	const POLL_MS = 5000;
 	const driving = new Set();
 
+	/**
+	 * Gives the job list from the store.
+	 */
 	function list() {
 		return store.get( 'jobs' ) || [];
 	}
 
+	/**
+	 * Gives a copy of the jobs, newest first.
+	 */
 	function sorted( jobs ) {
 		return jobs.slice().sort( ( a, b ) => ( b.created || 0 ) - ( a.created || 0 ) );
 	}
 
+	/**
+	 * Tells whether a job is running or paused.
+	 */
 	function isActive( job ) {
 		return !! job && ( 'running' === job.status || 'paused' === job.status );
 	}
 
+	/**
+	 * Puts one job into the store, replacing its old copy and keeping the newest first.
+	 *
+	 * @return {Object} The same job.
+	 */
 	function upsert( job ) {
 		if ( ! job || ! job.id ) {
 			return job;
@@ -53,6 +67,9 @@
 		return job;
 	}
 
+	/**
+	 * Removes a job from the store and stops driving it.
+	 */
 	function forget( id ) {
 		driving.delete( id );
 		store.set( 'jobs', list().filter( ( item ) => item.id !== id ) );
@@ -75,6 +92,9 @@
 		} );
 	}
 
+	/**
+	 * Builds the route of a job, or of one of its actions.
+	 */
 	function path( id, action ) {
 		return '/jobs/' + encodeURIComponent( id ) + ( action ? '/' + action : '' );
 	}
@@ -119,6 +139,11 @@
 		}
 	}
 
+	/**
+	 * Pauses a job and stops driving it from this window.
+	 *
+	 * @return {Promise} Resolves with the paused job.
+	 */
 	function pause( id ) {
 		driving.delete( id );
 		return api.post( path( id, 'pause' ) ).then( upsert );
@@ -138,6 +163,11 @@
 		return drive( job.id, true );
 	}
 
+	/**
+	 * Starts a new job with the same config as an old one.
+	 *
+	 * @return {Promise} Resolves with the new job.
+	 */
 	function rerun( id ) {
 		return api.post( path( id, 'rerun' ) ).then( ( job ) => {
 			upsert( job );
@@ -145,6 +175,9 @@
 		} );
 	}
 
+	/**
+	 * Deletes a job and its file, then removes it from the store.
+	 */
 	function remove( id ) {
 		driving.delete( id );
 		return api.del( path( id ) ).then( () => forget( id ) );

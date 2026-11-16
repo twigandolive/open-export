@@ -23,32 +23,56 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 	/** The source id saved configs use. */
 	const SOURCE = 'woo:coupons';
 
-	/** The provider when WooCommerce is active, else null. */
+	/**
+	 * The provider when WooCommerce is active, else null.
+	 *
+	 * @return OPEX_Source_Provider|null The provider, or null when WooCommerce is not active.
+	 */
 	public static function resolve(): ?OPEX_Source_Provider {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source id.
+	 */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The post type.
+	 */
 	public function post_type(): string {
 		return 'shop_coupon';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The SQL for the start of the SELECT list.
+	 */
 	protected function base_select(): string {
 		return 'p.*';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source name.
+	 */
 	public function label(): string {
 		return __( 'WooCommerce Coupons', 'open-export' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array|null The picker entry, or null when the source has none.
+	 */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -58,7 +82,11 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
+	 */
 	public function date_fields(): array {
 		global $wpdb;
 		return array(
@@ -80,12 +108,20 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array[] Field groups, each with a label and its fields.
+	 */
 	protected function extra_groups(): array {
 		return OPEX_Catalog::grouped_meta( OPEX_Catalog::sample_meta_keys( 'posts', 'shop_coupon' ), OPEX_Catalog::acf_keys() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Field definitions by field id.
+	 */
 	protected function field_defs(): array {
 		$coupon = __( 'Coupon', 'open-export' );
 		$limits = __( 'Usage limits', 'open-export' );

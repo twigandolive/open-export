@@ -27,6 +27,9 @@
 
 	const PARTS = [ 'header', 'row', 'footer' ];
 
+	/**
+	 * Lists the batch sizes people can pick, from gentle to fast.
+	 */
 	function speeds() {
 		return [
 			{ batch: 100, name: __( 'Gentle', 'open-export' ), desc: __( 'Slower. Best for shared hosting.', 'open-export' ) },
@@ -35,6 +38,9 @@
 		];
 	}
 
+	/**
+	 * Gives the one-line description shown under a format.
+	 */
 	function describe( id ) {
 		return {
 			csv: __( 'Plain text rows. Opens in any spreadsheet.', 'open-export' ),
@@ -45,10 +51,18 @@
 		}[ id ] || '';
 	}
 
+	/**
+	 * Says why a format cannot be picked on this server.
+	 */
 	function unavailable( id ) {
 		return 'xlsx' === id ? __( 'This server is missing the PHP zip extension.', 'open-export' ) : __( 'This server cannot write this format.', 'open-export' );
 	}
 
+	/**
+	 * Builds one radio choice with a title, a description and, when it is disabled, the reason.
+	 *
+	 * @return {Object} { input, root }.
+	 */
 	function choice( name, value, title, desc, opts ) {
 		const o = opts || {};
 		const reasonId = o.reason ? app.uid( 'opex-reason' ) : null;
@@ -61,6 +75,11 @@
 		return { label, input };
 	}
 
+	/**
+	 * Builds the Format card: the format, its options, compression and speed.
+	 *
+	 * @param {Object} ctx Builder context.
+	 */
 	function build( ctx ) {
 		const formats = ctx.options.formats || {};
 		const formatName = app.uid( 'opex-format' );

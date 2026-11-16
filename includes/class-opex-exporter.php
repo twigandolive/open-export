@@ -19,27 +19,52 @@ class OPEX_Exporter {
 
 	/**
 	 * Validate a raw config and reduce it to the saved shape. See OPEX_Config.
+	 *
+	 * @param array    $raw   Config from the browser, a recipe or the command line.
+	 * @param string[] $notes Receives a note for each value that was changed or dropped.
+	 * @return array|WP_Error The clean config, or an error that says what is wrong.
 	 */
 	public static function sanitize_config( array $raw, array &$notes = array() ) {
 		return OPEX_Config::sanitize_config( $raw, $notes );
 	}
 
-	/** Turn a relative date range into fixed dates. See OPEX_Config. */
+	/**
+	 * Turn a relative date range into fixed dates. See OPEX_Config.
+	 *
+	 * @param array $config Clean config.
+	 * @return array The config with fixed from and to dates.
+	 */
 	public static function freeze_date_range( array $config ): array {
 		return OPEX_Config::freeze_date_range( $config );
 	}
 
-	/** Column headers for the chosen fields. See OPEX_Config. */
+	/**
+	 * Column headers for the chosen fields. See OPEX_Config.
+	 *
+	 * @param string[] $fields Field ids in output order.
+	 * @param array[]  $custom Custom columns, each with an id and label.
+	 * @return array<string, string> Unique column labels by field id.
+	 */
 	public static function header_map( array $fields, array $custom = array() ): array {
 		return OPEX_Config::header_map( $fields, $custom );
 	}
 
-	/** The delimiter character for a delimiter key. See OPEX_Config. */
+	/**
+	 * The delimiter character for a delimiter key. See OPEX_Config.
+	 *
+	 * @param string $key Delimiter key: comma, semicolon or tab.
+	 * @return string The delimiter character.
+	 */
 	public static function csv_delimiter_char( string $key ): string {
 		return OPEX_Config::csv_delimiter_char( $key );
 	}
 
-	/** Writer options taken from a config. See OPEX_Config. */
+	/**
+	 * Writer options taken from a config. See OPEX_Config.
+	 *
+	 * @param array $config Clean config.
+	 * @return array Options for OPEX_Writer::make().
+	 */
 	public static function writer_options( array $config ): array {
 		return OPEX_Config::writer_options( $config );
 	}
@@ -178,6 +203,7 @@ class OPEX_Exporter {
 	 *
 	 * @param array    $config Export config.
 	 * @param string[] $notes  Receives notes.
+	 * @return array<string, string> Column labels by column key, in output order.
 	 * @throws RuntimeException When the database reports an error.
 	 */
 	private static function headers( array $config, array &$notes = array() ): array {
@@ -190,6 +216,7 @@ class OPEX_Exporter {
 	 * status and the plan land in one write.
 	 *
 	 * @param array $job Job record.
+	 * @return array The job, marked done, with its deliveries planned.
 	 */
 	private static function completed( array $job ): array {
 		$job['status']     = 'done';
@@ -204,6 +231,7 @@ class OPEX_Exporter {
 	 *
 	 * @param mixed    $raw   Raw delivery settings.
 	 * @param string[] $notes Receives notes.
+	 * @return array The delivery settings to store, or an empty array when every channel is off.
 	 */
 	private static function clean_delivery( $raw, array &$notes ): array {
 		if ( ! is_array( $raw ) || ! $raw ) {
@@ -244,6 +272,7 @@ class OPEX_Exporter {
 	 *
 	 * @param array $config Job config.
 	 * @param array $since  Job since term.
+	 * @return array The config for the query layer.
 	 *
 	 * @internal Shared with OPEX_Export_Run only.
 	 */
@@ -262,12 +291,18 @@ class OPEX_Exporter {
 	 *
 	 * @param string $id     Job id.
 	 * @param bool   $resume True when a person asked to resume a paused job.
+	 * @return array|WP_Error The job as the screen shows it, or an error.
 	 */
 	public static function run( string $id, bool $resume = false ) {
 		return OPEX_Export_Run::run( $id, $resume );
 	}
 
-	/** Create a new export job from a previous job's stored config. */
+	/**
+	 * Create a new export job from a previous job's stored config.
+	 *
+	 * @param string $id Id of the job to copy.
+	 * @return array|WP_Error The new job, or an error when the old one is gone.
+	 */
 	public static function rerun( string $id ) {
 		$job = OPEX_Jobs::get( $id );
 		if ( ! $job || empty( $job['config'] ) ) {
@@ -280,7 +315,12 @@ class OPEX_Exporter {
 		return self::create( $job['config'], $label );
 	}
 
-	/** Pause a running job so it can be resumed later. */
+	/**
+	 * Pause a running job so it can be resumed later.
+	 *
+	 * @param string $id Id of the job to pause.
+	 * @return array|WP_Error The job as the screen shows it, or an error when it is gone.
+	 */
 	public static function pause( string $id ) {
 		$job = OPEX_Jobs::update(
 			$id,
@@ -301,6 +341,8 @@ class OPEX_Exporter {
 	/**
 	 * Size of the finished export file, without PHP warnings if it vanished.
 	 *
+	 * @param array $job Job record.
+	 * @return int Size of the file in bytes, or 0 when it is missing.
 	 * @internal Shared with OPEX_Export_Run only.
 	 */
 	public static function output_size( array $job ): int {
@@ -314,9 +356,9 @@ class OPEX_Exporter {
 	 * paths. Only an OPEX_User_Error, written for people, passes through.
 	 * Detail goes to the debug log (see log_exception).
 	 *
-	 * @internal Shared with OPEX_Export_Run only.
-	 *
 	 * @param Throwable $e What stopped the export.
+	 * @return string The message to show and store.
+	 * @internal Shared with OPEX_Export_Run only.
 	 */
 	public static function public_error_message( Throwable $e ): string {
 		if ( $e instanceof OPEX_User_Error ) {
@@ -343,7 +385,12 @@ class OPEX_Exporter {
 		}
 	}
 
-	/** First rows and total count for the preview step. */
+	/**
+	 * First rows and total count for the preview step.
+	 *
+	 * @param array $config Clean config.
+	 * @return array|WP_Error The first rows and the total count, or an error when the query fails.
+	 */
 	public static function preview( array $config ) {
 		$notes = array();
 		try {

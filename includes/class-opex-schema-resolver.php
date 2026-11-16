@@ -30,6 +30,10 @@ class OPEX_Schema_Resolver {
 	 *
 	 * Returns array( ok, report, config, name ). Only a malformed request
 	 * (no source, or a source this site does not have) is a WP_Error.
+	 *
+	 * @param array    $recipe The recipe an assistant wrote.
+	 * @param string[] $notes  Receives a note for each value that was changed or dropped.
+	 * @return array|WP_Error The config, the report and the notes, or an error when the source is missing or unknown.
 	 */
 	public static function recipe_to_config( array $recipe, array &$notes = array() ) {
 		$report = array(
@@ -237,18 +241,34 @@ class OPEX_Schema_Resolver {
 		);
 	}
 
-	/** Human label for a field id, for echoing back in the report. */
+	/**
+	 * Human label for a field id, for echoing back in the report.
+	 *
+	 * @param string $source_id Source id.
+	 * @param string $field     Field id.
+	 * @return string The field label, or the id when the field is unknown.
+	 */
 	private static function label_for( string $source_id, string $field ): string {
 		$ids = OPEX_Catalog::field_ids( $source_id );
 		return $ids[ $field ] ?? $field;
 	}
 
-	/** The part of an id after its last colon ("woo:total" gives "total"). */
+	/**
+	 * The part of an id after its last colon ("woo:total" gives "total").
+	 *
+	 * @param string $id Id to cut.
+	 * @return string The part after the last colon, or the whole id when it has none.
+	 */
 	private static function tail_after_colon( string $id ): string {
 		return false !== strpos( $id, ':' ) ? substr( $id, strrpos( $id, ':' ) + 1 ) : $id;
 	}
 
-	/** A scalar as text. Anything else (an array from a bad recipe) becomes ''. */
+	/**
+	 * A scalar as text. Anything else (an array from a bad recipe) becomes ''.
+	 *
+	 * @param mixed $value Value from the recipe.
+	 * @return string The value as text, or '' when it is not a scalar.
+	 */
 	private static function scalar_text( $value ): string {
 		return is_scalar( $value ) ? (string) $value : '';
 	}
@@ -260,6 +280,10 @@ class OPEX_Schema_Resolver {
 	 * "woo:billing_state") is the common miss and is matched exactly, and anything
 	 * else falls back to edit distance, and only when it is close enough to be
 	 * worth showing.
+	 *
+	 * @param string   $wanted     The id the assistant wrote.
+	 * @param string[] $candidates Ids that exist.
+	 * @return string The closest id, or '' when none is close enough.
 	 */
 	public static function suggest( string $wanted, array $candidates ): string {
 		$wanted = strtolower( trim( $wanted ) );

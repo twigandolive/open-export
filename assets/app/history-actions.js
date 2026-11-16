@@ -22,6 +22,11 @@
 	const ui = app.ui;
 	const jobs = app.jobs;
 
+	/**
+	 * Builds the row actions of the History tab and runs them through the shared job list.
+	 *
+	 * @param {Object} ctx say, fail, rows, body and hintId from the History tab.
+	 */
 	app.historyActions = function ( ctx ) {
 		const { say, fail, rows, body, hintId } = ctx;
 

@@ -46,7 +46,11 @@ class OPEX_Acf {
 	 */
 	private static $memo = array();
 
-	/** Whether ACF or Secure Custom Fields is active. */
+	/**
+	 * Whether ACF or Secure Custom Fields is active.
+	 *
+	 * @return bool True when an ACF-compatible plugin is active.
+	 */
 	public static function available(): bool {
 		return function_exists( 'acf_get_field_groups' ) && function_exists( 'acf_get_fields' );
 	}
@@ -92,6 +96,7 @@ class OPEX_Acf {
 	 *
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id.
+	 * @return bool True when the field id belongs to an ACF field of the source.
 	 */
 	public static function is_field( array $src, string $field ): bool {
 		return null !== self::definition( $src, $field );
@@ -102,6 +107,7 @@ class OPEX_Acf {
 	 *
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id.
+	 * @return array|null The ACF field definition, or null when the id is not an ACF field.
 	 */
 	public static function definition( array $src, string $field ): ?array {
 		if ( 0 !== strpos( $field, self::PREFIX ) ) {
@@ -116,6 +122,7 @@ class OPEX_Acf {
 	 *
 	 * @param array $src    Parsed source.
 	 * @param array $groups Field groups.
+	 * @return array The field groups, with the ACF group added when the source has ACF fields.
 	 */
 	public static function add_group( array $src, array $groups ): array {
 		$fields = array();
@@ -227,6 +234,7 @@ class OPEX_Acf {
 	 *
 	 * @param array  $def   ACF field definition.
 	 * @param string $value Stored value (only its start is needed).
+	 * @return int Number of rows stored in the value.
 	 */
 	public static function row_count( array $def, string $value ): int {
 		if ( 'flexible_content' === ( $def['type'] ?? '' ) ) {
@@ -242,6 +250,7 @@ class OPEX_Acf {
 	 * @param string $prefix Meta key of the field.
 	 * @param array  $meta   Meta of one record, key => value.
 	 * @param int    $depth  Nesting depth.
+	 * @return array One object per row, each keyed by sub field name.
 	 */
 	private static function rows( array $def, string $prefix, array $meta, int $depth ): array {
 		$stored = (string) ( $meta[ $prefix ] ?? '' );
@@ -272,6 +281,7 @@ class OPEX_Acf {
 	 * @param string $base  Meta key of the row, without the sub field name.
 	 * @param array  $meta  Meta of one record.
 	 * @param int    $depth Nesting depth.
+	 * @return array The row, keyed by sub field name.
 	 */
 	private static function subs( array $subs, string $base, array $meta, int $depth ): array {
 		$row = array();

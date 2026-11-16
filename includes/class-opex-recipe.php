@@ -161,6 +161,7 @@ class OPEX_Recipe {
 	 * Whether a recipe uses anything the 1.3.1 resolver cannot read.
 	 *
 	 * @param array $recipe Recipe.
+	 * @return bool True when the recipe needs the newer resolver.
 	 */
 	private static function uses_new_keys( array $recipe ): bool {
 		foreach ( self::NEW_KEYS as $key ) {
@@ -182,6 +183,7 @@ class OPEX_Recipe {
 	 *
 	 * @param mixed    $field      Listed field.
 	 * @param string[] $custom_ids Clean custom column ids.
+	 * @return bool True when the field names a custom column.
 	 */
 	private static function is_custom( $field, array $custom_ids ): bool {
 		return is_scalar( $field ) && in_array( sanitize_text_field( (string) $field ), $custom_ids, true );
@@ -358,6 +360,7 @@ class OPEX_Recipe {
 	 * A scalar as text. Anything else becomes ''.
 	 *
 	 * @param mixed $value Raw value.
+	 * @return string The value as text, or '' when it is not a scalar.
 	 */
 	private static function text( $value ): string {
 		return is_scalar( $value ) ? (string) $value : '';

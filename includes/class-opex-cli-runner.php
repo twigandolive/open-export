@@ -15,14 +15,23 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_CLI_Runner {
 
-	/** Stop with an error when a plugin call returned WP_Error. */
+	/**
+	 * Stop with an error when a plugin call returned WP_Error.
+	 *
+	 * @param mixed $value Result of a plugin call, checked for WP_Error.
+	 */
 	public static function fail_on_error( $value ): void {
 		if ( is_wp_error( $value ) ) {
 			WP_CLI::error( $value->get_error_message() );
 		}
 	}
 
-	/** Check an export format against what this server can write. */
+	/**
+	 * Check an export format against what this server can write.
+	 *
+	 * @param string $format Format id given on the command line.
+	 * @return string The format id, once it is known and available.
+	 */
 	public static function check_format( string $format ): string {
 		$formats = OPEX_Writer::formats();
 		if ( ! isset( $formats[ $format ] ) ) {
@@ -37,6 +46,7 @@ class OPEX_CLI_Runner {
 	/**
 	 * Find a template or schedule by exact id, then by exact name.
 	 *
+	 * @param string $key Id or exact name given on the command line.
 	 * @return array { kind: template|schedule, id, name, config? }
 	 */
 	public static function find_target( string $key ): array {
@@ -90,7 +100,13 @@ class OPEX_CLI_Runner {
 		WP_CLI::error( sprintf( 'No template or schedule has the id or name "%s". Try `wp opex templates` or `wp opex schedules`.', $key ) );
 	}
 
-	/** Build the job's since value from --since (site time) on the first date field. */
+	/**
+	 * Build the job's since value from --since (site time) on the first date field.
+	 *
+	 * @param string $text   Value of --since, in site time.
+	 * @param array  $config Template config, used to find the first date field.
+	 * @return array The since value for the job: the date field and the UTC time rows must be after.
+	 */
 	public static function since( string $text, array $config ): array {
 		$tz   = wp_timezone();
 		$date = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $text ) ? $text . ' 00:00:00' : $text, $tz );
@@ -116,7 +132,12 @@ class OPEX_CLI_Runner {
 		);
 	}
 
-	/** Check --output before any work starts. Returns the full path or ''. */
+	/**
+	 * Check --output before any work starts. Returns the full path or ''.
+	 *
+	 * @param array $assoc_args Named command line arguments, read for --output and --force.
+	 * @return string Full output path, or '' when no --output was given.
+	 */
 	public static function check_output( array $assoc_args ): string {
 		$out = (string) ( $assoc_args['output'] ?? '' );
 		if ( '' === $out ) {
@@ -143,7 +164,13 @@ class OPEX_CLI_Runner {
 		return $full;
 	}
 
-	/** Work a started job to the end, deliver, copy the file and report. */
+	/**
+	 * Work a started job to the end, deliver, copy the file and report.
+	 *
+	 * @param array  $job        Job that has started.
+	 * @param string $dest       Path to copy the finished file to, or '' for none.
+	 * @param array  $assoc_args Named command line arguments, read for --porcelain.
+	 */
 	public static function finish_job( array $job, string $dest, array $assoc_args ): void {
 		$porcelain = ! empty( $assoc_args['porcelain'] );
 		$id        = (string) $job['id'];

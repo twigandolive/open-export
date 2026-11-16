@@ -18,10 +18,18 @@ defined( 'ABSPATH' ) || exit;
  */
 abstract class OPEX_Source_Table extends OPEX_Source_Provider {
 
-	/** The source type the engine passes around for this provider. */
+	/**
+	 * The source type the engine passes around for this provider.
+	 *
+	 * @return string The source type.
+	 */
 	abstract public function src_type(): string;
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The parsed source.
+	 */
 	public function src(): array {
 		return array(
 			'type'           => $this->src_type(),

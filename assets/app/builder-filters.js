@@ -30,6 +30,9 @@
 		json: [ 'contains', 'not_contains', 'empty', 'not_empty' ],
 	};
 
+	/**
+	 * Lists the operators to offer when the server sent none.
+	 */
 	function fallbackOps() {
 		return [
 			[ 'eq', __( 'equals', 'open-export' ) ], [ 'neq', __( 'does not equal', 'open-export' ) ],
@@ -43,10 +46,18 @@
 
 	const isGroup = ( node ) => Array.isArray( node.rules ) && undefined === node.field;
 
+	/**
+	 * Counts the rules in a group and every group inside it, for the rule limit.
+	 */
 	function countRules( group ) {
 		return group.rules.reduce( ( n, node ) => n + ( isGroup( node ) ? countRules( node ) : 1 ), 0 );
 	}
 
+	/**
+	 * Builds the Filters card: the date range and the nested rule tree.
+	 *
+	 * @param {Object} ctx Builder context.
+	 */
 	function build( ctx ) {
 		const dates = B.dates( ctx, ( reason ) => ctx.changed( reason ) );
 		const tree = el( 'div', {} );

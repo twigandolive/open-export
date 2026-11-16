@@ -26,6 +26,11 @@
 	// Where focus goes when the action someone used turns into another one.
 	const COUNTERPART = { pause: 'resume', resume: 'pause', rerun: 'download' };
 
+	/**
+	 * Builds the History tab and keeps its rows in step with the job list.
+	 *
+	 * @param {Element} panel Tab panel.
+	 */
 	function mount( panel ) {
 		const messages = el( 'div', { class: 'opex-messages', 'aria-live': 'polite' } );
 		const body = el( 'div', {} );

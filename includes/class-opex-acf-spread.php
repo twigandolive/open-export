@@ -100,6 +100,7 @@ class OPEX_Acf_Spread {
 	 * @param array $items   Rows from the query, keyed by field id.
 	 * @param array $config  Export config.
 	 * @param array $headers Job headers (column key => label).
+	 * @return array Rows to hand to the writer.
 	 */
 	public static function output( array $items, array $config, array $headers ): array {
 		return self::fill( OPEX_Transforms::apply( $items, $config ), $items, $headers );
@@ -112,6 +113,7 @@ class OPEX_Acf_Spread {
 	 * @param array $rows    Transformed rows.
 	 * @param array $items   Raw rows, in the same order.
 	 * @param array $headers Column key => label.
+	 * @return array The transformed rows with their spread columns filled.
 	 */
 	public static function fill( array $rows, array $items, array $headers ): array {
 		$cells = array();
@@ -145,6 +147,7 @@ class OPEX_Acf_Spread {
 	 *
 	 * @param array $src Parsed source.
 	 * @param array $def ACF field definition.
+	 * @return int The largest row count found, or 0 when none is stored.
 	 * @throws RuntimeException When the database reports an error.
 	 */
 	private static function max_rows( array $src, array $def ): int {

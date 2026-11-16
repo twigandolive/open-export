@@ -29,6 +29,7 @@ class OPEX_Network {
 	 * Whether a config asks for a network export.
 	 *
 	 * @param array $config Export config.
+	 * @return bool True when the config asks for every site.
 	 */
 	public static function is_network( array $config ): bool {
 		return ! empty( $config['network'] );
@@ -37,6 +38,8 @@ class OPEX_Network {
 	/**
 	 * Whether the current caller may ask for a network export. A super admin
 	 * may, and so may WP-CLI, whose operator already has the whole install.
+	 *
+	 * @return bool True when the caller may ask for a network export.
 	 */
 	public static function may_request(): bool {
 		return is_multisite() && ( is_super_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) );
@@ -46,6 +49,7 @@ class OPEX_Network {
 	 * Why a source cannot run across the network, or null when it can.
 	 *
 	 * @param array $src Parsed source.
+	 * @return WP_Error|null The reason the source cannot run across the network, or null when it can.
 	 */
 	public static function source_refusal( array $src ): ?WP_Error {
 		$type = (string) ( $src['type'] ?? '' );
@@ -65,6 +69,7 @@ class OPEX_Network {
 	 *
 	 * @param array  $config Sanitized config.
 	 * @param string $origin Who starts the job: manual, cron, trigger or cli.
+	 * @return WP_Error|null The reason the job cannot start, or null when it can.
 	 */
 	public static function check_create( array $config, string $origin ): ?WP_Error {
 		if ( ! is_multisite() || ( 'manual' === $origin && ! self::may_request() ) ) {
@@ -216,6 +221,7 @@ class OPEX_Network {
 	 *
 	 * @param array $rows    Transformed rows.
 	 * @param int   $site_id Site the rows came from.
+	 * @return array The rows with the site id and address first.
 	 */
 	public static function with_site_columns( array $rows, int $site_id ): array {
 		$lead = array(
@@ -231,6 +237,8 @@ class OPEX_Network {
 
 	/**
 	 * The note a network preview carries.
+	 *
+	 * @return string The note shown with a network preview.
 	 */
 	public static function preview_note(): string {
 		return __( 'This preview shows rows from this site only. The export reads every site of the network.', 'open-export' );
@@ -282,6 +290,7 @@ class OPEX_Network {
 	 * also needs the plugin active on this site.
 	 *
 	 * @param string $source_id Source id.
+	 * @return bool True when this site has the source.
 	 */
 	public static function source_here( string $source_id ): bool {
 		return 'missing' !== self::source_state( $source_id );
@@ -296,6 +305,7 @@ class OPEX_Network {
 	 * on the first site still looks present. Its content decides instead.
 	 *
 	 * @param string $source_id Source id.
+	 * @return string One of ok, missing or empty.
 	 */
 	public static function source_state( string $source_id ): string {
 		global $wpdb;
@@ -319,7 +329,11 @@ class OPEX_Network {
 		return 'ok';
 	}
 
-	/** Whether WooCommerce is active on the current site or for the whole network. */
+	/**
+	 * Whether WooCommerce is active on the current site or for the whole network.
+	 *
+	 * @return bool True when WooCommerce runs on this site.
+	 */
 	private static function woo_active_here(): bool {
 		$plugin = defined( 'WC_PLUGIN_BASENAME' ) ? (string) WC_PLUGIN_BASENAME : 'woocommerce/woocommerce.php';
 		if ( in_array( $plugin, (array) get_option( 'active_plugins', array() ), true ) ) {
@@ -333,6 +347,7 @@ class OPEX_Network {
 	 *
 	 * @param int    $site_id Site id.
 	 * @param string $state   'missing' or 'empty', from source_state().
+	 * @return string The note for the job.
 	 */
 	private static function missing_note( int $site_id, string $state = 'missing' ): string {
 		if ( 'empty' === $state ) {
@@ -361,6 +376,7 @@ class OPEX_Network {
 	 * The error for a network export that is not allowed.
 	 *
 	 * @param string $message Why.
+	 * @return WP_Error The error to return.
 	 */
 	private static function refused( string $message ): WP_Error {
 		return new WP_Error( 'opex_bad_network', $message, array( 'status' => 400 ) );

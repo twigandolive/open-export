@@ -51,6 +51,7 @@ abstract class OPEX_Writer {
 	 * @param array  $headers Column labels by field id.
 	 * @param array  $options csv_delimiter, csv_encoding, csv_eol, csv_enclosure,
 	 *                        csv_quote_all, xml_template and title.
+	 * @return OPEX_Writer The writer.
 	 * @throws OPEX_User_Error When Excel is asked for without the zip extension.
 	 */
 	public static function make( string $format, string $path, array $headers, array $options = array() ): OPEX_Writer {
@@ -136,6 +137,7 @@ abstract class OPEX_Writer {
 	 *
 	 * @param string $value      Raw text.
 	 * @param bool   $substitute True to replace invalid UTF-8 instead of dropping the value.
+	 * @return string The escaped text.
 	 */
 	protected static function xml_escape( string $value, bool $substitute = false ): string {
 		$value = preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $value );
@@ -172,6 +174,7 @@ abstract class OPEX_Writer {
 	 * Byte size of a file, 0 when it is missing.
 	 *
 	 * @param string $file Path.
+	 * @return int Size in bytes.
 	 */
 	protected static function file_size( string $file ): int {
 		clearstatcache( true, $file );
@@ -210,6 +213,7 @@ abstract class OPEX_Writer {
 	 * a negative refund total, are left alone so they stay numbers.
 	 *
 	 * @param string $value Cell text.
+	 * @return string The cell text, safe from formula use.
 	 */
 	protected static function guard_cell( string $value ): string {
 		if ( '' === $value || false === strpos( "=+-@\t\r", $value[0] ) ) {

@@ -22,6 +22,7 @@ class OPEX_Schedule_Clock {
 	 * @param array             $schedule Schedule record (frequency, time, weekday, monthday, enabled).
 	 * @param int               $now      UTC timestamp.
 	 * @param DateTimeZone|null $tz       Timezone, defaults to the site timezone.
+	 * @return int The next run as a UTC timestamp, or 0 when the schedule does not run by itself.
 	 */
 	public static function next_run( array $schedule, int $now, ?DateTimeZone $tz = null ): int {
 		$freq = (string) ( $schedule['frequency'] ?? 'manual' );
@@ -105,6 +106,7 @@ class OPEX_Schedule_Clock {
 	 *
 	 * @param string       $wall 'Y-m-d H:i'.
 	 * @param DateTimeZone $tz   Timezone.
+	 * @return int The UTC timestamp.
 	 */
 	private static function wall_to_ts( string $wall, DateTimeZone $tz ): int {
 		$dt = new DateTimeImmutable( $wall . ':00', $tz );

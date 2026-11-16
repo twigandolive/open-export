@@ -19,6 +19,11 @@
 	// Ranges match the REST arguments in class-opex-rest-delivery.php.
 	const RANGES = { retention_days: [ 1, 365 ], link_days: [ 1, 30 ] };
 
+	/**
+	 * Builds the Settings tab: the saved settings and what this server can do.
+	 *
+	 * @param {Element} panel Tab panel.
+	 */
 	function mount( panel ) {
 		const settingsCard = ui.card( { title: __( 'Exports', 'open-export' ) } );
 		const serverCard = ui.card( { title: __( 'This server', 'open-export' ) } );
@@ -38,10 +43,18 @@
 		load();
 	}
 
+	/**
+	 * Builds a number input limited to the range the server allows for a setting.
+	 */
 	function numberInput( value, key ) {
 		return el( 'input', { type: 'number', class: 'opex-w-num', min: RANGES[ key ][ 0 ], max: RANGES[ key ][ 1 ], step: 1, value: String( value ) } );
 	}
 
+	/**
+	 * Builds the settings form from the saved values and saves it.
+	 *
+	 * @param {Object} saved Settings as the server sent them.
+	 */
 	function form( saved ) {
 		const keep = numberInput( saved.retention_days, 'retention_days' );
 		const links = numberInput( saved.link_days, 'link_days' );

@@ -18,10 +18,19 @@
 	const el = app.el;
 	const ui = app.ui;
 
+	/**
+	 * Removes the code fences an assistant often wraps around a recipe.
+	 */
 	function stripFences( text ) {
 		return String( text ).trim().replace( /^```[a-zA-Z]*\s*/, '' ).replace( /\s*```$/, '' ).trim();
 	}
 
+	/**
+	 * Adds every rule of a report, nested groups included, to one list.
+	 *
+	 * @param {Array} rows Report rows, some of them groups.
+	 * @param {Array} out  Receives the rules.
+	 */
 	function flattenRules( rows, out ) {
 		( Array.isArray( rows ) ? rows : [] ).forEach( ( row ) => {
 			if ( row && row.group ) {
@@ -33,6 +42,9 @@
 		return out;
 	}
 
+	/**
+	 * Describes one field of the recipe report: its id, its label and what was used instead.
+	 */
 	function fieldText( row ) {
 		let text = String( row.id || '' );
 		if ( row.label && row.label !== row.id ) {
@@ -52,6 +64,9 @@
 		return text;
 	}
 
+	/**
+	 * Builds the list that says which fields, filters and dates of a recipe were used, changed or dropped.
+	 */
 	function reportList( answer ) {
 		const report = ( answer && answer.report ) || {};
 		const lines = [];
@@ -90,6 +105,12 @@
 		return lines.length ? el( 'ul', {}, lines ) : null;
 	}
 
+	/**
+	 * Builds the AI recipe panel: copy or download the capability document, paste a recipe and apply it.
+	 *
+	 * @param {Object} o Callbacks: source() and onApply( config, name ).
+	 * @return {Object} { toggle, panel, open( focus ) }.
+	 */
 	app.exportRecipe = function ( o ) {
 		const panelId = app.uid( 'opex-recipe' );
 		const toggle = el( 'button', { type: 'button', class: 'opex-link', 'aria-expanded': 'false', 'aria-controls': panelId }, __( 'Use an AI recipe', 'open-export' ) );

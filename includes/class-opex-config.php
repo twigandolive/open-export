@@ -25,6 +25,10 @@ class OPEX_Config {
 	/**
 	 * Validate a raw config from the client and reduce it to exactly the
 	 * shape the query layer expects. Returns WP_Error on bad input.
+	 *
+	 * @param array    $raw   Config from the browser, a recipe or the command line.
+	 * @param string[] $notes Receives a note for each value that was changed or dropped.
+	 * @return array|WP_Error The clean config, or an error that says what is wrong.
 	 */
 	public static function sanitize_config( array $raw, array &$notes = array() ) {
 		$source = sanitize_text_field( self::text( $raw['source'] ?? '' ) );
@@ -226,6 +230,7 @@ class OPEX_Config {
 	 * Clean the XML template: three text parts, each capped, no control characters.
 	 *
 	 * @param mixed $raw Raw template.
+	 * @return array The header, row and footer text.
 	 */
 	private static function sanitize_xml_template( $raw ): array {
 		$raw = is_array( $raw ) ? $raw : array();
@@ -244,6 +249,7 @@ class OPEX_Config {
 	 *
 	 * @param array  $src   Parsed source.
 	 * @param string $field Field id.
+	 * @return bool True when a custom column may read the field.
 	 */
 	public static function is_referencable( array $src, string $field ): bool {
 		if ( ! OPEX_Query::is_field_id( $field ) ) {
@@ -296,7 +302,12 @@ class OPEX_Config {
 		return array_merge( $labels, (array) ( $config['column_labels'] ?? array() ) );
 	}
 
-	/** A scalar as text. Anything else (an array in a bad request) becomes ''. */
+	/**
+	 * A scalar as text. Anything else (an array in a bad request) becomes ''.
+	 *
+	 * @param mixed $value Value from a request.
+	 * @return string The value as text, or '' when it is not a scalar.
+	 */
 	private static function text( $value ): string {
 		return is_scalar( $value ) ? (string) $value : '';
 	}
@@ -308,6 +319,10 @@ class OPEX_Config {
 	 * export. Relative presets are stored unresolved so a saved template still
 	 * means "last 30 days" the next time it runs, not the 30 days it meant when
 	 * it was saved.
+	 *
+	 * @param array $src Parsed source, which decides the allowed date fields.
+	 * @param array $raw Date range from the request.
+	 * @return array The clean range: field, preset, from and to.
 	 */
 	private static function sanitize_date_range( array $src, array $raw ): array {
 		$empty = array(
@@ -358,6 +373,9 @@ class OPEX_Config {
 	 * Pin a relative preset to concrete dates for the life of one job, so a
 	 * long export that crosses midnight keeps counting and streaming the same
 	 * rows it started with.
+	 *
+	 * @param array $config Clean config.
+	 * @return array The config with fixed from and to dates.
 	 */
 	public static function freeze_date_range( array $config ): array {
 		$range  = (array) ( $config['date_range'] ?? array() );
@@ -379,6 +397,10 @@ class OPEX_Config {
 	/**
 	 * Unique, human-readable output keys for the chosen fields:
 	 * "meta:_sku" → "_sku", colliding names get a numeric suffix.
+	 *
+	 * @param string[] $fields Field ids in output order.
+	 * @param array[]  $custom Custom columns, each with an id and label.
+	 * @return array<string, string> Unique column labels by field id.
 	 */
 	public static function header_map( array $fields, array $custom = array() ): array {
 		$headers = array();
@@ -401,7 +423,12 @@ class OPEX_Config {
 		return $headers;
 	}
 
-	/** Map delimiter key to the character used by fputcsv. */
+	/**
+	 * Map delimiter key to the character used by fputcsv.
+	 *
+	 * @param string $key Delimiter key: comma, semicolon or tab.
+	 * @return string The delimiter character. A comma for an unknown key.
+	 */
 	public static function csv_delimiter_char( string $key ): string {
 		$map = array(
 			'comma'     => ',',
@@ -411,7 +438,12 @@ class OPEX_Config {
 		return $map[ $key ] ?? ',';
 	}
 
-	/** Writer options derived from a sanitized config. */
+	/**
+	 * Writer options derived from a sanitized config.
+	 *
+	 * @param array $config Clean config.
+	 * @return array Options for OPEX_Writer::make().
+	 */
 	public static function writer_options( array $config ): array {
 		return array(
 			'csv_delimiter' => self::csv_delimiter_char( $config['csv_delimiter'] ?? 'comma' ),

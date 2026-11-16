@@ -23,6 +23,7 @@ class OPEX_Filename {
 	 *
 	 * @param string $pattern Pattern with tokens {label} {source} {date} {time} {datetime} {id} {site}.
 	 * @param array  $context Values: label, source, id, site, and optional time (UTC timestamp, for tests).
+	 * @return string The file name without its extension.
 	 */
 	public static function render( string $pattern, array $context ): string {
 		$now = isset( $context['time'] ) ? (int) $context['time'] : time();
@@ -58,7 +59,11 @@ class OPEX_Filename {
 		return '' === $name ? self::FALLBACK : $name;
 	}
 
-	/** Host name of the site, for the {site} token. */
+	/**
+	 * Host name of the site, for the {site} token.
+	 *
+	 * @return string The host name, or '' when the site address has none.
+	 */
 	private static function site_host(): string {
 		$host = wp_parse_url( home_url(), PHP_URL_HOST );
 		return is_string( $host ) ? $host : '';

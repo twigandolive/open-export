@@ -134,6 +134,7 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	 * @param string $template Template text.
 	 * @param array  $row      Values keyed by field id.
 	 * @param array  $known    Allowed field ids as keys.
+	 * @return string The filled template.
 	 */
 	private static function render( string $template, array $row, array $known ): string {
 		return (string) preg_replace_callback(
@@ -157,6 +158,7 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	 * Trims a leading UTF-8 BOM.
 	 *
 	 * @param string $text Template part.
+	 * @return string The text without the BOM.
 	 */
 	private static function clean( string $text ): string {
 		return 0 === strpos( $text, "\xEF\xBB\xBF" ) ? substr( $text, 3 ) : $text;
@@ -166,6 +168,7 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	 * Ends a non-empty piece with a newline so pieces do not run together.
 	 *
 	 * @param string $text Piece.
+	 * @return string The piece, ending with a newline when it has text.
 	 */
 	private static function terminate( string $text ): string {
 		return ( '' === $text || "\n" === substr( $text, -1 ) ) ? $text : $text . "\n";
@@ -175,6 +178,7 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	 * Parses XML without loading entities or touching the network.
 	 *
 	 * @param string $xml Document.
+	 * @return bool True when the XML parses.
 	 */
 	private static function well_formed( string $xml ): bool {
 		if ( class_exists( 'DOMDocument' ) ) {

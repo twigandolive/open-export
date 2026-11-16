@@ -18,7 +18,12 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Query_Fetch {
 
-	/** Total row count for a config, used for the progress bar. */
+	/**
+	 * Total row count for a config, used for the progress bar.
+	 *
+	 * @param array $config Clean config.
+	 * @return int Number of rows the export would hold.
+	 */
 	public static function count( array $config ): int {
 		global $wpdb;
 
@@ -53,6 +58,7 @@ class OPEX_Query_Fetch {
 	 * @param int           $limit  Most rows to read.
 	 * @param callable|null $tick   Called now and then while rows are assembled, so a
 	 *                              long batch can refresh its lock.
+	 * @return array The rows, the cursor for the next call, and whether the source is used up.
 	 * @throws RuntimeException When the database reports an error.
 	 */
 	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {
@@ -130,6 +136,10 @@ class OPEX_Query_Fetch {
 	/**
 	 * FROM clause, WHERE clause (sans pagination), prepare args, and the
 	 * qualified primary-key column for keyset paging ('' = offset paging).
+	 *
+	 * @param array $src    Parsed source.
+	 * @param array $config Clean config.
+	 * @return array The FROM clause, the WHERE clause, its values, and the key column for keyset paging.
 	 */
 	private static function build_query_parts( array $src, array $config ): array {
 		global $wpdb;
@@ -202,7 +212,12 @@ class OPEX_Query_Fetch {
 		return array( $from, implode( ' AND ', $base ), $args, $pk );
 	}
 
-	/** Single-column primary key of a raw table, backtick-qualified, or ''. */
+	/**
+	 * Single-column primary key of a raw table, backtick-qualified, or ''.
+	 *
+	 * @param string $table Table name, already checked.
+	 * @return string The quoted key column, or '' when the table has no single-column key.
+	 */
 	private static function table_pk( string $table ): string {
 		$pks = array();
 		foreach ( OPEX_Catalog::table_columns( $table ) as $col ) {
@@ -225,6 +240,9 @@ class OPEX_Query_Fetch {
 	/**
 	 * Primary key columns of a raw table, backtick-quoted and comma separated,
 	 * for ORDER BY when keyset paging is not possible. '' when it has none.
+	 *
+	 * @param string $table Table name, already checked.
+	 * @return string The ORDER BY list, or '' when the table has no primary key.
 	 */
 	private static function table_order( string $table ): string {
 		$cols = array();
@@ -263,6 +281,7 @@ class OPEX_Query_Fetch {
 	 * A column reference without its table alias, such as post_title for p.post_title.
 	 *
 	 * @param string $col Column, maybe with an alias.
+	 * @return string The column name alone.
 	 */
 	private static function unqualified( string $col ): string {
 		$col = str_replace( '`', '', $col );
@@ -270,7 +289,13 @@ class OPEX_Query_Fetch {
 		return false === $dot ? $col : substr( $col, $dot + 1 );
 	}
 
-	/** SELECT list: raw tables fetch only requested columns plus the PK. */
+	/**
+	 * SELECT list: raw tables fetch only requested columns plus the PK.
+	 *
+	 * @param array    $src    Parsed source.
+	 * @param string[] $fields Field ids the export asked for.
+	 * @return string The SELECT list.
+	 */
 	private static function select_list( array $src, array $fields ): string {
 		$provider = OPEX_Sources::for_src( $src );
 		if ( $provider ) {

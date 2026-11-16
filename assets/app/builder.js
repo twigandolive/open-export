@@ -30,6 +30,11 @@
 
 	const fieldCache = new Map();
 
+	/**
+	 * Loads a source's fields once and keeps the answer, so switching back to a source does not ask the server again. A failed load is forgotten so it can be tried again.
+	 *
+	 * @return {Promise} Resolves with the /fields answer.
+	 */
 	function loadFields( source ) {
 		if ( ! fieldCache.has( source ) ) {
 			fieldCache.set( source, api.get( '/fields?source=' + encodeURIComponent( source ) ).catch( ( err ) => {
@@ -40,6 +45,11 @@
 		return fieldCache.get( source );
 	}
 
+	/**
+	 * Loads the source list once and keeps it in the store.
+	 *
+	 * @return {Promise} Resolves with the source groups.
+	 */
 	function loadSources() {
 		if ( store.get( 'sources' ) ) {
 			return Promise.resolve( store.get( 'sources' ) );
@@ -47,6 +57,12 @@
 		return api.get( '/sources' ).then( ( list ) => store.set( 'sources', Array.isArray( list ) ? list : [] ) );
 	}
 
+	/**
+	 * Mounts the builder in a container and returns the controls the tab uses to read and change the config.
+	 *
+	 * @param {Element} container Where the cards go.
+	 * @param {Object}  opts      Config, mode and callbacks.
+	 */
 	B.mount = function ( container, opts ) {
 		const o = opts || {};
 		const options = store.get( 'options' ) || {};

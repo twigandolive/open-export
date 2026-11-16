@@ -19,6 +19,13 @@
 	const B = app.builder;
 	const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+	/**
+	 * Builds the date range row of the Filters card: the date field, the preset and the custom dates.
+	 *
+	 * @param {Object}   ctx      Builder context.
+	 * @param {Function} onChange Called with a reason after each change.
+	 * @return {Object} { root, refresh(), summary(), errors() }.
+	 */
 	B.dates = function ( ctx, onChange ) {
 		const fieldSelect = el( 'select', {} );
 		const presetSelect = el( 'select', {} );

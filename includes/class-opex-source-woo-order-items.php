@@ -47,42 +47,70 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		'tax'       => 'shipping_tax_amount',
 	);
 
-	/** The provider when WooCommerce is active, else null. */
+	/**
+	 * The provider when WooCommerce is active, else null.
+	 *
+	 * @return OPEX_Source_Provider|null The provider, or null when WooCommerce is not active.
+	 */
 	public static function resolve(): ?OPEX_Source_Provider {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source id.
+	 */
 	public function id(): string {
 		return self::SOURCE;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source type.
+	 */
 	public function src_type(): string {
 		return 'woo_order_items';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The parsed source.
+	 */
 	public function src(): array {
 		// The storage engine is part of the source, so memoized date columns
 		// can never be shared between the two.
 		return parent::src() + array( 'storage' => OPEX_Woo::use_hpos() ? 'hpos' : 'legacy' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string A key that changes when the definitions must be built again.
+	 */
 	protected function defs_key(): string {
 		global $wpdb;
 		return $wpdb->prefix . ( OPEX_Woo::use_hpos() ? '|hpos' : '|legacy' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return bool True when the source can be used on this site.
+	 */
 	public function is_available(): bool {
 		global $wpdb;
 		return OPEX_Catalog::table_exists( $wpdb->prefix . 'woocommerce_order_items' )
 			&& OPEX_Catalog::table_exists( $wpdb->prefix . 'woocommerce_order_itemmeta' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The FROM clause.
+	 */
 	public function from(): string {
 		global $wpdb;
 		$items = "{$wpdb->prefix}woocommerce_order_items oi";
@@ -92,7 +120,11 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		return "{$items} INNER JOIN {$wpdb->posts} op ON op.ID = oi.order_id";
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array The base WHERE conditions and the values for their placeholders.
+	 */
 	public function base_where(): array {
 		// The same orders the orders source exports: no refunds, no carts.
 		if ( OPEX_Woo::use_hpos() ) {
@@ -101,27 +133,47 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		return array( array( "op.post_type = 'shop_order'", 'op.post_status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' ), array() );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key column for cursor paging.
+	 */
 	public function primary_key(): string {
 		return 'oi.order_item_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The key property name on a fetched row.
+	 */
 	public function id_prop(): string {
 		return 'order_item_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The SQL for the start of the SELECT list.
+	 */
 	protected function base_select(): string {
 		return 'oi.order_item_id';
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return string The source name.
+	 */
 	public function label(): string {
 		return __( 'WooCommerce Order Items', 'open-export' );
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array|null The picker entry, or null when the source has none.
+	 */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -131,7 +183,11 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Date fields by field id, each with a label and how its time is stored.
+	 */
 	public function date_fields(): array {
 		$hpos = OPEX_Woo::use_hpos();
 		return array(
@@ -144,13 +200,24 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 		);
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $field Field id of the rule.
+	 * @param string $op    Filter operator.
+	 * @param string $value Rule value as typed.
+	 * @return string The value the rule compares.
+	 */
 	public function prepare_filter_value( string $field, string $op, string $value ): string {
 		// The order status takes "completed" or "wc-completed", as on the orders source.
 		return 'woo:order_status' === $field ? OPEX_Source_Woo_Orders_Rules::filter_value( 'woo:status', $op, $value ) : $value;
 	}
 
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, array> Field definitions by field id.
+	 */
 	protected function field_defs(): array {
 		global $wpdb;
 		$item  = __( 'Item', 'open-export' );
@@ -263,6 +330,7 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 	 * key gives NULL, which prints empty.
 	 *
 	 * @param array<string, string> $keys Item type => meta key, constants in this class.
+	 * @return string The SQL CASE expression.
 	 */
 	private function by_type( array $keys ): string {
 		$sql = 'CASE oi.order_item_type';
@@ -276,6 +344,7 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 	 * SQL for the first value of an item meta key.
 	 *
 	 * @param string $key Meta key, a constant in this class.
+	 * @return string The SQL subquery.
 	 */
 	private function item_meta( string $key ): string {
 		global $wpdb;

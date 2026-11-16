@@ -25,6 +25,11 @@
 	const jobs = app.jobs;
 	const parts = app.scheduleParts;
 
+	/**
+	 * Builds the Schedules tab: the cards and the add and edit form.
+	 *
+	 * @param {Element} panel Tab panel.
+	 */
 	function mount( panel ) {
 		const messages = el( 'div', { class: 'opex-messages', 'aria-live': 'polite' } );
 		const limitHelp = el( 'p', { class: 'opex-help', id: app.uid( 'opex-limit' ), hidden: true },
