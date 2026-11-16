@@ -8,8 +8,8 @@
 use PHPUnit\Framework\TestCase;
 
 /**
- * The current screen loads by default, the new one only with opex_ui=next,
- * and nothing loads on other admin pages.
+ * The page loads the screen in assets/app/ in dependency order, the old
+ * one-page screen is gone, and nothing loads on other admin pages.
  */
 class AdminScreenTest extends TestCase {
 
@@ -17,11 +17,9 @@ class AdminScreenTest extends TestCase {
 
 	protected function setUp(): void {
 		$this->reset_assets();
-		unset( $_GET['opex_ui'] );
 	}
 
 	protected function tearDown(): void {
-		unset( $_GET['opex_ui'] );
 		$this->reset_assets();
 	}
 
@@ -50,43 +48,34 @@ class AdminScreenTest extends TestCase {
 		);
 	}
 
-	public function test_current_screen_loads_without_the_switch() {
+	public function test_old_screen_is_gone() {
 		OPEX_Admin::enqueue( self::HOOK );
 
-		$this->assertTrue( wp_script_is( 'opex-admin', 'enqueued' ) );
-		$this->assertTrue( wp_style_is( 'opex-admin', 'enqueued' ) );
-		foreach ( OPEX_Admin::next_style_handles() as $handle ) {
-			$this->assertFalse( wp_style_is( $handle, 'enqueued' ), $handle );
-		}
-		foreach ( OPEX_Admin::next_handles() as $handle ) {
-			$this->assertFalse( wp_script_is( $handle, 'registered' ), $handle );
-		}
-		$boot = (string) wp_scripts()->get_data( 'opex-admin', 'data' );
-		$this->assertStringContainsString( '"restBase":"open-export/v1"', $boot );
-		$this->assertStringNotContainsString( 'adminUrl', $boot );
+		$this->assertFalse( wp_script_is( 'opex-admin', 'registered' ) );
+		$this->assertFalse( wp_style_is( 'opex-admin', 'registered' ) );
+		$this->assertFalse( file_exists( OPEX_DIR . 'assets/admin.js' ) );
+		$this->assertFalse( file_exists( OPEX_DIR . 'assets/admin.css' ) );
 	}
 
-	public function test_other_values_of_the_switch_keep_the_current_screen() {
-		$_GET['opex_ui'] = 'nope';
+	public function test_a_leftover_preview_parameter_changes_nothing() {
+		$_GET['opex_ui'] = 'old';
 		OPEX_Admin::enqueue( self::HOOK );
+		unset( $_GET['opex_ui'] );
 
-		$this->assertTrue( wp_script_is( 'opex-admin', 'enqueued' ) );
-		$this->assertFalse( wp_script_is( 'opex-app-main', 'registered' ) );
+		$this->assertTrue( wp_script_is( 'opex-app-main', 'enqueued' ) );
+		$this->assertFalse( wp_script_is( 'opex-admin', 'registered' ) );
 	}
 
-	public function test_new_screen_loads_in_dependency_order_with_the_switch() {
-		$_GET['opex_ui'] = 'next';
+	public function test_screen_loads_in_dependency_order() {
 		OPEX_Admin::enqueue( self::HOOK );
 
-		$this->assertFalse( wp_script_is( 'opex-admin', 'enqueued' ) );
-		$this->assertFalse( wp_style_is( 'opex-admin', 'enqueued' ) );
 		$this->assertTrue( wp_style_is( 'opex-app', 'enqueued' ) );
 		$this->assertTrue( wp_script_is( 'opex-app-main', 'enqueued' ) );
 
 		$scripts = wp_scripts();
 		$scripts->all_deps( $scripts->queue );
 		$order   = $this->ours( $scripts->to_do );
-		$handles = OPEX_Admin::next_handles();
+		$handles = OPEX_Admin::script_handles();
 
 		// Every file loads, and each one after the opex files it depends on.
 		$this->assertEqualsCanonicalizing( $handles, $order );
@@ -103,7 +92,7 @@ class AdminScreenTest extends TestCase {
 		$this->assertContains( 'wp-i18n', $scripts->to_do );
 		$this->assertContains( 'wp-date', $scripts->to_do );
 
-		// OPEX_BOOT rides on the first file and keeps the current keys.
+		// OPEX_BOOT rides on the first file and keeps its keys.
 		$boot = (string) $scripts->get_data( 'opex-app-core', 'data' );
 		foreach ( array( 'restBase', 'restNonce', 'restRoot', 'adminUrl' ) as $key ) {
 			$this->assertStringContainsString( '"' . $key . '"', $boot );
@@ -112,7 +101,6 @@ class AdminScreenTest extends TestCase {
 	}
 
 	public function test_export_tab_and_builder_load_before_main_with_translations() {
-		$_GET['opex_ui'] = 'next';
 		OPEX_Admin::enqueue( self::HOOK );
 
 		$scripts = wp_scripts();
@@ -135,14 +123,13 @@ class AdminScreenTest extends TestCase {
 		$this->assertContains( 'opex-app-tab-export', $scripts->registered['opex-app-main']->deps );
 
 		// Every file of the new screen gets its translations.
-		foreach ( OPEX_Admin::next_handles() as $handle ) {
+		foreach ( OPEX_Admin::script_handles() as $handle ) {
 			$this->assertSame( 'open-export', $scripts->registered[ $handle ]->textdomain, $handle );
 			$this->assertFileExists( OPEX_DIR . 'assets/app/' . basename( (string) wp_parse_url( $scripts->registered[ $handle ]->src, PHP_URL_PATH ) ), $handle );
 		}
 	}
 
 	public function test_schedules_tab_loads_after_the_builder_sections_and_before_main() {
-		$_GET['opex_ui'] = 'next';
 		OPEX_Admin::enqueue( self::HOOK );
 
 		$scripts = wp_scripts();
@@ -164,13 +151,12 @@ class AdminScreenTest extends TestCase {
 		$this->assertContains( 'opex-app-tab-schedules', $scripts->registered['opex-app-main']->deps );
 	}
 
-	public function test_new_screen_styles_load_in_order_with_the_switch() {
-		$_GET['opex_ui'] = 'next';
+	public function test_styles_load_in_order() {
 		OPEX_Admin::enqueue( self::HOOK );
 
-		$this->assertSame( array( 'opex-app', 'opex-app-builder' ), OPEX_Admin::next_style_handles() );
+		$this->assertSame( array( 'opex-app', 'opex-app-builder' ), OPEX_Admin::style_handles() );
 		$styles = wp_styles();
-		foreach ( OPEX_Admin::next_style_handles() as $handle ) {
+		foreach ( OPEX_Admin::style_handles() as $handle ) {
 			$this->assertTrue( wp_style_is( $handle, 'enqueued' ), $handle );
 			$this->assertStringContainsString( 'assets/app/', $styles->registered[ $handle ]->src, $handle );
 		}
@@ -182,15 +168,13 @@ class AdminScreenTest extends TestCase {
 	}
 
 	public function test_nothing_loads_on_other_admin_pages() {
-		foreach ( array( '', 'nope', 'next' ) as $switch ) {
+		foreach ( array( 'index.php', 'tools_page_something-else', 'tools_page_open-export-other' ) as $hook ) {
 			$this->reset_assets();
-			$_GET['opex_ui'] = $switch;
-			OPEX_Admin::enqueue( 'index.php' );
-			OPEX_Admin::enqueue( 'tools_page_something-else' );
+			OPEX_Admin::enqueue( $hook );
 
-			$this->assertSame( array(), $this->ours( wp_scripts()->queue ), 'switch: ' . $switch );
-			$this->assertSame( array(), $this->ours( wp_styles()->queue ), 'switch: ' . $switch );
-			$this->assertSame( array(), $this->ours( array_keys( wp_scripts()->registered ) ), 'switch: ' . $switch );
+			$this->assertSame( array(), $this->ours( wp_scripts()->queue ), $hook );
+			$this->assertSame( array(), $this->ours( wp_styles()->queue ), $hook );
+			$this->assertSame( array(), $this->ours( array_keys( wp_scripts()->registered ) ), $hook );
 		}
 	}
 }

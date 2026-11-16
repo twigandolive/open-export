@@ -1,11 +1,7 @@
 <?php
 /**
- * Admin screen: a single page that boots the JS app. All data flows
- * through the REST API, so this stays a thin shell.
- *
- * Two screens exist while the new one is built. The current screen
- * (assets/admin.js) loads by default. The new screen (assets/app/) loads
- * only when the page URL has opex_ui=next.
+ * Admin screen: a single page that boots the JS app in assets/app/. All
+ * data flows through the REST API, so this stays a thin shell.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -15,10 +11,10 @@ class OPEX_Admin {
 	private const SLUG = 'open-export';
 
 	/**
-	 * Scripts of the new screen in load order: handle => array( file, deps ).
+	 * Scripts of the screen in load order: handle => array( file, deps ).
 	 * Each file adds to window.opexApp, so each one depends on the files it uses.
 	 */
-	private const NEXT_SCRIPTS = array(
+	private const SCRIPTS = array(
 		'opex-app-core'              => array( 'core.js', array( 'wp-i18n', 'wp-date' ) ),
 		'opex-app-store'             => array( 'store.js', array( 'opex-app-core' ) ),
 		'opex-app-api'               => array( 'api.js', array( 'opex-app-store', 'wp-api-fetch' ) ),
@@ -68,9 +64,9 @@ class OPEX_Admin {
 	);
 
 	/**
-	 * Styles of the new screen in load order: handle => array( file, deps ).
+	 * Styles of the screen in load order: handle => array( file, deps ).
 	 */
-	private const NEXT_STYLES = array(
+	private const STYLES = array(
 		'opex-app'         => array( 'app.css', array( 'dashicons' ) ),
 		'opex-app-builder' => array( 'builder.css', array( 'opex-app' ) ),
 	);
@@ -85,68 +81,24 @@ class OPEX_Admin {
 		);
 	}
 
+	/**
+	 * Loads the screen's scripts and styles on the Open Export page only.
+	 * OPEX_BOOT rides on the first script.
+	 *
+	 * @param string $hook Admin page hook.
+	 * @return void
+	 */
 	public static function enqueue( string $hook ): void {
 		if ( 'tools_page_' . self::SLUG !== $hook ) {
 			return;
 		}
 
-		if ( self::is_next() ) {
-			self::enqueue_next();
-			return;
-		}
-
-		wp_enqueue_style( 'opex-admin', OPEX_URL . 'assets/admin.css', array(), OPEX_VERSION );
-		wp_enqueue_script( 'opex-admin', OPEX_URL . 'assets/admin.js', array( 'wp-api-fetch', 'wp-i18n' ), OPEX_VERSION, true );
-		wp_set_script_translations( 'opex-admin', 'open-export' );
-
-		wp_localize_script( 'opex-admin', 'OPEX_BOOT', array(
-			'restBase'  => 'open-export/v1',
-			'restNonce' => wp_create_nonce( 'wp_rest' ),
-			'restRoot'  => esc_url_raw( rest_url( 'open-export/v1' ) ),
-		) );
-	}
-
-	/**
-	 * Whether this request asked for the new screen.
-	 *
-	 * @return bool
-	 */
-	public static function is_next(): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only picks which read-only assets load, nothing is saved.
-		return isset( $_GET['opex_ui'] ) && 'next' === sanitize_key( wp_unslash( $_GET['opex_ui'] ) );
-	}
-
-	/**
-	 * Handles of the new screen's scripts, in load order.
-	 *
-	 * @return string[]
-	 */
-	public static function next_handles(): array {
-		return array_keys( self::NEXT_SCRIPTS );
-	}
-
-	/**
-	 * Handles of the new screen's styles, in load order.
-	 *
-	 * @return string[]
-	 */
-	public static function next_style_handles(): array {
-		return array_keys( self::NEXT_STYLES );
-	}
-
-	/**
-	 * Loads the new screen. OPEX_BOOT keeps the keys of the current screen
-	 * and adds adminUrl, the link back to the current screen.
-	 *
-	 * @return void
-	 */
-	private static function enqueue_next(): void {
 		$base = OPEX_URL . 'assets/app/';
-		foreach ( self::NEXT_STYLES as $handle => $style ) {
+		foreach ( self::STYLES as $handle => $style ) {
 			wp_enqueue_style( $handle, $base . $style[0], $style[1], OPEX_VERSION );
 		}
 
-		foreach ( self::NEXT_SCRIPTS as $handle => $script ) {
+		foreach ( self::SCRIPTS as $handle => $script ) {
 			wp_register_script( $handle, $base . $script[0], $script[1], OPEX_VERSION, true );
 			wp_set_script_translations( $handle, 'open-export' );
 		}
@@ -158,6 +110,24 @@ class OPEX_Admin {
 			'restRoot'  => esc_url_raw( rest_url( 'open-export/v1' ) ),
 			'adminUrl'  => esc_url_raw( admin_url( 'tools.php?page=' . self::SLUG ) ),
 		) );
+	}
+
+	/**
+	 * Script handles in load order.
+	 *
+	 * @return string[]
+	 */
+	public static function script_handles(): array {
+		return array_keys( self::SCRIPTS );
+	}
+
+	/**
+	 * Style handles in load order.
+	 *
+	 * @return string[]
+	 */
+	public static function style_handles(): array {
+		return array_keys( self::STYLES );
 	}
 
 	public static function render(): void {
