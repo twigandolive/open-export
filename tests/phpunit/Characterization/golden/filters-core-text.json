@@ -1,0 +1,86 @@
+{
+    "eq": {
+        "count": 1,
+        "first": "16",
+        "last": "16",
+        "sha1": "1574bddb75c78a6fd2251d61e2993b5146201319"
+    },
+    "neq": {
+        "count": 59,
+        "first": "10",
+        "last": "69",
+        "sha1": "de4f26759df45430338fa3d9071bb2a4b195152c"
+    },
+    "contains": {
+        "count": 11,
+        "first": "10",
+        "last": "28",
+        "sha1": "285d25d7cec4ed7686c3771bc6cb1d3680645a2a"
+    },
+    "not_contains": {
+        "count": 49,
+        "first": "11",
+        "last": "69",
+        "sha1": "384986fb49759ce2e31c2f3ee7de2db7fc2f05ed"
+    },
+    "starts_with": {
+        "count": 11,
+        "first": "10",
+        "last": "28",
+        "sha1": "285d25d7cec4ed7686c3771bc6cb1d3680645a2a"
+    },
+    "ends_with": {
+        "count": 6,
+        "first": "14",
+        "last": "64",
+        "sha1": "0f1c614d4622cce3446676284eac00e3415352ee"
+    },
+    "gt": {
+        "count": 15,
+        "first": "15",
+        "last": "69",
+        "sha1": "2faf0e8f4e84ef251ec086243e4d7611bfbd9738"
+    },
+    "gte": {
+        "count": 16,
+        "first": "14",
+        "last": "69",
+        "sha1": "02c0adc03ce9dc3b13abe5239064901cb8cee78f"
+    },
+    "lt": {
+        "count": 44,
+        "first": "10",
+        "last": "58",
+        "sha1": "c7705181dcc2b0dfb13d6d1fe4edd088b5bb21f9"
+    },
+    "lte": {
+        "count": 45,
+        "first": "10",
+        "last": "58",
+        "sha1": "55fd72075a74259d935bbda92a1ca3c95f632e2b"
+    },
+    "in": {
+        "count": 3,
+        "first": "10",
+        "last": "12",
+        "sha1": "2e0ea36a6bc8fb2123ea993a873c08b8eb6b1aa5"
+    },
+    "not_in": {
+        "count": 58,
+        "first": "12",
+        "last": "69",
+        "sha1": "0e3dca860400d1a1a036c735ebac8bfb0fe3302a"
+    },
+    "empty": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "not_empty": {
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
+    }
+}

@@ -1,0 +1,33 @@
+{
+    "format": "csv",
+    "count": 5,
+    "processed": 5,
+    "filesize": 149,
+    "batches": 1,
+    "sha256": "47b00ba408a3f51fcd18979b524f71ac0e0885213871d8f83cb4cbcdca3e2a8c",
+    "header": [
+        "term_id",
+        "name",
+        "slug",
+        "description",
+        "parent",
+        "count"
+    ],
+    "first": [
+        "18",
+        "beta",
+        "beta",
+        "",
+        "0",
+        "24"
+    ],
+    "last": [
+        "22",
+        "alpha",
+        "alpha",
+        "",
+        "0",
+        "24"
+    ],
+    "rows": 5
+}

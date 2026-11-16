@@ -1,0 +1,27 @@
+{
+    "format": "csv",
+    "count": 15,
+    "processed": 15,
+    "filesize": 453,
+    "batches": 1,
+    "sha256": "127b5eb3aac3dff78c0c94defae2138ef3a58581556ff432409b4f2c7d142cc9",
+    "header": [
+        "ID",
+        "ID_2",
+        "My Col!",
+        "9 lives"
+    ],
+    "first": [
+        "5",
+        "",
+        "Shop",
+        "shop"
+    ],
+    "last": [
+        "79",
+        "",
+        "Test page 10",
+        "test-page-10"
+    ],
+    "rows": 15
+}

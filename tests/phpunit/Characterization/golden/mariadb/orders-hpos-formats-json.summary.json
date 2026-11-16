@@ -1,0 +1,51 @@
+{
+    "format": "json",
+    "count": 40,
+    "processed": 40,
+    "filesize": 12462,
+    "batches": 5,
+    "sha256": "e4fa5728c433486157defcde02ece5424e11fad79e9b053fc70cee1eac805d9b",
+    "rows": 40,
+    "first": {
+        "order_id": "106",
+        "order_number": "106",
+        "status": "wc-completed",
+        "date_created": "2026-06-29 12:00:00",
+        "total": "82.50000000",
+        "discount_total": "0.00000000",
+        "customer_id": "3",
+        "is_guest": "no",
+        "billing_first_name": "First2",
+        "billing_last_name": "Buyer1",
+        "billing_email": "buyer1@example.test",
+        "billing_country": "US"
+    },
+    "last": {
+        "order_id": "150",
+        "order_number": "150",
+        "status": "wc-completed",
+        "date_created": "2026-05-21 12:00:00",
+        "total": "212.85000000",
+        "discount_total": "23.65000000",
+        "customer_id": "2",
+        "is_guest": "no",
+        "billing_first_name": "First1",
+        "billing_last_name": "Buyer40",
+        "billing_email": "buyer40@example.test",
+        "billing_country": "US"
+    },
+    "header": [
+        "order_id",
+        "order_number",
+        "status",
+        "date_created",
+        "total",
+        "discount_total",
+        "customer_id",
+        "is_guest",
+        "billing_first_name",
+        "billing_last_name",
+        "billing_email",
+        "billing_country"
+    ]
+}

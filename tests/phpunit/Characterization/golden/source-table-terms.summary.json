@@ -1,0 +1,24 @@
+{
+    "format": "csv",
+    "count": 22,
+    "processed": 22,
+    "filesize": 484,
+    "batches": 3,
+    "sha256": "f2271205702e07a0723154cee59f81c9562506750c590307da68099d1f72ffab",
+    "header": [
+        "term_id",
+        "name",
+        "slug"
+    ],
+    "first": [
+        "1",
+        "Uncategorized",
+        "uncategorized"
+    ],
+    "last": [
+        "22",
+        "alpha",
+        "alpha"
+    ],
+    "rows": 22
+}

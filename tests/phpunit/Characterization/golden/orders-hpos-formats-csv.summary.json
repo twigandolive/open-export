@@ -1,0 +1,51 @@
+{
+    "format": "csv",
+    "count": 40,
+    "processed": 40,
+    "filesize": 3871,
+    "batches": 5,
+    "sha256": "64bdae54b7bb7714f72bfa3980727f431118d9503dbfdb2e5667d87e8ac549a0",
+    "header": [
+        "order_id",
+        "order_number",
+        "status",
+        "date_created",
+        "total",
+        "discount_total",
+        "customer_id",
+        "is_guest",
+        "billing_first_name",
+        "billing_last_name",
+        "billing_email",
+        "billing_country"
+    ],
+    "first": [
+        "106",
+        "106",
+        "wc-completed",
+        "2026-06-29 12:00:00",
+        "82.5",
+        "0",
+        "3",
+        "no",
+        "First2",
+        "Buyer1",
+        "buyer1@example.test",
+        "US"
+    ],
+    "last": [
+        "150",
+        "150",
+        "wc-completed",
+        "2026-05-21 12:00:00",
+        "212.85",
+        "23.65",
+        "2",
+        "no",
+        "First1",
+        "Buyer40",
+        "buyer40@example.test",
+        "US"
+    ],
+    "rows": 40
+}

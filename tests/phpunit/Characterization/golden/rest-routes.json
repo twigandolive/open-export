@@ -1,0 +1,44 @@
+{
+    "/open-export/v1/fields": [
+        "GET"
+    ],
+    "/open-export/v1/jobs": [
+        "GET",
+        "POST"
+    ],
+    "/open-export/v1/jobs/(?P<id>j[a-f0-9]{12})": [
+        "DELETE",
+        "GET"
+    ],
+    "/open-export/v1/jobs/(?P<id>j[a-f0-9]{12})/download": [
+        "GET"
+    ],
+    "/open-export/v1/jobs/(?P<id>j[a-f0-9]{12})/pause": [
+        "POST"
+    ],
+    "/open-export/v1/jobs/(?P<id>j[a-f0-9]{12})/rerun": [
+        "POST"
+    ],
+    "/open-export/v1/jobs/(?P<id>j[a-f0-9]{12})/run": [
+        "POST"
+    ],
+    "/open-export/v1/preview": [
+        "POST"
+    ],
+    "/open-export/v1/recipe": [
+        "POST"
+    ],
+    "/open-export/v1/schema": [
+        "GET"
+    ],
+    "/open-export/v1/sources": [
+        "GET"
+    ],
+    "/open-export/v1/templates": [
+        "GET",
+        "POST"
+    ],
+    "/open-export/v1/templates/(?P<id>t[a-f0-9]{12})": [
+        "DELETE"
+    ]
+}

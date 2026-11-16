@@ -1,0 +1,195 @@
+{
+    "field_keys": [
+        "id",
+        "label",
+        "group",
+        "type"
+    ],
+    "fields": [
+        {
+            "id": "core:ID",
+            "label": "ID",
+            "group": "Core Fields",
+            "type": "id"
+        },
+        {
+            "id": "core:user_login",
+            "label": "user_login",
+            "group": "Core Fields",
+            "type": "text"
+        },
+        {
+            "id": "core:user_email",
+            "label": "user_email",
+            "group": "Core Fields",
+            "type": "email"
+        },
+        {
+            "id": "core:user_nicename",
+            "label": "user_nicename",
+            "group": "Core Fields",
+            "type": "text"
+        },
+        {
+            "id": "core:user_url",
+            "label": "user_url",
+            "group": "Core Fields",
+            "type": "url"
+        },
+        {
+            "id": "core:user_registered",
+            "label": "user_registered",
+            "group": "Core Fields",
+            "type": "date"
+        },
+        {
+            "id": "core:display_name",
+            "label": "display_name",
+            "group": "Core Fields",
+            "type": "text"
+        },
+        {
+            "id": "computed:roles",
+            "label": "roles",
+            "group": "Computed",
+            "type": "text",
+            "values": [
+                "administrator",
+                "editor",
+                "author",
+                "contributor",
+                "subscriber",
+                "customer",
+                "shop_manager"
+            ]
+        },
+        {
+            "id": "meta:admin_color",
+            "label": "admin_color",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:comment_shortcuts",
+            "label": "comment_shortcuts",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:description",
+            "label": "description",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:dismissed_wp_pointers",
+            "label": "dismissed_wp_pointers",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:first_name",
+            "label": "first_name",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:last_name",
+            "label": "last_name",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:last_update",
+            "label": "last_update",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:locale",
+            "label": "locale",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:nickname",
+            "label": "nickname",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:rich_editing",
+            "label": "rich_editing",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:show_admin_bar_front",
+            "label": "show_admin_bar_front",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:show_welcome_panel",
+            "label": "show_welcome_panel",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:syntax_highlighting",
+            "label": "syntax_highlighting",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:use_ssl",
+            "label": "use_ssl",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:wp_capabilities",
+            "label": "wp_capabilities",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:wp_user_level",
+            "label": "wp_user_level",
+            "group": "WordPress Core",
+            "type": "text"
+        },
+        {
+            "id": "meta:infinite_scrolling",
+            "label": "infinite_scrolling",
+            "group": "Custom Fields",
+            "type": "text"
+        },
+        {
+            "id": "meta:opex_plan",
+            "label": "opex_plan",
+            "group": "Custom Fields",
+            "type": "text"
+        },
+        {
+            "id": "meta:opex_prefs",
+            "label": "opex_prefs",
+            "group": "Custom Fields",
+            "type": "text"
+        },
+        {
+            "id": "meta:paying_customer",
+            "label": "paying_customer",
+            "group": "Custom Fields",
+            "type": "text"
+        }
+    ],
+    "date_fields": [
+        {
+            "id": "core:user_registered",
+            "label": "Registered",
+            "stored_in": "UTC"
+        }
+    ],
+    "kind": "users"
+}

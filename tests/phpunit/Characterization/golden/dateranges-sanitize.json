@@ -1,0 +1,62 @@
+{
+    "custom ok": {
+        "field": "core:post_date",
+        "preset": "custom",
+        "from": "2026-06-01",
+        "to": "2026-06-10"
+    },
+    "swapped": {
+        "field": "core:post_date",
+        "preset": "custom",
+        "from": "2026-06-01",
+        "to": "2026-06-10"
+    },
+    "unknown preset": {
+        "field": "",
+        "preset": "all_time",
+        "from": "",
+        "to": ""
+    },
+    "all_time": {
+        "field": "",
+        "preset": "all_time",
+        "from": "",
+        "to": ""
+    },
+    "unknown field": {
+        "field": "core:post_date",
+        "preset": "custom",
+        "from": "2026-06-01",
+        "to": "2026-06-10"
+    },
+    "bad dates": {
+        "field": "",
+        "preset": "all_time",
+        "from": "",
+        "to": ""
+    },
+    "one bad date": {
+        "field": "core:post_date",
+        "preset": "custom",
+        "from": "",
+        "to": "2026-06-10"
+    },
+    "preset keeps no dates": {
+        "field": "core:post_date",
+        "preset": "last_7_days",
+        "from": "",
+        "to": ""
+    },
+    "no field": {
+        "field": "core:post_date",
+        "preset": "custom",
+        "from": "2026-06-01",
+        "to": "2026-06-10"
+    },
+    "source without date fields": {
+        "field": "",
+        "preset": "all_time",
+        "from": "",
+        "to": ""
+    }
+}

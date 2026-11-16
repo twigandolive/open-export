@@ -1,0 +1,30 @@
+{
+    "format": "csv",
+    "count": 184,
+    "processed": 184,
+    "filesize": 3585,
+    "batches": 4,
+    "sha256": "79b9ad7cd411b99f8650ea2d11c508dd1720887c529985cf3cd6edee8c23541d",
+    "header": [
+        "comment_ID",
+        "comment_type",
+        "comment_approved",
+        "user_id",
+        "comment_parent"
+    ],
+    "first": [
+        "2",
+        "comment",
+        "1",
+        "0",
+        "0"
+    ],
+    "last": [
+        "185",
+        "order_note",
+        "1",
+        "0",
+        "0"
+    ],
+    "rows": 184
+}

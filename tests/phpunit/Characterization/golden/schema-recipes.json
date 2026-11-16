@@ -1,0 +1,365 @@
+{
+    "good": {
+        "ok": true,
+        "report": {
+            "ok": true,
+            "fields": [
+                {
+                    "id": "core:user_login",
+                    "status": "matched",
+                    "label": "user_login"
+                },
+                {
+                    "id": "core:user_email",
+                    "status": "matched",
+                    "label": "user_email"
+                },
+                {
+                    "id": "meta:opex_plan",
+                    "status": "matched",
+                    "label": "opex_plan"
+                },
+                {
+                    "id": "computed:roles",
+                    "status": "matched",
+                    "label": "roles"
+                }
+            ],
+            "filters": [
+                {
+                    "index": 0,
+                    "field": "meta:opex_plan",
+                    "op": "eq",
+                    "status": "matched"
+                },
+                {
+                    "index": 1,
+                    "field": "computed:roles",
+                    "op": "eq",
+                    "status": "matched"
+                }
+            ],
+            "date_range": {
+                "field": "core:user_registered",
+                "preset": "custom",
+                "status": "matched"
+            },
+            "summary": {
+                "fields_requested": 4,
+                "fields_matched": 4,
+                "fields_dropped": 0,
+                "rules_matched": 2,
+                "rules_dropped": 0
+            }
+        },
+        "config": {
+            "source": "users",
+            "fields": [
+                "core:user_login",
+                "core:user_email",
+                "meta:opex_plan",
+                "computed:roles"
+            ],
+            "filters": {
+                "relation": "OR",
+                "rules": [
+                    {
+                        "field": "meta:opex_plan",
+                        "op": "eq",
+                        "value": "pro"
+                    },
+                    {
+                        "field": "computed:roles",
+                        "op": "eq",
+                        "value": "editor"
+                    }
+                ]
+            },
+            "date_range": {
+                "field": "core:user_registered",
+                "preset": "custom",
+                "from": "2026-01-01",
+                "to": "2026-12-31"
+            },
+            "format": "json",
+            "batch_size": 50,
+            "csv_delimiter": "tab",
+            "column_labels": {
+                "core:user_login": "Login"
+            }
+        },
+        "name": "Pro users",
+        "notes": []
+    },
+    "unknown field": {
+        "ok": true,
+        "report": {
+            "ok": true,
+            "fields": [
+                {
+                    "id": "core:user_login",
+                    "status": "matched",
+                    "label": "user_login"
+                },
+                {
+                    "id": "core:user_logn",
+                    "status": "dropped",
+                    "reason": "This source does not have that field.",
+                    "suggestion": "core:user_login"
+                },
+                {
+                    "id": "core:user_login",
+                    "status": "dropped",
+                    "reason": "Listed more than once; the first one is kept."
+                },
+                {
+                    "id": "plain",
+                    "status": "dropped",
+                    "reason": "Not a field id. Ids look like \"woo:total\" or \"core:post_title\".",
+                    "suggestion": ""
+                },
+                {
+                    "id": "woo:total",
+                    "status": "dropped",
+                    "reason": "This source does not have that field.",
+                    "suggestion": ""
+                }
+            ],
+            "filters": [
+                {
+                    "index": 0,
+                    "field": "core:nope",
+                    "op": "eq",
+                    "status": "dropped",
+                    "reason": "This source has no field by that id to filter on.",
+                    "suggestion": ""
+                },
+                {
+                    "index": 1,
+                    "field": "core:user_login",
+                    "op": "bogus",
+                    "status": "dropped",
+                    "reason": "Unsupported operator.",
+                    "suggestion": ""
+                },
+                {
+                    "index": 2,
+                    "field": "core:user_login",
+                    "op": "contains",
+                    "status": "matched"
+                }
+            ],
+            "date_range": {
+                "field": "core:nope",
+                "preset": "last_30_days",
+                "status": "substituted",
+                "reason": "That is not a date column on this source.",
+                "suggestion": "",
+                "used_instead": "core:user_registered"
+            },
+            "summary": {
+                "fields_requested": 5,
+                "fields_matched": 1,
+                "fields_dropped": 4,
+                "rules_matched": 1,
+                "rules_dropped": 2
+            }
+        },
+        "config": {
+            "source": "users",
+            "fields": [
+                "core:user_login"
+            ],
+            "filters": {
+                "relation": "AND",
+                "rules": [
+                    {
+                        "field": "core:user_login",
+                        "op": "contains",
+                        "value": "user"
+                    }
+                ]
+            },
+            "date_range": {
+                "field": "core:user_registered",
+                "preset": "last_30_days",
+                "from": "",
+                "to": ""
+            },
+            "format": "csv",
+            "batch_size": 500,
+            "csv_delimiter": "comma",
+            "column_labels": []
+        },
+        "name": "",
+        "notes": []
+    },
+    "resolves to nothing": {
+        "ok": false,
+        "report": {
+            "ok": false,
+            "fields": [
+                {
+                    "id": "core:nope",
+                    "status": "dropped",
+                    "reason": "This source does not have that field.",
+                    "suggestion": ""
+                },
+                {
+                    "id": "meta",
+                    "status": "dropped",
+                    "reason": "Not a field id. Ids look like \"woo:total\" or \"core:post_title\".",
+                    "suggestion": ""
+                }
+            ],
+            "filters": [],
+            "date_range": null,
+            "summary": {
+                "fields_requested": 2,
+                "fields_matched": 0,
+                "fields_dropped": 2,
+                "rules_matched": 0,
+                "rules_dropped": 0
+            },
+            "reason": "None of the fields in this recipe exist on this source, so there is nothing to export. Give the assistant the capability document for this site and ask it to use only the field ids listed there."
+        },
+        "config": null,
+        "name": "",
+        "notes": []
+    },
+    "no fields": {
+        "ok": false,
+        "report": {
+            "ok": false,
+            "fields": [],
+            "filters": [],
+            "date_range": null,
+            "summary": {
+                "fields_requested": 0,
+                "fields_matched": 0,
+                "fields_dropped": 0,
+                "rules_matched": 0,
+                "rules_dropped": 0
+            },
+            "reason": "The recipe lists no fields to export."
+        },
+        "config": null,
+        "name": "",
+        "notes": []
+    },
+    "newer version": {
+        "ok": true,
+        "report": {
+            "ok": true,
+            "fields": [
+                {
+                    "id": "core:ID",
+                    "status": "matched",
+                    "label": "ID"
+                }
+            ],
+            "filters": [],
+            "date_range": null,
+            "summary": {
+                "fields_requested": 1,
+                "fields_matched": 1,
+                "fields_dropped": 0,
+                "rules_matched": 0,
+                "rules_dropped": 0
+            }
+        },
+        "config": {
+            "source": "users",
+            "fields": [
+                "core:ID"
+            ],
+            "filters": {
+                "relation": "AND",
+                "rules": []
+            },
+            "date_range": {
+                "field": "",
+                "preset": "all_time",
+                "from": "",
+                "to": ""
+            },
+            "format": "csv",
+            "batch_size": 500,
+            "csv_delimiter": "comma",
+            "column_labels": []
+        },
+        "name": "",
+        "notes": [
+            "This recipe declares format version 99 but this plugin understands version 1. Reading it anyway."
+        ]
+    },
+    "posts with tax": {
+        "ok": true,
+        "report": {
+            "ok": true,
+            "fields": [
+                {
+                    "id": "core:post_title",
+                    "status": "matched",
+                    "label": "post_title"
+                },
+                {
+                    "id": "tax:category",
+                    "status": "matched",
+                    "label": "category"
+                },
+                {
+                    "id": "meta:opex_note",
+                    "status": "matched",
+                    "label": "opex_note"
+                }
+            ],
+            "filters": [
+                {
+                    "index": 0,
+                    "field": "tax:category",
+                    "op": "eq",
+                    "status": "matched"
+                }
+            ],
+            "date_range": null,
+            "summary": {
+                "fields_requested": 3,
+                "fields_matched": 3,
+                "fields_dropped": 0,
+                "rules_matched": 1,
+                "rules_dropped": 0
+            }
+        },
+        "config": {
+            "source": "posts:post",
+            "fields": [
+                "core:post_title",
+                "tax:category",
+                "meta:opex_note"
+            ],
+            "filters": {
+                "relation": "AND",
+                "rules": [
+                    {
+                        "field": "tax:category",
+                        "op": "eq",
+                        "value": "News"
+                    }
+                ]
+            },
+            "date_range": {
+                "field": "",
+                "preset": "all_time",
+                "from": "",
+                "to": ""
+            },
+            "format": "csv",
+            "batch_size": 500,
+            "csv_delimiter": "comma",
+            "column_labels": []
+        },
+        "name": "",
+        "notes": []
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "format": "csv",
+    "count": 40,
+    "processed": 40,
+    "filesize": 2156,
+    "batches": 3,
+    "sha256": "7026019adb1553298448e41b018bd0caeb765c4fcbfd40593ce4a6c674d4870f",
+    "header": [
+        "order_id",
+        "_billing_address_index",
+        "_refund_amount"
+    ],
+    "first": [
+        "106",
+        "First2 Buyer1       US buyer1@example.test ",
+        ""
+    ],
+    "last": [
+        "150",
+        "First1 Buyer40       US buyer40@example.test ",
+        ""
+    ],
+    "rows": 40
+}

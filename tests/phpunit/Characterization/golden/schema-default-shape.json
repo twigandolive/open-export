@@ -1,0 +1,245 @@
+{
+    "operators": [
+        {
+            "id": "eq",
+            "means": "equals",
+            "needs_value": true
+        },
+        {
+            "id": "neq",
+            "means": "does not equal",
+            "needs_value": true
+        },
+        {
+            "id": "contains",
+            "means": "contains",
+            "needs_value": true
+        },
+        {
+            "id": "not_contains",
+            "means": "does not contain",
+            "needs_value": true
+        },
+        {
+            "id": "starts_with",
+            "means": "starts with",
+            "needs_value": true
+        },
+        {
+            "id": "ends_with",
+            "means": "ends with",
+            "needs_value": true
+        },
+        {
+            "id": "gt",
+            "means": "greater than",
+            "needs_value": true
+        },
+        {
+            "id": "gte",
+            "means": "greater than or equal to",
+            "needs_value": true
+        },
+        {
+            "id": "lt",
+            "means": "less than",
+            "needs_value": true
+        },
+        {
+            "id": "lte",
+            "means": "less than or equal to",
+            "needs_value": true
+        },
+        {
+            "id": "in",
+            "means": "is one of (comma-separated list)",
+            "needs_value": true
+        },
+        {
+            "id": "not_in",
+            "means": "is not one of (comma-separated list)",
+            "needs_value": true
+        },
+        {
+            "id": "empty",
+            "means": "is empty or missing",
+            "needs_value": false
+        },
+        {
+            "id": "not_empty",
+            "means": "has any value",
+            "needs_value": false
+        }
+    ],
+    "date_presets": [
+        {
+            "id": "all_time",
+            "label": "All time"
+        },
+        {
+            "id": "today",
+            "label": "Today"
+        },
+        {
+            "id": "yesterday",
+            "label": "Yesterday"
+        },
+        {
+            "id": "last_7_days",
+            "label": "Last 7 days"
+        },
+        {
+            "id": "last_30_days",
+            "label": "Last 30 days"
+        },
+        {
+            "id": "last_90_days",
+            "label": "Last 90 days"
+        },
+        {
+            "id": "this_week",
+            "label": "This week"
+        },
+        {
+            "id": "last_week",
+            "label": "Last week"
+        },
+        {
+            "id": "this_month",
+            "label": "This month"
+        },
+        {
+            "id": "last_month",
+            "label": "Last month"
+        },
+        {
+            "id": "this_quarter",
+            "label": "This quarter"
+        },
+        {
+            "id": "last_quarter",
+            "label": "Last quarter"
+        },
+        {
+            "id": "this_year",
+            "label": "This year"
+        },
+        {
+            "id": "last_year",
+            "label": "Last year"
+        },
+        {
+            "id": "custom",
+            "label": "Custom range…"
+        }
+    ],
+    "formats": [
+        "csv",
+        "json",
+        "xml"
+    ],
+    "csv_delimiters": [
+        "comma",
+        "semicolon",
+        "tab"
+    ],
+    "site_keys": [
+        "timezone",
+        "wordpress",
+        "locale",
+        "woocommerce"
+    ],
+    "all_source_ids": [
+        "woo:orders",
+        "posts:post",
+        "posts:page",
+        "posts:attachment",
+        "posts:wp_block",
+        "posts:wp_navigation",
+        "posts:product",
+        "posts:shop_coupon",
+        "users",
+        "comments",
+        "terms:category",
+        "terms:post_tag",
+        "terms:link_category",
+        "terms:post_format",
+        "terms:wp_pattern_category",
+        "terms:product_brand",
+        "terms:product_cat",
+        "terms:product_tag",
+        "posts:shop_order",
+        "table:wp_actionscheduler_actions",
+        "table:wp_actionscheduler_claims",
+        "table:wp_actionscheduler_groups",
+        "table:wp_actionscheduler_logs",
+        "table:wp_commentmeta",
+        "table:wp_comments",
+        "table:wp_links",
+        "table:wp_options",
+        "table:wp_postmeta",
+        "table:wp_posts",
+        "table:wp_term_relationships",
+        "table:wp_term_taxonomy",
+        "table:wp_termmeta",
+        "table:wp_terms",
+        "table:wp_usermeta",
+        "table:wp_users",
+        "table:wp_wc_admin_note_actions",
+        "table:wp_wc_admin_notes",
+        "table:wp_wc_category_lookup",
+        "table:wp_wc_customer_lookup",
+        "table:wp_wc_download_log",
+        "table:wp_wc_order_addresses",
+        "table:wp_wc_order_coupon_lookup",
+        "table:wp_wc_order_operational_data",
+        "table:wp_wc_order_product_lookup",
+        "table:wp_wc_order_stats",
+        "table:wp_wc_order_tax_lookup",
+        "table:wp_wc_orders",
+        "table:wp_wc_orders_meta",
+        "table:wp_wc_product_attributes_lookup",
+        "table:wp_wc_product_download_directories",
+        "table:wp_wc_product_meta_lookup",
+        "table:wp_wc_rate_limits",
+        "table:wp_wc_reserved_stock",
+        "table:wp_wc_stock_notificationmeta",
+        "table:wp_wc_stock_notifications",
+        "table:wp_wc_tax_rate_classes",
+        "table:wp_wc_webhooks",
+        "table:wp_woocommerce_api_keys",
+        "table:wp_woocommerce_attribute_taxonomies",
+        "table:wp_woocommerce_downloadable_product_permissions",
+        "table:wp_woocommerce_log",
+        "table:wp_woocommerce_order_itemmeta",
+        "table:wp_woocommerce_order_items",
+        "table:wp_woocommerce_payment_tokenmeta",
+        "table:wp_woocommerce_payment_tokens",
+        "table:wp_woocommerce_sessions",
+        "table:wp_woocommerce_shipping_zone_locations",
+        "table:wp_woocommerce_shipping_zone_methods",
+        "table:wp_woocommerce_shipping_zones",
+        "table:wp_woocommerce_tax_rate_locations",
+        "table:wp_woocommerce_tax_rates"
+    ],
+    "source_ids": [
+        "woo:orders",
+        "posts:post",
+        "posts:page",
+        "posts:attachment",
+        "posts:wp_block",
+        "posts:wp_navigation",
+        "posts:product",
+        "posts:shop_coupon",
+        "users",
+        "comments",
+        "terms:category",
+        "terms:post_tag",
+        "terms:link_category",
+        "terms:post_format",
+        "terms:wp_pattern_category",
+        "terms:product_brand",
+        "terms:product_cat",
+        "terms:product_tag"
+    ]
+}

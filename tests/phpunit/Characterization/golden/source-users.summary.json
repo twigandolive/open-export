@@ -1,0 +1,42 @@
+{
+    "format": "csv",
+    "count": 26,
+    "processed": 26,
+    "filesize": 3396,
+    "batches": 3,
+    "sha256": "669c8228721c1fa47487e3773d47002cb652b1a4d07aebf36bf42351b014a5e6",
+    "header": [
+        "ID",
+        "user_login",
+        "user_email",
+        "display_name",
+        "user_registered",
+        "first_name",
+        "opex_plan",
+        "opex_prefs",
+        "roles"
+    ],
+    "first": [
+        "1",
+        "admin",
+        "admin@example.test",
+        "admin",
+        "2025-12-12 12:00:00",
+        "",
+        "",
+        "",
+        "administrator"
+    ],
+    "last": [
+        "26",
+        "user25",
+        "user25@example.test",
+        "First25 Last25",
+        "2026-02-25 12:00:00",
+        "First25",
+        "team",
+        "{\"newsletter\":false,\"lang\":\"en\"}",
+        "subscriber"
+    ],
+    "rows": 26
+}

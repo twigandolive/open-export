@@ -1,0 +1,86 @@
+{
+    "eq": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "neq": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "contains": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "not_contains": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "starts_with": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "ends_with": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "gt": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "gte": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "lt": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "lte": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "in": {
+        "count": 8,
+        "first": "11",
+        "last": "81",
+        "sha1": "74f8af554862c4a6e55e60a83029b442567cd9f3"
+    },
+    "not_in": {
+        "count": 176,
+        "first": "2",
+        "last": "185",
+        "sha1": "6ef2268541bb2bb2280c32c5615e79fbea95efd6"
+    },
+    "empty": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "not_empty": {
+        "count": 184,
+        "first": "2",
+        "last": "185",
+        "sha1": "1e4b1927e3a589287092279e6febbbdf1dd6505b"
+    }
+}

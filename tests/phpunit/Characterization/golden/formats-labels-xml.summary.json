@@ -1,0 +1,11 @@
+{
+    "format": "xml",
+    "count": 15,
+    "processed": 15,
+    "filesize": 1973,
+    "batches": 1,
+    "sha256": "a13683e3dc9c1218f253722c8dab11510217a8383ee70809f9f17189264d087a",
+    "rows": 15,
+    "first": "<record>\n    <ID>5</ID>\n    <ID_2></ID_2>\n    <My_Col_>Shop</My_Col_>\n    <_9_lives>shop</_9_lives>\n  </record>",
+    "last": "<record>\n    <ID>79</ID>\n    <ID_2></ID_2>\n    <My_Col_>Test page 10</My_Col_>\n    <_9_lives>test-page-10</_9_lives>\n  </record>"
+}

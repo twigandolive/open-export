@@ -1,0 +1,51 @@
+{
+    "format": "csv",
+    "count": 60,
+    "processed": 60,
+    "filesize": 12736,
+    "batches": 7,
+    "sha256": "a2c805028083eee62fd71a00a324ceaff821566beb0872a2f227ea91cc582cd9",
+    "header": [
+        "ID",
+        "post_title",
+        "post_status",
+        "post_date",
+        "post_content",
+        "opex_rating",
+        "opex_note",
+        "opex_settings",
+        "category",
+        "post_tag",
+        "permalink",
+        "author_display_name"
+    ],
+    "first": [
+        "10",
+        "Test post 1",
+        "publish",
+        "2026-06-29 12:00:00",
+        "Body of test post 1.\n\nSecond paragraph.",
+        "1",
+        "note 1",
+        "{\"color\":\"blue\",\"sizes\":[1,2,1],\"on\":true}",
+        "Guides",
+        "beta | delta",
+        "http://example.test/?p=10",
+        "admin"
+    ],
+    "last": [
+        "69",
+        "Test post 60",
+        "publish",
+        "2026-05-01 12:00:00",
+        "Body of test post 60.\n\nSecond paragraph.",
+        "0",
+        "note 60",
+        "{\"color\":\"blue\",\"sizes\":[1,2,60],\"on\":true}",
+        "News",
+        "alpha | gamma",
+        "http://example.test/?p=69",
+        "admin"
+    ],
+    "rows": 60
+}

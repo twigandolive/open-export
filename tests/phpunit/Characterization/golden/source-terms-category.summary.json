@@ -1,0 +1,30 @@
+{
+    "format": "csv",
+    "count": 3,
+    "processed": 3,
+    "filesize": 108,
+    "batches": 1,
+    "sha256": "3b3df33c0a31e5ae7b98d96f6a23965e9bcfd7c8612dc4f40d5ccd5cd1b4d401",
+    "header": [
+        "term_id",
+        "name",
+        "slug",
+        "parent",
+        "count"
+    ],
+    "first": [
+        "1",
+        "Uncategorized",
+        "uncategorized",
+        "0",
+        "0"
+    ],
+    "last": [
+        "17",
+        "Guides",
+        "guides",
+        "0",
+        "30"
+    ],
+    "rows": 3
+}

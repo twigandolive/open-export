@@ -1,0 +1,86 @@
+{
+    "eq": {
+        "count": 5,
+        "first": "2",
+        "last": "22",
+        "sha1": "368b4eaa297104dfb8d58cc19a0f0953a9ac0e95"
+    },
+    "neq": {
+        "count": 21,
+        "first": "1",
+        "last": "26",
+        "sha1": "6397a0064539d79eb6e86d35de4279346bc3228d"
+    },
+    "contains": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "not_contains": {
+        "count": 26,
+        "first": "1",
+        "last": "26",
+        "sha1": "ebb84530763fcb60a6ca23f6386b95199c78921d"
+    },
+    "starts_with": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "ends_with": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "gt": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "gte": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "lt": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "lte": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "in": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "not_in": {
+        "count": 26,
+        "first": "1",
+        "last": "26",
+        "sha1": "ebb84530763fcb60a6ca23f6386b95199c78921d"
+    },
+    "empty": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "not_empty": {
+        "count": 0,
+        "first": null,
+        "last": null,
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    }
+}

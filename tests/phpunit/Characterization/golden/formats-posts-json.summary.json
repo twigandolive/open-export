@@ -1,0 +1,30 @@
+{
+    "format": "json",
+    "count": 60,
+    "processed": 60,
+    "filesize": 6234,
+    "batches": 3,
+    "sha256": "6d581e3b88da377275b17fd2b082e24252b22407e2228b6a0430e449dded5172",
+    "rows": 60,
+    "first": {
+        "ID": "10",
+        "post_title": "Test post 1",
+        "post_status": "publish",
+        "opex_rating": "1",
+        "category": "Guides"
+    },
+    "last": {
+        "ID": "69",
+        "post_title": "Test post 60",
+        "post_status": "publish",
+        "opex_rating": "0",
+        "category": "News"
+    },
+    "header": [
+        "ID",
+        "post_title",
+        "post_status",
+        "opex_rating",
+        "category"
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "woo:date_created 2026-06-01..2026-06-10": 10,
+    "woo:date_created 2026-06-10..2026-06-10": 1,
+    "woo:date_created 2026-06-10..": 20,
+    "woo:date_created ..2026-06-10": 21,
+    "woo:date_modified 2026-06-01..2026-06-10": 10,
+    "woo:date_modified 2026-06-10..2026-06-10": 1,
+    "woo:date_modified 2026-06-10..": 20,
+    "woo:date_modified ..2026-06-10": 21,
+    "woo:date_paid 2026-06-01..2026-06-10": 3,
+    "woo:date_paid 2026-06-10..2026-06-10": 0,
+    "woo:date_paid 2026-06-10..": 8,
+    "woo:date_paid ..2026-06-10": 7,
+    "woo:date_completed 2026-06-01..2026-06-10": 2,
+    "woo:date_completed 2026-06-10..2026-06-10": 0,
+    "woo:date_completed 2026-06-10..": 5,
+    "woo:date_completed ..2026-06-10": 5,
+    "preset today": 0,
+    "preset last_30_days": 0,
+    "preset this_year": 40,
+    "preset last_year": 0
+}

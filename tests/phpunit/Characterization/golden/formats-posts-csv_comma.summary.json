@@ -1,0 +1,30 @@
+{
+    "format": "csv",
+    "count": 60,
+    "processed": 60,
+    "filesize": 2081,
+    "batches": 3,
+    "sha256": "822c973dc47b768faf6245c970d0dfd19020129deab67f8f9f917c9cfef1a59a",
+    "header": [
+        "ID",
+        "post_title",
+        "post_status",
+        "opex_rating",
+        "category"
+    ],
+    "first": [
+        "10",
+        "Test post 1",
+        "publish",
+        "1",
+        "Guides"
+    ],
+    "last": [
+        "69",
+        "Test post 60",
+        "publish",
+        "0",
+        "News"
+    ],
+    "rows": 60
+}

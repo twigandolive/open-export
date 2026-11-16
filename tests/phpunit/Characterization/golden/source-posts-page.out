@@ -1,0 +1,16 @@
+﻿ID,post_title,post_name,post_date,permalink
+5,Shop,shop,"2026-06-29 12:00:00",http://example.test/?page_id=5
+6,Cart,cart,"2026-06-29 12:00:00",http://example.test/?page_id=6
+7,Checkout,checkout,"2026-06-29 12:00:00",http://example.test/?page_id=7
+8,"My account",my-account,"2026-06-29 12:00:00",http://example.test/?page_id=8
+9,"Refund and Returns Policy",refund_returns,"2026-06-29 12:00:00",http://example.test/?page_id=9
+70,"Test page 1",test-page-1,"2026-06-29 12:00:00",http://example.test/?page_id=70
+71,"Test page 2",test-page-2,"2026-06-29 12:00:00",http://example.test/?page_id=71
+72,"Test page 3",test-page-3,"2026-06-29 12:00:00",http://example.test/?page_id=72
+73,"Test page 4",test-page-4,"2026-06-29 12:00:00",http://example.test/?page_id=73
+74,"Test page 5",test-page-5,"2026-06-29 12:00:00",http://example.test/?page_id=74
+75,"Test page 6",test-page-6,"2026-06-29 12:00:00",http://example.test/?page_id=75
+76,"Test page 7",test-page-7,"2026-06-29 12:00:00",http://example.test/?page_id=76
+77,"Test page 8",test-page-8,"2026-06-29 12:00:00",http://example.test/?page_id=77
+78,"Test page 9",test-page-9,"2026-06-29 12:00:00",http://example.test/?page_id=78
+79,"Test page 10",test-page-10,"2026-06-29 12:00:00",http://example.test/?page_id=79

@@ -1,0 +1,86 @@
+{
+    "eq": {
+        "count": 11,
+        "first": "4",
+        "last": "24",
+        "sha1": "a88eadc4c6a339dd9269aca753476af81fb09074"
+    },
+    "neq": {
+        "count": 15,
+        "first": "1",
+        "last": "26",
+        "sha1": "a0bd0712a62552e58d8390fa0339c109642c5ff4"
+    },
+    "contains": {
+        "count": 14,
+        "first": "2",
+        "last": "26",
+        "sha1": "9f723f9a7339fbf0fd0616f5f9f5333c75683136"
+    },
+    "not_contains": {
+        "count": 12,
+        "first": "1",
+        "last": "24",
+        "sha1": "27a97f02e0c18f6a4a1db2015df647bd8b969670"
+    },
+    "starts_with": {
+        "count": 5,
+        "first": "2",
+        "last": "20",
+        "sha1": "b76d1c88a2fce2f3b34d8b4eec00802720092591"
+    },
+    "ends_with": {
+        "count": 9,
+        "first": "3",
+        "last": "26",
+        "sha1": "8305e0f6f2d0bca2a3e1b6e1d06580d2c24a62ad"
+    },
+    "gt": {
+        "count": 20,
+        "first": "3",
+        "last": "26",
+        "sha1": "ac3921ecbcbfeb3e589cdf77c497a6e060c8100b"
+    },
+    "gte": {
+        "count": 25,
+        "first": "2",
+        "last": "26",
+        "sha1": "46d6d5d3e833337676936a236c7d748a8d4b9f08"
+    },
+    "lt": {
+        "count": 5,
+        "first": "2",
+        "last": "20",
+        "sha1": "b76d1c88a2fce2f3b34d8b4eec00802720092591"
+    },
+    "lte": {
+        "count": 16,
+        "first": "2",
+        "last": "24",
+        "sha1": "a767981e98c0a1808a1ad4a1dfd396c621c3adfd"
+    },
+    "in": {
+        "count": 14,
+        "first": "2",
+        "last": "26",
+        "sha1": "9f723f9a7339fbf0fd0616f5f9f5333c75683136"
+    },
+    "not_in": {
+        "count": 12,
+        "first": "1",
+        "last": "24",
+        "sha1": "27a97f02e0c18f6a4a1db2015df647bd8b969670"
+    },
+    "empty": {
+        "count": 1,
+        "first": "1",
+        "last": "1",
+        "sha1": "356a192b7913b04c54574d18c28d46e6395428ab"
+    },
+    "not_empty": {
+        "count": 25,
+        "first": "2",
+        "last": "26",
+        "sha1": "46d6d5d3e833337676936a236c7d748a8d4b9f08"
+    }
+}

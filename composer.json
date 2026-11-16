@@ -1,0 +1,12 @@
+{
+	"name": "twigandolive/open-export",
+	"description": "Open Export WordPress plugin (test tooling only).",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require-dev": {
+		"phpunit/phpunit": "^11.5 || ^12.0 || ^13.0"
+	},
+	"config": {
+		"sort-packages": true
+	}
+}

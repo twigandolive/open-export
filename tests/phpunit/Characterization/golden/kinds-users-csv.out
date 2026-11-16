@@ -1,0 +1,27 @@
+﻿ID,user_login,user_email,user_nicename,user_url,user_registered,display_name,first_name,last_name,opex_plan,opex_prefs,wp_capabilities,roles
+1,admin,admin@example.test,admin,http://example.test,"2025-12-12 12:00:00",admin,,,,,"{""administrator"":true}",administrator
+2,user1,user1@example.test,user1,,"2026-03-21 12:00:00","First1 Last1",First1,Last1,free,"{""newsletter"":false,""lang"":""en""}","{""editor"":true}",editor
+3,user2,user2@example.test,user2,,"2026-03-20 12:00:00","First2 Last2",First2,Last2,team,"{""newsletter"":true,""lang"":""en""}","{""author"":true}",author
+4,user3,user3@example.test,user3,,"2026-03-19 12:00:00","First3 Last3",First3,Last3,pro,"{""newsletter"":false,""lang"":""en""}","{""contributor"":true}",contributor
+5,user4,user4@example.test,user4,,"2026-03-18 12:00:00","First4 Last4",First4,Last4,pro,"{""newsletter"":true,""lang"":""en""}","{""customer"":true}",customer
+6,user5,user5@example.test,user5,,"2026-03-17 12:00:00","First5 Last5",First5,Last5,free,"{""newsletter"":false,""lang"":""en""}","{""subscriber"":true}",subscriber
+7,user6,user6@example.test,user6,,"2026-03-16 12:00:00","First6 Last6",First6,Last6,team,"{""newsletter"":true,""lang"":""en""}","{""editor"":true}",editor
+8,user7,user7@example.test,user7,,"2026-03-15 12:00:00","First7 Last7",First7,Last7,pro,"{""newsletter"":false,""lang"":""en""}","{""author"":true}",author
+9,user8,user8@example.test,user8,,"2026-03-14 12:00:00","First8 Last8",First8,Last8,team,"{""newsletter"":true,""lang"":""en""}","{""contributor"":true}",contributor
+10,user9,user9@example.test,user9,,"2026-03-13 12:00:00","First9 Last9",First9,Last9,pro,"{""newsletter"":false,""lang"":""en""}","{""customer"":true}",customer
+11,user10,user10@example.test,user10,,"2026-03-12 12:00:00","First10 Last10",First10,Last10,team,"{""newsletter"":true,""lang"":""en""}","{""subscriber"":true}",subscriber
+12,user11,user11@example.test,user11,,"2026-03-11 12:00:00","First11 Last11",First11,Last11,pro,"{""newsletter"":false,""lang"":""en""}","{""editor"":true}",editor
+13,user12,user12@example.test,user12,,"2026-03-10 12:00:00","First12 Last12",First12,Last12,pro,"{""newsletter"":true,""lang"":""en""}","{""author"":true}",author
+14,user13,user13@example.test,user13,,"2026-03-09 12:00:00","First13 Last13",First13,Last13,team,"{""newsletter"":false,""lang"":""en""}","{""contributor"":true}",contributor
+15,user14,user14@example.test,user14,,"2026-03-08 12:00:00","First14 Last14",First14,Last14,free,"{""newsletter"":true,""lang"":""en""}","{""customer"":true}",customer
+16,user15,user15@example.test,user15,,"2026-03-07 12:00:00","First15 Last15",First15,Last15,free,"{""newsletter"":false,""lang"":""en""}","{""subscriber"":true}",subscriber
+17,user16,user16@example.test,user16,,"2026-03-06 12:00:00","First16 Last16",First16,Last16,pro,"{""newsletter"":true,""lang"":""en""}","{""editor"":true}",editor
+18,user17,user17@example.test,user17,,"2026-03-05 12:00:00","First17 Last17",First17,Last17,team,"{""newsletter"":false,""lang"":""en""}","{""author"":true}",author
+19,user18,user18@example.test,user18,,"2026-03-04 12:00:00","First18 Last18",First18,Last18,pro,"{""newsletter"":true,""lang"":""en""}","{""contributor"":true}",contributor
+20,user19,user19@example.test,user19,,"2026-03-03 12:00:00","First19 Last19",First19,Last19,free,"{""newsletter"":false,""lang"":""en""}","{""customer"":true}",customer
+21,user20,user20@example.test,user20,,"2026-03-02 12:00:00","First20 Last20",First20,Last20,pro,"{""newsletter"":true,""lang"":""en""}","{""subscriber"":true}",subscriber
+22,user21,user21@example.test,user21,,"2026-03-01 12:00:00","First21 Last21",First21,Last21,pro,"{""newsletter"":false,""lang"":""en""}","{""editor"":true}",editor
+23,user22,user22@example.test,user22,,"2026-02-28 12:00:00","First22 Last22",First22,Last22,team,"{""newsletter"":true,""lang"":""en""}","{""author"":true}",author
+24,user23,user23@example.test,user23,,"2026-02-27 12:00:00","First23 Last23",First23,Last23,pro,"{""newsletter"":false,""lang"":""en""}","{""contributor"":true}",contributor
+25,user24,user24@example.test,user24,,"2026-02-26 12:00:00","First24 Last24",First24,Last24,team,"{""newsletter"":true,""lang"":""en""}","{""customer"":true}",customer
+26,user25,user25@example.test,user25,,"2026-02-25 12:00:00","First25 Last25",First25,Last25,team,"{""newsletter"":false,""lang"":""en""}","{""subscriber"":true}",subscriber

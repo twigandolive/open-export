@@ -1,0 +1,292 @@
+{
+    "woo:status": {
+        "eq": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "neq": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "contains": {
+            "count": 5,
+            "sha1": "d6c914c752bfbb64d506c8dae69b4bcc5397f485"
+        },
+        "not_contains": {
+            "count": 35,
+            "sha1": "c665ec6afdb674f292b51b4e1961d5ce2e32ffee"
+        },
+        "starts_with": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "ends_with": {
+            "count": 30,
+            "sha1": "b5c00a0fc12d8aebc2e9cc9df68a595eecf4c43d"
+        },
+        "gt": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "gte": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "lt": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "lte": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "in": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_in": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "empty": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_empty": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        }
+    },
+    "woo:total": {
+        "eq": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "neq": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "contains": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "not_contains": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "starts_with": {
+            "count": 16,
+            "sha1": "50398a9d282acb3b6ca07faf605e341800070898"
+        },
+        "ends_with": {
+            "count": 18,
+            "sha1": "d56691aab6127aba36688b271f6c5e3c5e8d7513"
+        },
+        "gt": {
+            "count": 31,
+            "sha1": "e74f6c5a9ce92dabfdd57796102a13aaf3d7ac0e"
+        },
+        "gte": {
+            "count": 31,
+            "sha1": "e74f6c5a9ce92dabfdd57796102a13aaf3d7ac0e"
+        },
+        "lt": {
+            "count": 9,
+            "sha1": "13df551196a9bfccf797b74334eef982a3149f29"
+        },
+        "lte": {
+            "count": 9,
+            "sha1": "13df551196a9bfccf797b74334eef982a3149f29"
+        },
+        "in": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_in": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "empty": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_empty": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        }
+    },
+    "woo:billing_last_name": {
+        "eq": {
+            "count": 1,
+            "sha1": "e993215bfdaa515f6ea00fafc1918f549119f993"
+        },
+        "neq": {
+            "count": 39,
+            "sha1": "ae301f160985b2f577f60cd890cdc348962b59e0"
+        },
+        "contains": {
+            "count": 11,
+            "sha1": "8241936beb1fd43fd12fe6cef0acde725a9d9aa1"
+        },
+        "not_contains": {
+            "count": 29,
+            "sha1": "47c836e0896927c8829b755aa0e85676ff30f459"
+        },
+        "starts_with": {
+            "count": 11,
+            "sha1": "7bc916c87917660a5acb3f7098b1bb06ac94c379"
+        },
+        "ends_with": {
+            "count": 4,
+            "sha1": "8d22f48682dd3b4306306fd10045ab7d41984e6b"
+        },
+        "gt": {
+            "count": 4,
+            "sha1": "b128d3284e0fed32c9b1274b9181460339ea90ca"
+        },
+        "gte": {
+            "count": 5,
+            "sha1": "aeb949b9dd962badbad8734a2a2a9cc74046c732"
+        },
+        "lt": {
+            "count": 35,
+            "sha1": "e32aee4ce496ccf7912fff17fdbcf9718a72d39f"
+        },
+        "lte": {
+            "count": 36,
+            "sha1": "a9074462dd6d12ae9f6c3ebb7682084e1072b9ae"
+        },
+        "in": {
+            "count": 2,
+            "sha1": "207f65410825ff4e55d4f615ec1ec8d3a91431ad"
+        },
+        "not_in": {
+            "count": 38,
+            "sha1": "7774a721be0ed218581dec004b3a5d8d237d49b9"
+        },
+        "empty": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_empty": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        }
+    },
+    "woo:customer_id": {
+        "eq": {
+            "count": 4,
+            "sha1": "234580cb83fe3d8df46c3e089ac030affbd846c7"
+        },
+        "neq": {
+            "count": 36,
+            "sha1": "386b4dae173734ade2967d2b7a45390581a357e9"
+        },
+        "contains": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "not_contains": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "starts_with": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "ends_with": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "gt": {
+            "count": 24,
+            "sha1": "ba332910c2907b45c54cb8fb5a70394640625608"
+        },
+        "gte": {
+            "count": 28,
+            "sha1": "da63d269f1b0b87be33dee471a06a0399e8af7e1"
+        },
+        "lt": {
+            "count": 12,
+            "sha1": "42e304f21b47e7a5e0b3168a3822658c04b90cb5"
+        },
+        "lte": {
+            "count": 16,
+            "sha1": "9ab7d27a1909f57bcef1e966eeafc01b03fdc6e8"
+        },
+        "in": {
+            "count": 8,
+            "sha1": "dc6d9487bca7f0636fe7244c588c8c694614119b"
+        },
+        "not_in": {
+            "count": 32,
+            "sha1": "980c79cfd9ac28e42c6fdb940360dcf185337589"
+        },
+        "empty": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_empty": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        }
+    },
+    "woo:billing_company": {
+        "eq": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "neq": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "contains": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "not_contains": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "starts_with": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "ends_with": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "gt": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "gte": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "lt": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "lte": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        },
+        "in": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "not_in": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "empty": {
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+        },
+        "not_empty": {
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        }
+    }
+}

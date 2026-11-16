@@ -1,0 +1,11 @@
+{
+    "format": "xml",
+    "count": 60,
+    "processed": 60,
+    "filesize": 11091,
+    "batches": 3,
+    "sha256": "2197a839ddad91a58da83be2750b614cb11a5792171243dd71eec4e59bfe3fae",
+    "rows": 60,
+    "first": "<record>\n    <ID>10</ID>\n    <post_title>Test post 1</post_title>\n    <post_status>publish</post_status>\n    <opex_rating>1</opex_rating>\n    <category>Guides</category>\n  </record>",
+    "last": "<record>\n    <ID>69</ID>\n    <post_title>Test post 60</post_title>\n    <post_status>publish</post_status>\n    <opex_rating>0</opex_rating>\n    <category>News</category>\n  </record>"
+}

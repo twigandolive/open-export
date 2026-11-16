@@ -1,0 +1,36 @@
+{
+    "format": "csv",
+    "count": 184,
+    "processed": 184,
+    "filesize": 19058,
+    "batches": 19,
+    "sha256": "8670633463947f3d051382dc81e3b49f603466b6aace001e7a046e2c26c9951b",
+    "header": [
+        "comment_ID",
+        "comment_post_ID",
+        "comment_author",
+        "comment_author_email",
+        "comment_date",
+        "comment_content",
+        "comment_approved"
+    ],
+    "first": [
+        "2",
+        "11",
+        "Commenter 1",
+        "commenter1@example.test",
+        "2026-06-29 12:00:00",
+        "Comment number 1.",
+        "1"
+    ],
+    "last": [
+        "185",
+        "123",
+        "WooCommerce",
+        "woocommerce@noreply.com",
+        "2026-06-29 12:00:00",
+        "Email \"Refunded order\" sent.",
+        "1"
+    ],
+    "rows": 184
+}
