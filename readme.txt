@@ -20,55 +20,49 @@ No Pro version. No add-ons to buy. This is all of it.
 
 * Any post type, users, comments, and terms from any taxonomy.
 * Any database table, under Advanced.
-* WooCommerce orders, order items (one row per item), customers (with order count, total spent and average order), products and variations, and coupons.
+* WooCommerce orders, order items, customers (with order count, total spent and average order), products and variations, and coupons.
 * Custom fields are grouped by the plugin that owns them, such as WooCommerce, ACF, Yoast SEO, Rank Math and Elementor. Serialized values become readable JSON.
-* ACF repeater and flexible content fields on posts, terms and users, as one JSON column or spread into numbered columns.
-* On multisite, a network super admin can run one export across every site, with Site ID and Site URL columns.
+* ACF repeater and flexible content fields on posts, terms and users.
+* On multisite, one export across every public site of the network.
 
 = Shape the file =
 
 * Filters with rules such as equals, contains, greater than, is one of and is empty, in nested groups such as (A and B) or C.
-* Date ranges: a preset (today, last 30 days, last month, this quarter so far) or your own From and To dates, in whole days in your site's timezone.
+* Date ranges from a preset, such as last month, or your own dates, in whole days in your site's timezone.
 * Preview the first rows and the match count before you export.
 * Drag columns into order and rename headers.
-* Transforms change a column's values without code: trim, change case, add text before or after, find and replace, format a date or number, map values, fill in when empty, remove HTML, shorten.
-* Custom columns combine fields and text, such as a full name from first and last name.
+* Transforms without code: trim, change case, add text, find and replace, format a date or number, map values, fill in when empty, remove HTML, shorten.
+* Custom columns combine fields and text, such as a full name.
 
 = Formats =
 
-* CSV, with your choice of delimiter, encoding and line endings. The default (UTF-8 with BOM) opens cleanly in Excel. Cells that look like formulas are made safe.
-* Excel (XLSX), written by the plugin itself.
-* JSON.
-* XML, in a default layout or your own template.
-* Feed presets for Google Merchant Center, Meta catalogs and Pinterest catalogs.
+* CSV, with your choice of delimiter, encoding, line endings and quote character. You can quote every cell. The default (UTF-8 with BOM) opens cleanly in Excel.
+* Excel (XLSX), written by the plugin itself. Numbers are real numbers, so Excel shows 82.50 as 82.5 unless you format the column.
+* JSON, XML (a default layout or your own template), and an HTML table to open in a browser or print.
+* Cells that look like formulas stay plain text in CSV and Excel.
+* "Compress the finished file as a zip" for every format except Excel, which is already compressed.
+* Presets for Google, Meta and Pinterest product feeds and for WooCommerce's product importer.
 
 = Schedules and delivery =
 
-* Run a saved export hourly, daily, weekly, monthly or only when asked.
+* Run a saved export hourly, every 6 hours, twice a day, daily, weekly, monthly or only when asked.
+* Name the file with tokens: `{label}`, `{source}`, `{date}`, `{time}`, `{datetime}`, `{id}` and `{site}`.
 * "Changes only" schedules export only rows that are new or changed since the last run.
 * A trigger URL lets a real server cron job start a schedule.
 * Background exports keep going after you close the tab.
-* When an export finishes, send it by email (a link, or the file attached), to a webhook, or to an FTP, FTPS or SFTP server. Failed deliveries are tried again, and Send again now on the History tab tries them at once.
-
-= Built for shared hosting =
-
-* Exports run in small batches, so a large export does not overload a small host.
-* An interrupted export resumes where it stopped.
-* Finished exports are deleted after the number of days you choose (30 by default).
+* When an export finishes, send it by email (a link, or the file attached), to a webhook, or to an FTP, FTPS or SFTP server. Save and test checks a server first. On the History tab, an export's details show each delivery attempt, and Send again now retries a failed one.
+* Exports run in small batches for shared hosting, and an interrupted export resumes where it stopped.
 
 = Work with an AI assistant =
 
-Copy a JSON description of everything your site can export, give it to an assistant, and paste back the short recipe it writes. The screen fills itself in and tells you about anything it could not use. Nothing is sent to the assistant by the plugin, and nothing exports until you press Start export.
+On the Export tab, open "Use an AI recipe" and press Copy site schema: a JSON description of everything your site can export. Give it to an assistant, paste back the recipe it writes, and press Apply recipe. Unknown fields are named and left out. The plugin sends nothing to the assistant, and nothing exports until you press Start export. On WordPress with the Abilities API, the abilities `open-export/get-schema` and `open-export/list-sources` give AI tools the same description.
 
-= Good to know =
+= Limits =
 
-* Scheduled and background exports run on WP-Cron, which runs only when someone visits your site. On a quiet site, set up a real cron job.
-* A schedule's trigger URL is a secret. Anyone who has it can start that export.
-* FTP sends your password and file without encryption. FTPS encrypts, but PHP cannot verify the server's certificate. Use SFTP when you can.
-* SFTP private keys with a passphrase are not supported.
-* Email attachments over 10 MB are sent as a download link instead.
-* Excel (XLSX) files need the PHP zip extension. Numbers are real numbers, so Excel shows 82.50 as 82.5 unless you format the column. Text that looks like a formula stays text. One sheet holds at most 1,048,576 rows, so use CSV for more.
-* On multisite, a site administrator who is not a super admin can export only their own site's users and tables.
+* History keeps the latest 200 exports.
+* Up to 50 schedules, 20 destinations and 100 templates.
+* An email delivery goes to up to 10 addresses. A failed delivery is tried up to 3 times in all.
+* Excel and zip compression need the PHP zip extension.
 
 WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Excel, Google Merchant Center, Meta, Facebook, Instagram, Pinterest and other names are trademarks of their owners. They are used here only to describe compatibility. Open Export is an independent project and is not affiliated with or endorsed by any of them.
 
@@ -78,67 +72,70 @@ WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Exce
 2. Activate the plugin on the Plugins screen.
 3. Go to Tools, Open Export.
 
-You can export right away. Files go to a protected folder in your uploads directory, and you download them from the History tab.
-
-For schedules on a site with few visitors, add a real cron job that loads `wp-cron.php` every few minutes, or point your server's cron at a schedule's trigger URL.
+You can export right away and download the file from the History tab. On nginx, block the export folder first: see "Where do export files go?" below.
 
 == Frequently Asked Questions ==
 
+= Who can use Open Export? =
+
+Users with the `manage_options` capability, which means administrators. A developer can change that with the `opex_capability` filter, for example for shop managers. Whoever has that capability can export every source, raw tables included.
+
 = Can it export WooCommerce orders? =
 
-Yes. Choose the WooCommerce Orders source. It reads whichever storage your store uses, High-Performance Order Storage or the classic posts table, and gives the same file either way: order number, dates, status, customer, billing and shipping addresses, totals and payment details. Refunds and draft orders are left out. For one row per order item, choose WooCommerce Order Items. Shipping, fee, coupon and tax lines each show their own amounts.
+Yes. The WooCommerce Orders source reads High-Performance Order Storage or the classic posts table and gives the same file either way: order number, dates, status, customer, addresses, totals and payment details. Refunds and draft orders are left out. WooCommerce Order Items gives one row per item, and shipping, fee, coupon and tax lines show their own amounts.
 
 = Did order exports change in 2.0.0? =
 
-Yes. Money now uses your store's price decimals (82.50, not 82.50000000), flags read yes or no, dates are in your site's time, and draft orders are left out. If another program reads your order files, check it against a new export.
+Yes. Money uses your store's price decimals (82.50, not 82.50000000), flags read yes or no, dates are in site time, and drafts are left out. If another program reads your order files, check it against a new export.
 
 = How do scheduled exports run? =
 
-WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Set up a real cron job, or call the schedule's trigger URL from your server's cron. Site Health tells you when WP-Cron is switched off.
+WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Add a real cron job that loads `wp-cron.php` every few minutes, or call the schedule's trigger URL from your server's cron. Site Health warns you when a schedule is on and WP-Cron is switched off. A scheduled or background export that fails stops and shows as Failed on the History tab. It is not tried again by itself: only deliveries are.
 
 = Is the trigger URL safe to share? =
 
 No. Treat it like a password: anyone who has it can start that export. If it leaks, edit the schedule on the Schedules tab and press Make a new URL. The old URL stops working at once.
 
-= Where can a finished export be sent? =
-
-To email addresses, a webhook URL, or an FTP, FTPS or SFTP server that you save on the Destinations tab. Save and test checks a destination before a schedule relies on it. A failed delivery is tried up to 3 times in all, and the export's details on the History tab show each attempt.
-
 = Which delivery method should I use for private data? =
 
-SFTP. FTP sends your password and the file without encryption. FTPS encrypts the connection, but PHP cannot check the server's certificate. SFTP remembers the server's fingerprint the first time it connects and refuses to send if it changes.
+SFTP. FTP sends your password and the file without encryption. FTPS encrypts the connection, but PHP cannot check the server's certificate. SFTP remembers the server's fingerprint after the first test or delivery that works, and refuses to send if it changes. SFTP private keys with a passphrase are not supported.
 
 = How large can an export be? =
 
-There is no fixed row limit for CSV, JSON or XML. Exports run in batches, can run in the background, and resume after an interruption. An Excel file holds at most 1,048,576 rows. Email can attach files up to 10 MB. Larger files go out as a download link that expires after the number of days you set.
+CSV, JSON, XML and HTML have no fixed row limit. One Excel sheet holds 1,048,576 rows, header included: a bigger export stops and says the sheet is full: use CSV for those. An HTML export is one page, so a very large one is slow to open. Email attaches files up to 10 MB and sends a download link for larger ones.
 
-= Can I make a product feed? =
+= How long are finished exports kept? =
 
-Yes. On the Export tab, choose Google Merchant Center, Meta catalog or Pinterest catalog under Feed preset and press Load. Then change anything you like. Product condition is not included, because no WooCommerce product field holds it. To keep a feed fresh, put it on a schedule and send it to a server your feed service reads from.
-
-= Can it export ACF repeater fields? =
-
-Yes, with ACF or Secure Custom Fields, on posts, terms and users. A repeater or flexible content field exports as one JSON column. To get one column per sub-field and row instead, choose "Spread into columns" under "Export as" in the Chosen columns list. It makes up to 20 rows of columns. You cannot filter on these fields.
-
-= Does it work on multisite? =
-
-Yes. Each site has its own exports. A site administrator who is not a super admin can export only that site's users and tables. A network super admin can also turn on "All sites in the network" under Source on the Export tab to run one export across every site, with Site ID and Site URL columns first. Network exports are not offered for users or raw tables. The preview shows rows from the current site only.
-
-= How do I use this with an AI assistant? =
-
-On the Export tab, open "Use an AI recipe" and press Copy site schema. The schema describes your site's sources, fields, filters and date columns. Describe the report you want to the assistant, paste its recipe back, and press Apply recipe. Every field is checked against what the source really has, and anything unknown is named and left out.
+For the days set in "Keep finished exports" on the Settings tab (30 by default), counted from when each export finished. When History holds 200 exports, the oldest finished or failed one is removed sooner than that. Running and paused exports are never removed to make room. A download link stops working when its file is removed.
 
 = Where do export files go? =
 
-`wp-content/uploads/open-export/`. The folder has an `.htaccess` rule that denies access, and each file name includes random characters. Finished exports are deleted 30 days after they finish, or after the number of days you set in "Keep finished exports" on the Settings tab.
+`wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. Apache and LiteSpeed block direct access through the folder's `.htaccess` file, and IIS through its `web.config` file. nginx ignores both, so add a rule like this above your other regex `location` blocks:
 
-= Does my data leave my server? =
+    # Open Export: block the export folder
+    location ~ ^/wp-content/uploads/(sites/[0-9]+/)?open-export/ { deny all; }
 
-Only when you set up a delivery, or when you download a file. Open Export sends no usage data and contacts no outside service by itself.
+Either way, each file name carries 12 random characters.
+
+= Can I make a product feed? =
+
+Yes. On the Export tab, choose Google Merchant Center, Meta catalog or Pinterest catalog under Feed preset and press Load. The feeds carry the GTIN (stored by WooCommerce 9.2 and later) and, for a variation, its parent product as the item group. Product condition is not included, because no WooCommerce product field holds it.
+
+= Can I export products for WooCommerce's importer? =
+
+Yes. Load the "WooCommerce product CSV (importer columns)" preset. It writes every product and variation not in the trash, with the column names WooCommerce's importer reads. On WooCommerce's mapping screen, pick "GTIN, UPC, EAN, or ISBN" for the GTIN column once. Attributes, downloads, upsells, cross-sells and grouped products are not included.
+
+= Can it export ACF repeater fields? =
+
+Yes, with ACF or Secure Custom Fields, on posts, terms and users. Each repeater or flexible content field is one JSON column, or choose "Spread into columns" under "Export as" in the Chosen columns list for numbered columns, up to 20 rows. You cannot filter on these fields.
+
+= Does it work on multisite? =
+
+Yes. Each site has its own exports, and a site administrator who is not a super admin can export only that site's users and tables. A super admin can turn on "All sites in the network" under Source to run one export across every public site, with Site ID and Site URL columns first. It is not offered for users or raw tables, and the preview shows the current site only.
 
 = What happens when I delete the plugin? =
 
-Uninstalling removes its templates, schedules, destinations, settings, job history, cached data, scheduled events and every export file, on every site of a network.
+It removes its templates, schedules, destinations, settings, export history, cached data, scheduled events and export files, on every site of a network. To keep your setup for a later reinstall, first turn on "Keep my templates, schedules, export history and files" on the Settings tab. Then only the scheduled events are removed. On a network, each site's own setting decides for that site.
 
 = Can I run exports from the command line? =
 
@@ -167,17 +164,12 @@ SFTP uses the bundled phpseclib library (MIT license).
 == Changelog ==
 
 = 2.0.0 =
-* Added: a new five-tab screen (Export, History, Schedules, Destinations, Settings).
-* Added: schedules, "Changes only" runs, trigger URLs and background exports.
-* Added: delivery by email, webhook, FTP, FTPS and SFTP, with retries.
-* Added: Excel (XLSX), CSV encoding and line endings, XML templates, transforms, custom columns and nested filter groups.
-* Added: WooCommerce order items, customers, products and coupons.
-* Added: feed presets for Google Merchant Center, Meta catalogs and Pinterest catalogs.
-* Added: multisite network exports, WP-CLI, Site Health and suggested privacy text.
-* Added: ACF repeater and flexible content fields.
-* Changed: WooCommerce order files are the same on both storage types: store price decimals, yes or no flags, site-time dates. Draft orders are left out.
-* Changed: a filter on a field the source does not have is now an error. Saving a template under an existing name updates it.
-* Fixed: database errors, repeated batches and parallel requests can no longer leave a broken or doubled file.
+* Added: a five-tab screen, schedules, "Changes only" runs, trigger URLs, background exports, and delivery by email, webhook, FTP, FTPS and SFTP.
+* Added: Excel, an HTML table, zip compression, CSV options, XML templates, transforms, custom columns and nested filter groups.
+* Added: WooCommerce order items, customers, products and coupons, feed presets with GTIN, and a product importer preset.
+* Added: multisite network exports, ACF repeaters, WP-CLI, Site Health, privacy text and a setting to keep data on uninstall.
+* Changed: order files match on both storage types, and drafts are left out. A filter on an unknown field is an error. Saving under an existing template name updates it.
+* Fixed: errors, repeated batches and parallel requests no longer break or double a file.
 * Security: on multisite, a site administrator who is not a super admin now reaches only their own site's users and tables.
 
 Full history: CHANGELOG.md at https://github.com/twigandolive/open-export
