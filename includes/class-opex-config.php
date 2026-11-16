@@ -159,7 +159,10 @@ class OPEX_Config {
 			$delim_key = 'comma';
 		}
 
-		if ( ! $date_range['field'] && ! empty( $raw_range ) && 'all_time' !== self::text( $raw_range['preset'] ?? 'all_time' ) ) {
+		// Say so only when the source truly has no date column. A custom range
+		// with both dates left empty also ends up with no range, and that is
+		// not the reason.
+		if ( ! $date_range['field'] && ! empty( $raw_range ) && 'all_time' !== self::text( $raw_range['preset'] ?? 'all_time' ) && '' === OPEX_Query::date_field_or_default( $src, '' ) ) {
 			$notes[] = __( 'Open Export dropped the date range because this source has no date column to filter on.', 'open-export' );
 		}
 
