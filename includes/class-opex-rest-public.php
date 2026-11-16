@@ -296,16 +296,18 @@ class OPEX_Rest_Public {
 
 	/**
 	 * Drops this request's cached copy of a transient, so the next read asks
-	 * the database and sees what another request wrote. A shared object cache
-	 * already holds the shared value, so it is left alone.
+	 * the database and sees what another request wrote. That includes the
+	 * "missing" mark WordPress keeps for an option it did not find, or a
+	 * counter another request created meanwhile would still read as zero.
+	 * A shared object cache already holds the shared value, so it is left alone.
 	 *
 	 * @param string $key Transient name.
 	 * @return void
 	 */
 	private static function forget_transient( string $key ): void {
 		if ( ! wp_using_ext_object_cache() ) {
-			wp_cache_delete( '_transient_' . $key, 'options' );
-			wp_cache_delete( '_transient_timeout_' . $key, 'options' );
+			OPEX_Store::forget( '_transient_' . $key );
+			OPEX_Store::forget( '_transient_timeout_' . $key );
 		}
 	}
 

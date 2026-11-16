@@ -16,6 +16,12 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Query_Rows {
 
+	/** Deepest nesting of a stored serialized value that is read as JSON. */
+	private const MAX_DEPTH = 32;
+
+	/** Most parts of a stored serialized value that are walked before it is read as text. */
+	private const MAX_NODES = 100000;
+
 	/**
 	 * Turn raw DB rows into export items keyed by field id, prefetching all
 	 * meta and taxonomy values for the batch in one query each.
@@ -287,7 +293,8 @@ class OPEX_Query_Rows {
 	 * maybe_unserialize() reads it but with classes turned off: PHP never
 	 * builds an object, so no class code (__wakeup, __destruct) can run. Only
 	 * stdClass is allowed, since it has no code. A value that holds any other
-	 * object is exported as its stored text.
+	 * object, or that refers to itself or is nested too deep to walk, is
+	 * exported as its stored text.
 	 *
 	 * @param mixed $value Stored value.
 	 * @return string The value as text, with arrays and plain objects as JSON.
@@ -312,16 +319,26 @@ class OPEX_Query_Rows {
 	 * Whether an unserialized value holds an object of a class that was not
 	 * allowed, which PHP leaves as __PHP_Incomplete_Class.
 	 *
-	 * @param mixed $data Unserialized value.
-	 * @return bool True when the value holds such an object at any depth.
+	 * The walk is bounded. A stored value can refer to itself ("R:1"), and
+	 * walking that would never end. So a value nested deeper than MAX_DEPTH,
+	 * or with more than MAX_NODES parts, counts as unsafe too, and the
+	 * caller exports its stored text as it is.
+	 *
+	 * @param mixed $data  Unserialized value.
+	 * @param int   $depth How deep this part sits. 0 for the whole value.
+	 * @param int   $nodes Parts seen so far in this walk.
+	 * @return bool True when the value holds such an object at any depth, or is too deep or too large to walk.
 	 */
-	private static function holds_class_object( $data ): bool {
+	private static function holds_class_object( $data, int $depth = 0, int &$nodes = 0 ): bool {
+		if ( ++$nodes > self::MAX_NODES || $depth > self::MAX_DEPTH ) {
+			return true;
+		}
 		if ( is_object( $data ) && ! $data instanceof stdClass ) {
 			return true;
 		}
 		if ( is_array( $data ) || is_object( $data ) ) {
 			foreach ( (array) $data as $item ) {
-				if ( self::holds_class_object( $item ) ) {
+				if ( self::holds_class_object( $item, $depth + 1, $nodes ) ) {
 					return true;
 				}
 			}

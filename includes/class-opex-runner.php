@@ -17,7 +17,6 @@ class OPEX_Runner {
 
 	public const STALL_AFTER   = 600;
 	private const DELIVER_LOCK = 300;
-	private const RETRY_AFTER  = 60;
 	private const HOOKS        = array( 'opex_run_schedule', 'opex_run_job', 'opex_deliver', 'opex_maintenance' );
 
 	/** Add the cron callbacks and the hourly maintenance event. */
@@ -48,8 +47,11 @@ class OPEX_Runner {
 	}
 
 	/**
-	 * Cron entry for a schedule event. A start that throws (the store was
-	 * busy) is logged and tried again in a minute, so the run is not lost.
+	 * Cron entry for a schedule event. A start that throws, or that comes
+	 * back with the store's busy error, is logged and tried again in a
+	 * minute, so the run is not lost. After a few tries in a row (see
+	 * OPEX_Cron_Retry) the run is given up: the schedule's last run shows an
+	 * error and its next regular run is queued.
 	 *
 	 * @param string $id Schedule id from the cron event.
 	 * @return void
@@ -57,24 +59,23 @@ class OPEX_Runner {
 	public static function on_schedule( $id ): void {
 		$id = (string) $id;
 		try {
-			OPEX_Schedules::start( $id, 'cron' );
+			$result = OPEX_Schedules::start( $id, 'cron' );
 		} catch ( Throwable $e ) {
 			OPEX_Exporter::log_exception( $e );
-			self::later( 'opex_run_schedule', $id );
+			$result = $e;
 		}
-	}
-
-	/**
-	 * Queues a cron event a minute from now, unless one is queued already.
-	 * Cron callbacks use it to try again after a throw.
-	 *
-	 * @param string $hook Cron hook.
-	 * @param string $id   The one argument of the event.
-	 * @return void
-	 */
-	private static function later( string $hook, string $id ): void {
-		if ( ! wp_next_scheduled( $hook, array( $id ) ) ) {
-			wp_schedule_single_event( time() + self::RETRY_AFTER, $hook, array( $id ) );
+		if ( ! OPEX_Cron_Retry::retryable( $result ) ) {
+			OPEX_Cron_Retry::settled( 'opex_run_schedule', $id );
+			return;
+		}
+		if ( OPEX_Cron_Retry::later( 'opex_run_schedule', $id ) ) {
+			return;
+		}
+		try {
+			OPEX_Schedules::start_failed( $id );
+		} catch ( Throwable $e ) {
+			// The store is still busy. The hourly re-arm queues the next run.
+			OPEX_Exporter::log_exception( $e );
 		}
 	}
 
@@ -140,8 +141,10 @@ class OPEX_Runner {
 
 	/**
 	 * Cron entry for a job. Only background jobs run here. A batch that
-	 * throws (the store was busy) is logged and the job runs again in a
-	 * minute. Its saved cursor and file checkpoint let it carry on.
+	 * throws or comes back busy is logged and the job runs again in a
+	 * minute, a few times in a row (see OPEX_Cron_Retry). After that the
+	 * hourly stall check starts it again. Its saved cursor and file
+	 * checkpoint let it carry on.
 	 *
 	 * @param string $job_id Job id from the cron event.
 	 * @return void
@@ -156,9 +159,13 @@ class OPEX_Runner {
 			$result = self::work( $job_id );
 		} catch ( Throwable $e ) {
 			OPEX_Exporter::log_exception( $e );
-			self::later( 'opex_run_job', $job_id );
+			$result = $e;
+		}
+		if ( OPEX_Cron_Retry::retryable( $result ) ) {
+			OPEX_Cron_Retry::later( 'opex_run_job', $job_id );
 			return;
 		}
+		OPEX_Cron_Retry::settled( 'opex_run_job', $job_id );
 		if ( is_wp_error( $result ) ) {
 			return;
 		}
@@ -182,7 +189,7 @@ class OPEX_Runner {
 	 */
 	public static function housekeeping(): array {
 		$errors = array();
-		foreach ( array( 'sweep_jobs', 'restart_stalled', 'rearm_schedules', 'process_deliveries' ) as $step ) {
+		foreach ( array( 'settle_schedules', 'sweep_jobs', 'restart_stalled', 'rearm_schedules', 'process_deliveries' ) as $step ) {
 			try {
 				self::$step();
 			} catch ( Throwable $e ) {
@@ -191,6 +198,11 @@ class OPEX_Runner {
 			}
 		}
 		return $errors;
+	}
+
+	/** Do the schedule bookkeeping of finished runs that could not be saved at the time. */
+	private static function settle_schedules(): void {
+		OPEX_Schedule_Owed::settle();
 	}
 
 	/** Remove old jobs and their files. */
@@ -266,7 +278,9 @@ class OPEX_Runner {
 	/**
 	 * Cron entry: run the pending deliveries of one job. See deliver_pending().
 	 * A throw (the store was busy) is logged and the deliveries are tried
-	 * again in a minute. Items already saved as sent are never sent again.
+	 * again in a minute, a few times in a row (see OPEX_Cron_Retry). After
+	 * that the hourly maintenance run sends them. Items already saved as
+	 * sent are never sent again.
 	 *
 	 * @param string $job_id Job id from the cron event.
 	 * @return void
@@ -277,8 +291,10 @@ class OPEX_Runner {
 			self::deliver_pending( $job_id );
 		} catch ( Throwable $e ) {
 			OPEX_Exporter::log_exception( $e );
-			self::later( 'opex_deliver', $job_id );
+			OPEX_Cron_Retry::later( 'opex_deliver', $job_id );
+			return;
 		}
+		OPEX_Cron_Retry::settled( 'opex_deliver', $job_id );
 	}
 
 	/**

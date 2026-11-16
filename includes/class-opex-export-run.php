@@ -59,7 +59,12 @@ class OPEX_Export_Run {
 		}
 		$ended = false;
 		try {
-			if ( OPEX_File_Lock::UNSUPPORTED === $file ) {
+			// No file lock (a filesystem without flock, or a lock file that cannot
+			// be opened) does not stop the run. Such a server must still be able
+			// to export. The job lock is renewed during the batch and checked
+			// around every write, so it still keeps a second worker out. The job
+			// says so once, whichever way the file lock failed.
+			if ( OPEX_File_Lock::UNSUPPORTED === $file || OPEX_File_Lock::UNAVAILABLE === $file ) {
 				self::note_once( $id, __( 'This server cannot lock the export file, so only the job lock keeps two workers apart. Avoid running this export from two places at once.', 'open-export' ) );
 			}
 			$out   = OPEX_Access::scope(

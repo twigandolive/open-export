@@ -232,10 +232,12 @@ class OPEX_Store {
 	 * get_option() asks the database. With a persistent object cache this
 	 * clears the shared copy too, which is what other processes read.
 	 *
+	 * @internal Shared with OPEX_Rest_Public only, for its transient counters.
+	 *
 	 * @param string $option Option name.
 	 * @return void
 	 */
-	private static function forget( string $option ): void {
+	public static function forget( string $option ): void {
 		wp_cache_delete( $option, 'options' );
 		foreach ( array( 'notoptions', 'alloptions' ) as $list ) {
 			$cached = wp_cache_get( $list, 'options' );

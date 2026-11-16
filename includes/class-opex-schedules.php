@@ -276,6 +276,9 @@ class OPEX_Schedules {
 	 * @return array|WP_Error Exposed job or error.
 	 */
 	public static function start( string $id, string $origin ) {
+		// A run whose bookkeeping is still owed moves the watermark first, so
+		// this run does not export its rows again.
+		OPEX_Schedule_Owed::settle( $id );
 		$s = self::get( $id );
 		if ( ! $s ) {
 			return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
@@ -328,6 +331,27 @@ class OPEX_Schedules {
 	}
 
 	/**
+	 * Records that a cron start of this schedule was given up after the store
+	 * stayed busy, so its last run shows an error, and queues its next
+	 * regular run.
+	 *
+	 * @param string $id Schedule id.
+	 * @return void
+	 * @throws OPEX_User_Error With the code BUSY when the store is still busy.
+	 */
+	public static function start_failed( string $id ): void {
+		self::rearm(
+			$id,
+			array(
+				'time'   => time(),
+				'job_id' => '',
+				'status' => 'error',
+				'rows'   => 0,
+			)
+		);
+	}
+
+	/**
 	 * The error for a schedule that is already running.
 	 *
 	 * @return WP_Error The error to return.
@@ -377,17 +401,52 @@ class OPEX_Schedules {
 	 * run that started before a reset or a change of source or date field
 	 * leaves it alone.
 	 *
+	 * When the store is busy the job is marked as owing this bookkeeping
+	 * instead, and OPEX_Schedule_Owed::settle() does it later. The listener
+	 * does not throw then, so the other opex_job_done listeners still run.
+	 *
 	 * @param array $job Finished job record.
+	 * @return void
+	 * @throws OPEX_User_Error Only an unexpected one: the busy error of the store is handled here.
 	 */
 	public static function on_job_done( array $job ): void {
 		$sid = (string) ( $job['schedule_id'] ?? '' );
 		if ( '' === $sid ) {
 			return;
 		}
+		try {
+			self::book_done( $job, false );
+		} catch ( OPEX_User_Error $e ) {
+			if ( ! OPEX_Store::is_busy( $e ) ) {
+				throw $e;
+			}
+			OPEX_Exporter::log_exception( $e );
+			OPEX_Schedule_Owed::mark( (string) ( $job['id'] ?? '' ) );
+		}
+	}
+
+	/**
+	 * Sets last_run and moves the watermark for a finished job. See on_job_done().
+	 *
+	 * A late run of it (from OPEX_Schedule_Owed) leaves last_run alone when a
+	 * newer run is shown there already. The watermark only ever moves
+	 * forward, so a late run never moves it back past a newer run's.
+	 *
+	 * @param array $job  Finished job record.
+	 * @param bool  $late True when the bookkeeping is done after the fact.
+	 * @return void
+	 * @throws OPEX_User_Error With the code BUSY when the store is busy.
+	 *
+	 * @internal Shared with OPEX_Schedule_Owed only.
+	 */
+	public static function book_done( array $job, bool $late ): void {
 		self::patch(
-			$sid,
-			static function ( array $s ) use ( $job ): array {
-				$s['last_run'] = self::last_run_of( $job );
+			(string) $job['schedule_id'],
+			static function ( array $s ) use ( $job, $late ): array {
+				$shown = (string) $s['last_run']['job_id'];
+				if ( ! $late || (string) ( $job['id'] ?? '' ) === $shown || (int) $s['last_run']['time'] < (int) ( $job['created'] ?? 0 ) ) {
+					$s['last_run'] = self::last_run_of( $job );
+				}
 				if ( 'done' === ( $job['status'] ?? '' ) && (string) ( $job['generation'] ?? '' ) === (string) $s['generation'] ) {
 					$mark = gmdate( 'Y-m-d H:i:s', (int) ( $job['created'] ?? time() ) );
 					if ( $mark > (string) $s['watermark'] ) {

@@ -25,7 +25,10 @@ class OPEX_Acf_Location {
 	/** Post rules that do not name a post type: they can apply to any post type. */
 	private const ANY_POST = array( 'post_status', 'post_format', 'post_category', 'post_taxonomy', 'post_template' );
 
-	/** Page rules: they apply to pages only. */
+	/**
+	 * Page rules: they apply to pages only. A page_template rule is the
+	 * exception for any template but the default one, see post_rule_state().
+	 */
 	private const PAGE = array( 'page', 'page_type', 'page_parent', 'page_template' );
 
 	/** User rules. */
@@ -119,7 +122,7 @@ class OPEX_Acf_Location {
 	 * @param string $value Rule value.
 	 * @param bool   $is    True for ==, false for !=.
 	 * @param string $type  Post type of the source.
-	 * @return int self::YES, self::NO or self::NEUTRAL.
+	 * @return int self::YES or self::NO.
 	 */
 	private static function post_rule_state( string $param, string $value, bool $is, string $type ): int {
 		if ( 'post_type' === $param ) {
@@ -127,14 +130,23 @@ class OPEX_Acf_Location {
 			return ( $is ? $named : ! $named ) ? self::YES : self::NO;
 		}
 		if ( 'post' === $param ) {
-			// "Not this one post" leaves the rest of the post type in.
+			// "Not this one post" matches every other post of every post type,
+			// as ACF compares it with the one post being edited. Leaving out one
+			// record does not leave out its source.
 			if ( ! $is ) {
-				return self::NEUTRAL;
+				return self::YES;
 			}
 			return get_post_type( (int) $value ) === $type ? self::YES : self::NO;
 		}
 		if ( 'attachment' === $param ) {
 			return 'attachment' === $type ? self::YES : self::NO;
+		}
+		if ( 'page_template' === $param && 'default' !== $value ) {
+			// Since WordPress 4.7 any post type can use templates. ACF then
+			// checks a named template like a post_template rule, so it says
+			// nothing against the post type. Only the default template stays
+			// with pages.
+			return self::YES;
 		}
 		if ( in_array( $param, self::PAGE, true ) ) {
 			return 'page' === $type ? self::YES : self::NO;

@@ -16,6 +16,14 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_CLI_Runner {
 
 	/**
+	 * The function publish() makes a hard link with. Only tests change it,
+	 * through reflection, to act like a filesystem without hard links.
+	 *
+	 * @var callable
+	 */
+	private static $link = 'link';
+
+	/**
 	 * Stop with an error when a plugin call returned WP_Error.
 	 *
 	 * @param mixed $value Result of a plugin call, checked for WP_Error.
@@ -256,8 +264,15 @@ class OPEX_CLI_Runner {
 	 * share one. With --force it is renamed over the target. Without it the
 	 * copy is published with link(), which fails when a file already has the
 	 * target name, so a file that appeared while the export ran is never
-	 * replaced. Where the file system has no hard links, an exclusive create
-	 * of the target takes its place. The temporary file is removed on every path.
+	 * replaced. The final path is never written in place, so no reader sees
+	 * a half-written file.
+	 *
+	 * Where the file system has no hard links, publish() checks that the
+	 * target still does not exist and then renames the finished copy into
+	 * place. That fallback has a short window between the check and the
+	 * rename in which another process could create the target, which the
+	 * rename would then replace. File systems with hard links do not have
+	 * that window. The temporary file is removed on every path.
 	 *
 	 * @param string $source Finished export file.
 	 * @param string $dest   Full --output path.
@@ -274,13 +289,14 @@ class OPEX_CLI_Runner {
 			if ( $force ) {
 				return rename( $temp, $dest ) ? true : 'Could not write the --output file.'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
 			}
-			if ( @link( $temp, $dest ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a refusal is the expected answer when the file exists.
+			if ( @call_user_func( self::$link, $temp, $dest ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a refusal is the expected answer when the file exists.
 				return true;
 			}
 			if ( file_exists( $dest ) || is_link( $dest ) ) {
 				return 'The --output file appeared while the export ran. Add --force to overwrite it.';
 			}
-			return self::exclusive_copy( $temp, $dest ) ? true : 'Could not write the --output file.';
+			// No hard links here. The copy is finished and sits in the same folder, so the rename is atomic.
+			return rename( $temp, $dest ) ? true : 'Could not write the --output file.'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
 		} finally {
 			if ( file_exists( $temp ) ) {
 				wp_delete_file( $temp );

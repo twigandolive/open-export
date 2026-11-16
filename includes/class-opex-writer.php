@@ -275,10 +275,20 @@ abstract class OPEX_Writer {
 		while ( $done < $total ) {
 			$wrote = $this->write_chunk( $handle, 0 === $done ? $data : substr( $data, $done ) );
 			if ( false === $wrote || $wrote <= 0 ) {
-				throw new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
+				throw self::write_failed();
 			}
 			$done += $wrote;
 		}
+	}
+
+	/**
+	 * The error for output that could not be written or built in full. Every
+	 * writer throws this one, so a person sees the same message for each.
+	 *
+	 * @return OPEX_User_Error The error to throw.
+	 */
+	protected static function write_failed(): OPEX_User_Error {
+		return new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
 	}
 
 	/**

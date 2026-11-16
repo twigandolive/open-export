@@ -182,24 +182,48 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	/**
 	 * One record as fputcsv writes it, with only the cells that need it quoted.
 	 *
+	 * The record is built in memory, never in a temporary file: php://temp
+	 * moves a large record to disk, and a full or locked temporary folder
+	 * would then give an empty record without saying so. Every step is still
+	 * checked, and a record that cannot be built in full throws.
+	 *
 	 * @param array $fields Cell values.
 	 * @return string The line as fputcsv writes it.
-	 * @throws RuntimeException When no temporary stream can be opened.
+	 * @throws OPEX_User_Error When the record cannot be built in full.
 	 */
 	private function csv_line( array $fields ): string {
 		if ( null === $this->temp ) {
-			$temp = fopen( 'php://temp', 'w+b' );
+			$temp = fopen( 'php://memory', 'w+b' );
 			if ( false === $temp ) {
-				throw new RuntimeException( 'Could not open export file for writing.' );
+				throw self::write_failed();
 			}
 			$this->temp = $temp;
 		}
 		// One memory stream serves every record of the batch: it is emptied before each one.
-		ftruncate( $this->temp, 0 );
-		rewind( $this->temp );
-		fputcsv( $this->temp, $fields, $this->delimiter, $this->enclosure, '' );
-		rewind( $this->temp );
-		return (string) stream_get_contents( $this->temp );
+		if ( ! ftruncate( $this->temp, 0 ) || ! rewind( $this->temp ) ) {
+			throw self::write_failed();
+		}
+		$wrote = $this->put_record( $this->temp, $fields );
+		if ( false === $wrote || $wrote <= 0 || ! rewind( $this->temp ) ) {
+			throw self::write_failed();
+		}
+		$line = stream_get_contents( $this->temp );
+		if ( ! is_string( $line ) || strlen( $line ) !== $wrote ) {
+			throw self::write_failed();
+		}
+		return $line;
+	}
+
+	/**
+	 * One fputcsv() call. Kept apart so a test can stand in for a stream
+	 * that cannot take the record.
+	 *
+	 * @param resource $stream Memory stream, empty and at its start.
+	 * @param array    $fields Cell values.
+	 * @return int|false Bytes written, or false on failure.
+	 */
+	protected function put_record( $stream, array $fields ) {
+		return fputcsv( $stream, $fields, $this->delimiter, $this->enclosure, '' );
 	}
 
 	/**

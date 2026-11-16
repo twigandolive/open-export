@@ -85,6 +85,8 @@ require_once OPEX_DIR . 'includes/class-opex-filename.php';
 require_once OPEX_DIR . 'includes/class-opex-schedule-clock.php';
 require_once OPEX_DIR . 'includes/class-opex-schedules.php';
 require_once OPEX_DIR . 'includes/class-opex-schedule-rules.php';
+require_once OPEX_DIR . 'includes/class-opex-schedule-owed.php';
+require_once OPEX_DIR . 'includes/class-opex-cron-retry.php';
 require_once OPEX_DIR . 'includes/class-opex-runner.php';
 require_once OPEX_DIR . 'includes/class-opex-config.php';
 require_once OPEX_DIR . 'includes/class-opex-config-output.php';

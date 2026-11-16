@@ -18,10 +18,14 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Writer_XML_Template extends OPEX_Writer {
 
 	/**
-	 * Matches {id} and {id|cdata}. An id may hold pipes, as spread ACF
-	 * columns do ("acf:team|1|name"): only a trailing "|cdata" is a modifier.
+	 * Matches the text between braces. An id may hold pipes, as spread ACF
+	 * columns do ("acf:team|1|name"). See placeholder() for how the text
+	 * splits into an id and the "|cdata" modifier.
 	 */
-	const PLACEHOLDER = '/\{([^{}\r\n]+?)(\|cdata)?\}/';
+	const PLACEHOLDER = '/\{([^{}\r\n]+)\}/';
+
+	/** The modifier that writes a value as a CDATA section. */
+	const CDATA = '|cdata';
 
 	/** A spread ACF column key: "<field id>|<row number>|<sub field>". */
 	const SPREAD = '/^([^|]+)\|[1-9][0-9]*\|[^|]+$/';
@@ -114,7 +118,8 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 			$samples[ (string) $id ] = 'sample';
 		}
 		if ( preg_match_all( self::PLACEHOLDER, $all, $found ) ) {
-			foreach ( $found[1] as $id ) {
+			foreach ( $found[1] as $inner ) {
+				$id = self::placeholder( $inner, $samples )[0];
 				if ( in_array( $id, $field_ids, true ) ) {
 					continue;
 				}
@@ -169,13 +174,13 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 		return (string) preg_replace_callback(
 			self::PLACEHOLDER,
 			static function ( array $m ) use ( $row, $known ): string {
-				if ( ! array_key_exists( $m[1], $known ) ) {
-					$plain  = false === strpos( $m[1], '|' );
-					$spread = 0 === strpos( $m[1], OPEX_Acf::PREFIX ) && 1 === preg_match( self::SPREAD, $m[1] );
-					return ( $plain || $spread ) ? '' : $m[0];
+				list( $id, $cdata ) = self::placeholder( $m[1], $known );
+				if ( ! array_key_exists( $id, $known ) ) {
+					$plain = false === strpos( $id, '|' );
+					return ( $plain || self::acf_spread( $id ) ) ? '' : $m[0];
 				}
-				$value = (string) ( $row[ $m[1] ] ?? '' );
-				if ( isset( $m[2] ) && '' !== $m[2] ) {
+				$value = (string) ( $row[ $id ] ?? '' );
+				if ( $cdata ) {
 					$value = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $value );
 					return '<![CDATA[' . str_replace( ']]>', ']]]]><![CDATA[>', $value ) . ']]>';
 				}
@@ -183,6 +188,36 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 			},
 			$template
 		);
+	}
+
+	/**
+	 * Splits the text between braces into a field id and the CDATA modifier.
+	 *
+	 * The whole text is tried as a field id first, so a spread ACF column
+	 * whose sub field is named "cdata" ("acf:team|1|cdata") stays a column.
+	 * Only when the whole text is no field id does a trailing "|cdata" count
+	 * as the modifier.
+	 *
+	 * @param string $inner The text between the braces.
+	 * @param array  $known Known field ids as keys.
+	 * @return array{0: string, 1: bool} The field id, and true when the value goes in a CDATA section.
+	 */
+	private static function placeholder( string $inner, array $known ): array {
+		$cut = strlen( $inner ) - strlen( self::CDATA );
+		if ( array_key_exists( $inner, $known ) || self::acf_spread( $inner ) || $cut < 1 || self::CDATA !== substr( $inner, $cut ) ) {
+			return array( $inner, false );
+		}
+		return array( substr( $inner, 0, $cut ), true );
+	}
+
+	/**
+	 * Whether a field id has the form of a spread ACF column.
+	 *
+	 * @param string $id Field id.
+	 * @return bool True for "acf:<field>|<row number>|<sub field>".
+	 */
+	private static function acf_spread( string $id ): bool {
+		return 0 === strpos( $id, OPEX_Acf::PREFIX ) && 1 === preg_match( self::SPREAD, $id );
 	}
 
 	/**

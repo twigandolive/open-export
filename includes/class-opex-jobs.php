@@ -61,6 +61,8 @@ class OPEX_Jobs {
 		'checkpoint'    => array(),
 		'wide'          => false,
 		'generation'    => '',
+		// True while the schedule's completion bookkeeping of this finished job could not be saved yet.
+		'schedule_owed' => false,
 	);
 
 	/** Config keys an old record might lack, with their defaults. */
