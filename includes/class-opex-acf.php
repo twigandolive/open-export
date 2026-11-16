@@ -29,7 +29,14 @@ class OPEX_Acf {
 	/** How deep nested fields are followed. ACF data deeper than this is left out. */
 	private const MAX_DEPTH = 8;
 
-	/** How many rows one repeater may report, so a broken count cannot run away. */
+	/**
+	 * The most rows read from one repeater or flexible content value.
+	 *
+	 * The row count is stored text that anyone with edit rights can change. A
+	 * broken or hostile count such as 999999999 would make every record loop
+	 * that many times and build a cell too large to write. A value cut here is
+	 * reported in a job note (see cut_note()), never dropped silently.
+	 */
 	private const MAX_ROWS = 1000;
 
 	/** Meta table, object id column and row id column per source type. */
@@ -45,6 +52,20 @@ class OPEX_Acf {
 	 * @var array<string, array>
 	 */
 	private static $memo = array();
+
+	/**
+	 * Names of the fields that were cut at MAX_ROWS since take_cut() last ran.
+	 *
+	 * @var array<string, true>
+	 */
+	private static $cut = array();
+
+	/**
+	 * True once the value being read was cut at MAX_ROWS.
+	 *
+	 * @var bool
+	 */
+	private static $cutting = false;
 
 	/**
 	 * Whether ACF or Secure Custom Fields is active.
@@ -86,9 +107,45 @@ class OPEX_Acf {
 		return $out;
 	}
 
-	/** Forget definitions found so far, for tests that add or remove field groups. */
+	/**
+	 * Forget definitions and cut fields found so far, for tests that add or remove field groups.
+	 *
+	 * @return void
+	 */
 	public static function reset(): void {
 		self::$memo = array();
+		self::$cut  = array();
+	}
+
+	/**
+	 * The fields cut at the row limit since the last call, and forget them.
+	 * The query layer calls this around each batch.
+	 *
+	 * @return string[] Field names, sorted.
+	 */
+	public static function take_cut(): array {
+		$names     = array_map( 'strval', array_keys( self::$cut ) );
+		self::$cut = array();
+		sort( $names );
+		return $names;
+	}
+
+	/**
+	 * The job note for fields cut at the row limit, or '' when none was cut.
+	 *
+	 * @param string[] $names Field names from take_cut().
+	 * @return string The note.
+	 */
+	public static function cut_note( array $names ): string {
+		if ( ! $names ) {
+			return '';
+		}
+		return sprintf(
+			/* translators: 1: ACF field names, joined with commas, 2: the row limit. */
+			__( 'Some records hold more than %2$d rows in %1$s. Only the first %2$d rows of each were exported.', 'open-export' ),
+			implode( ', ', $names ),
+			self::MAX_ROWS
+		);
 	}
 
 	/**
@@ -198,7 +255,12 @@ class OPEX_Acf {
 			foreach ( $ids as $id ) {
 				$values               = $meta[ (int) $id ] ?? array();
 				$name                 = (string) $def['name'];
+				self::$cutting        = false;
 				$out[ $field ][ $id ] = isset( $values[ $name ] ) ? (string) wp_json_encode( self::rows( $def, $name, $values, 0 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) : '';
+				if ( self::$cutting ) {
+					// Named by its top-level field, also when a nested value was the one cut.
+					self::$cut[ $name ] = true;
+				}
 			}
 		}
 		return $out;
@@ -261,13 +323,21 @@ class OPEX_Acf {
 				$layouts[ (string) ( $layout['name'] ?? '' ) ] = (array) ( $layout['sub_fields'] ?? array() );
 			}
 			$list = self::stored_value( $stored );
-			foreach ( array_slice( array_values( is_array( $list ) ? $list : array() ), 0, self::MAX_ROWS ) as $i => $name ) {
+			$list = is_array( $list ) ? array_values( $list ) : array();
+			if ( count( $list ) > self::MAX_ROWS ) {
+				self::$cutting = true;
+			}
+			foreach ( array_slice( $list, 0, self::MAX_ROWS ) as $i => $name ) {
 				$name   = is_scalar( $name ) ? (string) $name : '';
 				$rows[] = array_merge( array( 'acf_fc_layout' => $name ), self::subs( $layouts[ $name ] ?? array(), $prefix . '_' . $i, $meta, $depth ) );
 			}
 			return $rows;
 		}
-		$count = min( self::MAX_ROWS, self::row_count( $def, $stored ) );
+		$count = self::row_count( $def, $stored );
+		if ( $count > self::MAX_ROWS ) {
+			self::$cutting = true;
+			$count         = self::MAX_ROWS;
+		}
 		for ( $i = 0; $i < $count; $i++ ) {
 			$rows[] = self::subs( (array) ( $def['sub_fields'] ?? array() ), $prefix . '_' . $i, $meta, $depth );
 		}

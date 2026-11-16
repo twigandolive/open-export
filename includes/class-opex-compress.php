@@ -30,6 +30,13 @@ class OPEX_Compress {
 	const PART = '.zip.part';
 
 	/**
+	 * True to make the close step fail, as on a full disk. Only tests set it, through reflection.
+	 *
+	 * @var bool
+	 */
+	private static $fail_close = false;
+
+	/**
 	 * Whether this server can make zip files: Excel files and zip compression
 	 * both need it. The opex_zip_available filter can turn zip output off
 	 * (tests use it to reach the refusals), but never on without the extension.
@@ -65,10 +72,16 @@ class OPEX_Compress {
 	 * Packs a job's finished plain file into a zip next to it. Calling it
 	 * again rebuilds the same zip, so a replayed finish is safe.
 	 *
+	 * Every step is checked: opening the zip, adding the file, and close(),
+	 * where ZipArchive really writes and where a full disk shows up. The zip
+	 * must then open again with one entry before it takes the zip's name. On
+	 * any failure the half-built zip goes and the plain file stays, so the job
+	 * keeps its plain file name and finishing again retries.
+	 *
 	 * @param array $job Job record whose file name is still the plain file.
 	 * @return string The file name the job should save: the zip's.
-	 * @throws OPEX_User_Error When this server has no zip extension.
-	 * @throws RuntimeException When the zip cannot be made.
+	 * @throws OPEX_User_Error When this server has no zip extension, or the zip cannot be made.
+	 * @throws RuntimeException When the plain file is missing.
 	 */
 	public static function apply( array $job ): string {
 		$plain = OPEX_Jobs::file_path( $job );
@@ -83,18 +96,48 @@ class OPEX_Compress {
 			wp_delete_file( $part );
 		}
 		$zip = new ZipArchive();
-		if ( true !== $zip->open( $part, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
-			throw new RuntimeException( 'Could not compress the export file.' );
-		}
-		// ZipArchive reads the plain file at close(), so close() reports a read failure too.
-		$ok = $zip->addFile( $plain, OPEX_Download::plain_name( $job ) ) && $zip->close();
-		if ( ! $ok || ! rename( $part, $plain . self::SUFFIX ) ) {
+		$ok  = true === $zip->open( $part, ZipArchive::CREATE | ZipArchive::OVERWRITE );
+		// ZipArchive reads the plain file and writes the zip at close(), so close() reports both.
+		$ok = $ok && $zip->addFile( $plain, OPEX_Download::plain_name( $job ) ) && self::close( $zip );
+		$ok = $ok && self::complete( $part ) && rename( $part, $plain . self::SUFFIX );
+		if ( ! $ok ) {
 			if ( file_exists( $part ) ) {
 				wp_delete_file( $part );
 			}
-			throw new RuntimeException( 'Could not compress the export file.' );
+			throw new OPEX_User_Error( esc_html__( 'The export file could not be compressed. The disk may be full.', 'open-export' ) );
 		}
 		return (string) $job['filename'] . self::SUFFIX;
+	}
+
+	/**
+	 * Closes the zip, which is when it is written.
+	 *
+	 * @param ZipArchive $zip The open zip.
+	 * @return bool False when the write failed.
+	 */
+	private static function close( ZipArchive $zip ): bool {
+		$closed = $zip->close();
+		return $closed && ! self::$fail_close;
+	}
+
+	/**
+	 * Whether a written zip is whole: not empty, and it opens with its one entry.
+	 *
+	 * @param string $path The zip being built.
+	 * @return bool True when the zip can be used.
+	 */
+	private static function complete( string $path ): bool {
+		clearstatcache( true, $path );
+		if ( ! is_file( $path ) || filesize( $path ) <= 0 ) {
+			return false;
+		}
+		$check = new ZipArchive();
+		if ( true !== $check->open( $path, ZipArchive::CHECKCONS ) ) {
+			return false;
+		}
+		$whole = 1 === $check->count();
+		$check->close();
+		return $whole;
 	}
 
 	/**

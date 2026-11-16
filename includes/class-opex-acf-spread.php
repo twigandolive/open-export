@@ -162,7 +162,12 @@ class OPEX_Acf_Spread {
 				$sql = $wpdb->prepare( "SELECT SUBSTR(m.meta_value, 1, 24) FROM {$wpdb->termmeta} m INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = m.term_id WHERE m.meta_key = %s AND tt.taxonomy = %s", $name, (string) $src['taxonomy'] );
 				break;
 			case 'users':
-				$sql = $wpdb->prepare( "SELECT SUBSTR(m.meta_value, 1, 24) FROM {$wpdb->usermeta} m WHERE m.meta_key = %s", $name );
+				// The same members-only scope the users export has, so a site admin on a
+				// network never sizes the columns, or reads a note, from another site's users.
+				list( $terms, $scope_args ) = OPEX_Access::users_scope();
+				$where                      = $terms ? ' AND ' . implode( ' AND ', $terms ) : '';
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the tables come from $wpdb and the scope terms from OPEX_Access hold only placeholders. Every value is bound.
+				$sql = $wpdb->prepare( "SELECT SUBSTR(m.meta_value, 1, 24) FROM {$wpdb->usermeta} m INNER JOIN {$wpdb->users} u ON u.ID = m.user_id WHERE m.meta_key = %s{$where}", array_merge( array( $name ), $scope_args ) );
 				break;
 			default:
 				return 0;

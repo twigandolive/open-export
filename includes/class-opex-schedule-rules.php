@@ -49,6 +49,9 @@ class OPEX_Schedule_Rules {
 			'next_run'    => 0,
 			'created'     => 0,
 			'updated'     => 0,
+			// Added in 2.0.0. Changes when the watermark is reset or its meaning
+			// changes, so a run started before that cannot set the watermark again.
+			'generation'  => '',
 		);
 	}
 
@@ -162,6 +165,13 @@ class OPEX_Schedule_Rules {
 			'enabled' => (bool) rest_sanitize_boolean( $inc['enabled'] ?? false ),
 			'field'   => $inc_field,
 		);
+		// Checked when the source or the field may have changed. A record saved
+		// before this check keeps working until one of them is edited.
+		$touched = '' === $id || isset( $raw['config'] ) || is_array( $raw['incremental'] ?? null );
+		if ( $rec['incremental']['enabled'] && $touched && ! self::is_date_field( (string) ( $rec['config']['source'] ?? '' ), $inc_field ) ) {
+			return self::invalid( __( 'Changes only needs one of the date fields of this source. Pick one, or turn Changes only off.', 'open-export' ) );
+		}
+		self::follow_watermark( $rec, $base, '' !== $id, $notes );
 
 		$pattern         = sanitize_text_field( (string) ( $raw['filename'] ?? $base['filename'] ) );
 		$rec['filename'] = '' === $pattern ? '{label}-{date}' : mb_substr( $pattern, 0, 200 );
@@ -181,6 +191,54 @@ class OPEX_Schedule_Rules {
 		$rec['updated']  = $now;
 		$rec['next_run'] = OPEX_Schedules::next_run( $rec, $now );
 		return $rec;
+	}
+
+	/**
+	 * Whether a field is one of the date fields of a source.
+	 *
+	 * @param string $source Source id.
+	 * @param string $field  Field id.
+	 * @return bool True when the source has that date field.
+	 */
+	private static function is_date_field( string $source, string $field ): bool {
+		$src = OPEX_Query::parse_source( $source );
+		return '' !== $field && null !== $src && isset( OPEX_Query::date_fields( $src )[ $field ] );
+	}
+
+	/**
+	 * A watermark belongs to one source and one date field. When an edit
+	 * changes either, the watermark is cleared, so the next run exports every
+	 * row of what is now asked for, and the generation changes, so a run that
+	 * started before the edit cannot set the watermark again when it ends.
+	 *
+	 * @param array    $rec    Record being built, changed in place.
+	 * @param array    $base   Record as stored before the edit.
+	 * @param bool     $update True when an existing schedule is edited.
+	 * @param string[] $notes  Receives a note when a watermark was cleared.
+	 * @return void
+	 */
+	private static function follow_watermark( array &$rec, array $base, bool $update, array &$notes ): void {
+		$source = (string) ( $rec['config']['source'] ?? '' ) !== (string) ( $base['config']['source'] ?? '' );
+		$field  = (string) ( $base['incremental']['field'] ?? '' ) !== (string) $rec['incremental']['field'];
+		if ( ! $update || ( ! $source && ! $field ) ) {
+			return;
+		}
+		if ( '' !== (string) $rec['watermark'] ) {
+			$rec['watermark'] = '';
+			$notes[]          = __( 'The source or the Changes only date field changed, so the watermark was cleared. The next run exports every row.', 'open-export' );
+		}
+		$rec['generation'] = self::new_generation();
+	}
+
+	/**
+	 * A new generation id for a schedule's watermark.
+	 *
+	 * @return string A short random id.
+	 *
+	 * @internal Shared with OPEX_Schedules only.
+	 */
+	public static function new_generation(): string {
+		return 'g' . substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 12 );
 	}
 
 	/**

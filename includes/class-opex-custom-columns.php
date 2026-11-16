@@ -46,7 +46,19 @@ class OPEX_Custom_Columns {
 		if ( ! is_array( $raw ) ) {
 			return $out;
 		}
-		foreach ( array_values( $raw ) as $item ) {
+		$raw = array_values( $raw );
+
+		// Every incoming id belongs to the first column that carries it, so a
+		// new column listed earlier can never take an existing column's id.
+		$owner = array();
+		foreach ( $raw as $index => $item ) {
+			$id = is_array( $item ) && is_string( $item['id'] ?? null ) ? $item['id'] : '';
+			if ( preg_match( self::ID_PATTERN, $id ) && ! isset( $owner[ $id ] ) ) {
+				$owner[ $id ] = $index;
+			}
+		}
+
+		foreach ( $raw as $index => $item ) {
 			if ( count( $out ) >= self::MAX_COLUMNS ) {
 				$notes[] = __( 'Only the first 50 custom columns were kept.', 'open-export' );
 				break;
@@ -64,12 +76,12 @@ class OPEX_Custom_Columns {
 			// An incoming id stays put, so a column keeps its place in `fields` and
 			// its transforms when it is renamed. A new id comes from the label.
 			$id = is_string( $item['id'] ?? null ) ? $item['id'] : '';
-			if ( ! preg_match( self::ID_PATTERN, $id ) || isset( $used[ $id ] ) ) {
+			if ( ( $owner[ $id ] ?? null ) !== $index || isset( $used[ $id ] ) ) {
 				$slug = sanitize_title( $label );
 				$slug = '' === $slug ? 'column' : $slug;
 				$slug = preg_match( '/^[a-z0-9-]+$/', $slug ) ? $slug : 'column';
 				$id   = 'custom:' . $slug;
-				for ( $n = 2; isset( $used[ $id ] ); $n++ ) {
+				for ( $n = 2; isset( $used[ $id ] ) || isset( $owner[ $id ] ); $n++ ) {
 					$id = 'custom:' . $slug . '-' . $n;
 				}
 			}

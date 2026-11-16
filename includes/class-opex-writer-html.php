@@ -124,18 +124,14 @@ class OPEX_Writer_HTML extends OPEX_Writer {
 	}
 
 	/**
-	 * Appends text to the output file.
+	 * Appends text to the output file, every byte or an error.
 	 *
 	 * @param string $text Text.
-	 * @throws RuntimeException When the file cannot be written.
+	 * @return void
+	 * @throws OPEX_User_Error When the file cannot be written in full.
 	 */
 	private function write( string $text ): void {
-		$handle = $this->open();
-		$ok     = false !== fwrite( $handle, $text );
-		fclose( $handle );
-		if ( ! $ok ) {
-			throw new RuntimeException( 'Could not write the export file.' );
-		}
+		$this->append_text( $text );
 	}
 }
 

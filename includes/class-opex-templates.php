@@ -42,6 +42,7 @@ class OPEX_Templates {
 	 * @param string $name   Template name people see.
 	 * @param array  $config Export config to save.
 	 * @return array|WP_Error The template as the screen shows it, or an error.
+	 * @throws OPEX_User_Error Any error from the store other than busy, which becomes a WP_Error.
 	 */
 	public static function save( string $name, array $config ) {
 		$name = sanitize_text_field( $name );
@@ -54,8 +55,51 @@ class OPEX_Templates {
 			return $config;
 		}
 
-		$templates = self::all();
-		$now       = time();
+		try {
+			$template = OPEX_Store::change(
+				self::OPTION,
+				static function ( array &$templates ) use ( $name, $config ): array {
+					return self::put( $templates, $name, $config );
+				}
+			);
+		} catch ( OPEX_User_Error $e ) {
+			if ( ! OPEX_Store::is_busy( $e ) ) {
+				throw $e;
+			}
+			return new WP_Error( 'opex_busy', $e->getMessage(), array( 'status' => 503 ) );
+		}
+
+		return self::expose( $template );
+	}
+
+	/**
+	 * Removes a template.
+	 *
+	 * @param string $id Template id.
+	 * @return void
+	 * @throws OPEX_User_Error When the delete could not be saved (see OPEX_Store::change).
+	 */
+	public static function delete( string $id ): void {
+		OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$templates ) use ( $id ): void {
+				unset( $templates[ $id ] );
+			}
+		);
+	}
+
+	/**
+	 * Adds or updates a template in the stored list and trims the list to
+	 * MAX. Runs under the option's lock, on the list as stored now, so a
+	 * template another request saved or deleted meanwhile stays that way.
+	 *
+	 * @param array  $templates Stored templates, changed in place.
+	 * @param string $name      Clean template name.
+	 * @param array  $config    Clean export config.
+	 * @return array The stored template.
+	 */
+	private static function put( array &$templates, string $name, array $config ): array {
+		$now = time();
 
 		// Saving under a name that already exists updates that template. If
 		// older duplicates exist, the most recently updated one wins.
@@ -88,23 +132,7 @@ class OPEX_Templates {
 			// Oldest first, so the newest MAX stay.
 			$templates = array_slice( $templates, -self::MAX, null, true );
 		}
-
-		update_option( self::OPTION, $templates, false );
-
-		return self::expose( $template );
-	}
-
-	/**
-	 * Removes a template.
-	 *
-	 * @param string $id Template id.
-	 */
-	public static function delete( string $id ): void {
-		$templates = self::all();
-		if ( isset( $templates[ $id ] ) ) {
-			unset( $templates[ $id ] );
-			update_option( self::OPTION, $templates, false );
-		}
+		return $template;
 	}
 
 	/**

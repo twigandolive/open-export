@@ -282,19 +282,22 @@ class OPEX_Rest_Delivery {
 	}
 
 	/**
-	 * POST /destinations/<id>. Missing keys keep their stored value.
+	 * POST /destinations/<id>. Missing keys keep their stored value. Only
+	 * the submitted keys go to the store, which merges them with the record
+	 * as stored at that moment, under its lock.
 	 *
 	 * @param WP_REST_Request $request Request.
-	 * @return WP_REST_Response|WP_Error
+	 * @return WP_REST_Response|WP_Error The saved destination, or an error.
 	 */
 	public static function update_destination( WP_REST_Request $request ) {
-		$id     = (string) $request['id'];
-		$stored = OPEX_Destinations::get( $id );
-		if ( ! $stored ) {
+		$id = (string) $request['id'];
+		if ( ! OPEX_Destinations::get( $id ) ) {
 			return self::missing();
 		}
-		unset( $stored['secret'] );
-		$saved = OPEX_Destinations::save( array_merge( $stored, self::raw( $request ) ), $id );
+		$saved = OPEX_Destinations::update( $id, self::raw( $request ) );
+		if ( is_wp_error( $saved ) && 'opex_destination_missing' === $saved->get_error_code() ) {
+			return self::missing();
+		}
 		return is_wp_error( $saved ) ? self::fail( $saved ) : rest_ensure_response( OPEX_Destinations::expose( $saved ) );
 	}
 

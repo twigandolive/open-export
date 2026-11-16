@@ -29,6 +29,12 @@ class OPEX_Rest_Public {
 	private const IP_LIMIT   = 30;
 	private const TRIGGER    = '#^/open-export/v1/schedules/s[a-f0-9]{12}/trigger$#';
 
+	/** Seconds a counter or start-gap lock lives. Each is held for one read and one write. */
+	private const LOCK_TTL = 5;
+
+	/** Seconds a request waits for one of those locks. */
+	private const LOCK_WAIT = 2;
+
 	/**
 	 * Registers the routes.
 	 *
@@ -135,10 +141,10 @@ class OPEX_Rest_Public {
 			return true;
 		}
 		if ( $schedule ) {
-			self::count_failure( $sched_key, $fails );
+			self::count_failure( $sched_key );
 		}
 		if ( '' !== $ip_key ) {
-			self::count_failure( $ip_key, $ip_fails );
+			self::count_failure( $ip_key );
 		}
 		return self::denied( 403 );
 	}
@@ -208,21 +214,98 @@ class OPEX_Rest_Public {
 
 	/**
 	 * Adds one failed key. The window starts at the first failure and does not
-	 * move, so a steady trickle of guesses cannot keep it open forever.
+	 * move, so a steady trickle of guesses cannot keep it open forever. The
+	 * count is read again and written under a lock, so wrong keys sent at the
+	 * same moment are each counted. When the lock cannot be had in time the
+	 * failure is not counted, and the caller still gets its 403.
 	 *
-	 * @param string $key   Transient name.
-	 * @param array  $fails Current counter.
+	 * @param string $key Transient name.
+	 * @return void
 	 */
-	private static function count_failure( string $key, array $fails ): void {
-		$until = $fails['until'] > 0 ? $fails['until'] : time() + self::FAIL_SPAN;
-		set_transient(
-			$key,
-			array(
-				'count' => $fails['count'] + 1,
-				'until' => $until,
-			),
-			max( 1, $until - time() )
+	private static function count_failure( string $key ): void {
+		self::locked(
+			'trig_' . md5( $key ),
+			static function () use ( $key ): void {
+				self::forget_transient( $key );
+				$fails = self::failures( $key );
+				$until = $fails['until'] > 0 ? $fails['until'] : time() + self::FAIL_SPAN;
+				set_transient(
+					$key,
+					array(
+						'count' => $fails['count'] + 1,
+						'until' => $until,
+					),
+					max( 1, $until - time() )
+				);
+			}
 		);
+	}
+
+	/**
+	 * Runs a short read and write under a lock of its own.
+	 *
+	 * @param string   $name Lock name.
+	 * @param callable $work The read and write.
+	 * @return bool False when the lock could not be had, so $work did not run.
+	 */
+	private static function locked( string $name, callable $work ): bool {
+		$until = microtime( true ) + self::LOCK_WAIT;
+		do {
+			$token = OPEX_Lock::acquire( $name, self::LOCK_TTL );
+			if ( false !== $token ) {
+				try {
+					$work();
+				} finally {
+					OPEX_Lock::release( $name, $token );
+				}
+				return true;
+			}
+			usleep( 20000 );
+		} while ( microtime( true ) < $until );
+		return false;
+	}
+
+	/**
+	 * Takes the start gap of a schedule: at most one start every START_GAP
+	 * seconds. The check and the reservation happen under one lock, so two
+	 * requests at the same moment cannot both pass. The export itself starts
+	 * after the lock is given up.
+	 *
+	 * @param string $id Schedule id.
+	 * @return int 0 when this request may start, else the seconds to wait.
+	 */
+	private static function reserve_start( string $id ): int {
+		$wait = 1;
+		self::locked(
+			'trig_start_' . $id,
+			static function () use ( $id, &$wait ): void {
+				$tkey = self::TRANSIENT . $id;
+				self::forget_transient( $tkey );
+				$next = (int) get_transient( $tkey );
+				if ( $next > time() ) {
+					$wait = max( 1, $next - time() );
+					return;
+				}
+				set_transient( $tkey, time() + self::START_GAP, self::START_GAP );
+				$wait = 0;
+			}
+		);
+		return $wait;
+	}
+
+	/**
+	 * Drops this request's cached copy of a transient, so the next read asks
+	 * the database and sees what another request wrote. A shared object cache
+	 * already holds the shared value, so it is left alone.
+	 *
+	 * @param string $key Transient name.
+	 * @return void
+	 */
+	private static function forget_transient( string $key ): void {
+		if ( ! wp_using_ext_object_cache() ) {
+			wp_cache_delete( '_transient_' . $key, 'options' );
+			wp_cache_delete( '_transient_timeout_' . $key, 'options' );
+		}
 	}
 
 	/**
@@ -242,9 +325,8 @@ class OPEX_Rest_Public {
 		}
 
 		if ( '' === $running ) {
-			$tkey = self::TRANSIENT . $id;
-			$next = (int) get_transient( $tkey );
-			if ( $next > time() ) {
+			$wait = self::reserve_start( $id );
+			if ( $wait > 0 ) {
 				$response = new WP_REST_Response(
 					array(
 						'status'    => 'rate_limited',
@@ -253,11 +335,10 @@ class OPEX_Rest_Public {
 					),
 					429
 				);
-				$response->header( 'Retry-After', (string) max( 1, $next - time() ) );
+				$response->header( 'Retry-After', (string) $wait );
 				$response->header( 'Cache-Control', 'no-store' );
 				return $response;
 			}
-			set_transient( $tkey, time() + self::START_GAP, self::START_GAP );
 			$started = OPEX_Schedules::start( $id, 'trigger' );
 			if ( is_wp_error( $started ) ) {
 				self::log( $started );

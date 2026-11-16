@@ -247,7 +247,7 @@ abstract class OPEX_Writer {
 	 * Opens the output file for appending. Each call is a fresh open, because
 	 * the next batch may run in another PHP process.
 	 *
-	 * @return resource
+	 * @return resource The open handle.
 	 * @throws RuntimeException When the file cannot be opened.
 	 */
 	protected function open() {
@@ -256,6 +256,56 @@ abstract class OPEX_Writer {
 			throw new RuntimeException( 'Could not open export file for writing.' );
 		}
 		return $handle;
+	}
+
+	/**
+	 * Writes every byte of the text, or throws. A full disk or a quota can
+	 * make fwrite() write only part of the text, so the rest is written in
+	 * a loop. A failed write, or one that writes nothing, stops the export,
+	 * so a cut-off file is never reported as finished.
+	 *
+	 * @param resource $handle Open file handle.
+	 * @param string   $data   Text to write.
+	 * @return void
+	 * @throws OPEX_User_Error When the text cannot be written in full.
+	 */
+	protected function write_all( $handle, string $data ): void {
+		$total = strlen( $data );
+		$done  = 0;
+		while ( $done < $total ) {
+			$wrote = $this->write_chunk( $handle, 0 === $done ? $data : substr( $data, $done ) );
+			if ( false === $wrote || $wrote <= 0 ) {
+				throw new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
+			}
+			$done += $wrote;
+		}
+	}
+
+	/**
+	 * Writes the whole text to a fresh handle on the output file and closes it.
+	 *
+	 * @param string $data Text to append.
+	 * @return void
+	 * @throws OPEX_User_Error When the text cannot be written in full.
+	 */
+	protected function append_text( string $data ): void {
+		$handle = $this->open();
+		try {
+			$this->write_all( $handle, $data );
+		} finally {
+			fclose( $handle );
+		}
+	}
+
+	/**
+	 * One fwrite() call. Kept apart so a test can stand in for a full disk.
+	 *
+	 * @param resource $handle Open file handle.
+	 * @param string   $data   Text to write.
+	 * @return int|false Bytes written, or false on failure.
+	 */
+	protected function write_chunk( $handle, string $data ) {
+		return fwrite( $handle, $data );
 	}
 }
 

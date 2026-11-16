@@ -68,6 +68,30 @@ class OPEX_Destinations {
 	}
 
 	/**
+	 * Updates a destination with only the fields a request sent. A field
+	 * left out keeps its stored value, and a blank secret keeps the stored
+	 * one. The merge happens under the registry lock on the record as
+	 * stored now, so a field another request changed a moment ago is kept.
+	 *
+	 * @param string $id        Destination id.
+	 * @param array  $submitted Raw input, only the keys the request sent.
+	 * @return array|WP_Error The saved record, or an error (status 404 when the id is unknown).
+	 */
+	public static function update( string $id, array $submitted ) {
+		return OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$records ) use ( $submitted, $id ) {
+				$stored = '' !== $id ? ( $records[ $id ] ?? null ) : null;
+				if ( ! is_array( $stored ) ) {
+					return new WP_Error( 'opex_destination_missing', __( 'That destination does not exist.', 'open-export' ), array( 'status' => 404 ) );
+				}
+				unset( $stored['secret'] );
+				return self::build( $records, array_merge( $stored, $submitted ), $id );
+			}
+		);
+	}
+
+	/**
 	 * Validates a destination and adds it to the list.
 	 *
 	 * @param array  $records Stored destinations, changed in place on success.
@@ -201,23 +225,46 @@ class OPEX_Destinations {
 	 * Stores a host key fingerprint, only when none is stored yet. The first
 	 * successful connection wins, so a later change can never overwrite a pin.
 	 *
+	 * The connection record is the destination as the connection read it.
+	 * When given, the pin is stored only if the stored destination still has
+	 * the same type, host and port. Someone may have pointed it at another
+	 * server while the transfer ran, and that server's key is not this one.
+	 * The check runs under the registry lock, on the record as stored now.
+	 *
 	 * @param string $id          Destination id.
 	 * @param string $fingerprint Fingerprint such as SHA256:<base64>.
+	 * @param array  $connection  Destination record the connection used, or empty to skip the check.
 	 * @return void
 	 */
-	public static function pin_host_key( string $id, string $fingerprint ): void {
+	public static function pin_host_key( string $id, string $fingerprint, array $connection = array() ): void {
 		if ( 1 !== preg_match( '/^SHA256:[A-Za-z0-9+\/]{43}$/', $fingerprint ) ) {
 			return;
 		}
 		OPEX_Store::change(
 			self::OPTION,
-			static function ( array &$records ) use ( $id, $fingerprint ): void {
+			static function ( array &$records ) use ( $id, $fingerprint, $connection ): void {
 				if ( ! isset( $records[ $id ] ) || ! is_array( $records[ $id ] ) || '' !== (string) ( $records[ $id ]['host_key'] ?? '' ) ) {
+					return;
+				}
+				if ( $connection && ! self::same_server( $records[ $id ], $connection ) ) {
 					return;
 				}
 				$records[ $id ]['host_key'] = $fingerprint;
 			}
 		);
+	}
+
+	/**
+	 * Whether two destination records point at the same server.
+	 *
+	 * @param array $stored     Record as stored now.
+	 * @param array $connection Record a connection used.
+	 * @return bool True when type, host and port all match.
+	 */
+	private static function same_server( array $stored, array $connection ): bool {
+		return (string) ( $stored['type'] ?? '' ) === (string) ( $connection['type'] ?? '' )
+			&& (string) ( $stored['host'] ?? '' ) === (string) ( $connection['host'] ?? '' )
+			&& (int) ( $stored['port'] ?? 0 ) === (int) ( $connection['port'] ?? 0 );
 	}
 
 	/**

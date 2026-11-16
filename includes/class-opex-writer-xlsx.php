@@ -151,7 +151,9 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param string $rows  Sidecar path.
 	 * @param string $sheet Output path.
-	 * @throws RuntimeException When a file cannot be read or written.
+	 * @return void
+	 * @throws RuntimeException When a file cannot be opened or read, or (as
+	 *                          OPEX_User_Error) when the sheet cannot be written in full.
 	 */
 	private function build_sheet( string $rows, string $sheet ): void {
 		$out = fopen( $sheet, 'wb' );
@@ -159,17 +161,29 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 		if ( false === $out || false === $in ) {
 			throw new RuntimeException( 'Could not write the Excel file.' );
 		}
-		$ok = false !== fwrite(
-			$out,
-			'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
-			. '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
-		)
-			&& false !== stream_copy_to_stream( $in, $out )
-			&& false !== fwrite( $out, '</sheetData></worksheet>' );
-		fclose( $in );
-		fclose( $out );
-		if ( ! $ok ) {
-			throw new RuntimeException( 'Could not write the Excel file.' );
+		$done = false;
+		try {
+			$this->write_all(
+				$out,
+				'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+				. '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+			);
+			// Copied in chunks through write_all, so a short write on a full disk stops the build.
+			while ( ! feof( $in ) ) {
+				$chunk = fread( $in, 1048576 );
+				if ( false === $chunk ) {
+					throw new RuntimeException( 'Could not read the Excel export data.' );
+				}
+				$this->write_all( $out, $chunk );
+			}
+			$this->write_all( $out, '</sheetData></worksheet>' );
+			$done = true;
+		} finally {
+			fclose( $in );
+			fclose( $out );
+			if ( ! $done ) {
+				@unlink( $sheet ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
 		}
 	}
 
@@ -178,8 +192,10 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param array $lines  List of lists of string cell values.
 	 * @param bool  $header True for the bold header row.
-	 * @throws OPEX_User_Error When the sheet is full or was never started.
-	 * @throws RuntimeException When the sidecar cannot be written.
+	 * @return void
+	 * @throws OPEX_User_Error When the sheet is full, was never started, or the
+	 *                         sidecar cannot be written in full.
+	 * @throws RuntimeException When the sidecar cannot be opened.
 	 */
 	private function write_rows( array $lines, bool $header ): void {
 		$counter = $this->counter_path();
@@ -196,10 +212,15 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			++$next;
 		}
 		$handle = fopen( $this->rows_path(), 'ab' );
-		if ( false === $handle || false === fwrite( $handle, $xml ) ) {
+		if ( false === $handle ) {
 			throw new RuntimeException( 'Could not write the Excel export data.' );
 		}
-		fclose( $handle );
+		try {
+			$this->write_all( $handle, $xml );
+		} finally {
+			fclose( $handle );
+		}
+		// The row counter moves on only after every row reached the sidecar.
 		$this->write_file( $counter, (string) $next );
 	}
 
@@ -221,7 +242,7 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 			if ( '' === $value ) {
 				continue;
 			}
-			if ( ! $header && 1 === preg_match( '/^-?(0|[1-9][0-9]{0,14})(\.[0-9]+)?$/', $value ) ) {
+			if ( ! $header && self::is_exact_number( $value ) ) {
 				$xml .= '<c r="' . $ref . '"><v>' . $value . '</v></c>';
 				continue;
 			}
@@ -229,6 +250,23 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 				. self::xml_escape( $value, true ) . '</t></is></c>';
 		}
 		return $xml . "</row>\n";
+	}
+
+	/**
+	 * Whether a value can be a number cell without changing. Excel keeps 15
+	 * significant digits, so a value with more, counted over the whole number
+	 * without its leading zeros, stays text. Leading-zero ids such as 007 are
+	 * text too, because Excel would drop the zeros.
+	 *
+	 * @param string $value Cell text.
+	 * @return bool True when Excel shows exactly this number.
+	 */
+	private static function is_exact_number( string $value ): bool {
+		if ( 1 !== preg_match( '/^-?(0|[1-9][0-9]*)(?:\.([0-9]+))?$/', $value, $m ) ) {
+			return false;
+		}
+		$digits = ltrim( $m[1] . ( $m[2] ?? '' ), '0' );
+		return strlen( $digits ) <= 15;
 	}
 
 	/**
@@ -253,11 +291,17 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	 *
 	 * @param string $file    Path.
 	 * @param string $content Content.
+	 * @return void
 	 * @throws RuntimeException When the file cannot be written.
+	 * @throws OPEX_User_Error When only part of the content was written.
 	 */
 	private function write_file( string $file, string $content ): void {
-		if ( false === file_put_contents( $file, $content, LOCK_EX ) ) {
+		$wrote = file_put_contents( $file, $content, LOCK_EX );
+		if ( false === $wrote ) {
 			throw new RuntimeException( 'Could not write the Excel export data.' );
+		}
+		if ( strlen( $content ) !== $wrote ) {
+			throw new OPEX_User_Error( esc_html__( 'The export file could not be written. The disk may be full.', 'open-export' ) );
 		}
 	}
 

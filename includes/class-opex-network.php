@@ -140,14 +140,19 @@ class OPEX_Network {
 	 * Count every site at job creation. A site without the source counts zero
 	 * and gets a note.
 	 *
-	 * @param array $query Config the query layer reads.
+	 * @param array         $query Config the query layer reads.
+	 * @param callable|null $tick  Optional. Renews the caller's lock before each site is counted.
 	 * @return array{sites: int[], total: int, notes: string[]}
+	 * @throws RuntimeException When the database reports an error.
 	 */
-	public static function plan( array $query ): array {
+	public static function plan( array $query, ?callable $tick = null ): array {
 		$sites = self::site_ids();
 		$total = 0;
 		$notes = array();
 		foreach ( $sites as $site_id ) {
+			if ( null !== $tick ) {
+				$tick();
+			}
 			$total += (int) self::in_site(
 				$site_id,
 				static function () use ( $query, $site_id, &$notes ): int {
@@ -174,7 +179,7 @@ class OPEX_Network {
 	 * @param array    $job    Job record.
 	 * @param array    $query  Config the query layer reads.
 	 * @param callable $guard  Refreshes the job lock. It runs on the job's own site.
-	 * @return array{items: array, cursor: int, done: bool, next_site: bool, note: string}
+	 * @return array{items: array, cursor: int|string, done: bool, next_site: bool, note: string}
 	 * @throws RuntimeException When the network is gone or the database reports an error.
 	 */
 	public static function batch( array $job, array $query, callable $guard ): array {
@@ -182,7 +187,7 @@ class OPEX_Network {
 		$index = (int) $job['site_index'];
 		$out   = array(
 			'items'     => array(),
-			'cursor'    => (int) $job['cursor'],
+			'cursor'    => is_string( $job['cursor'] ) ? $job['cursor'] : (int) $job['cursor'],
 			'done'      => true,
 			'next_site' => false,
 			'note'      => '',
@@ -207,7 +212,7 @@ class OPEX_Network {
 					$out['note'] = self::missing_note( $site_id, $state );
 					return $out;
 				}
-				$batch          = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $tick );
+				$batch          = OPEX_Query::batch( $query, $out['cursor'], (int) $config['batch_size'], $tick );
 				$batch['items'] = self::with_site_columns( OPEX_Acf_Spread::output( $batch['items'], $config, (array) $job['headers'] ), $site_id );
 				return array_merge( $out, $batch );
 			}
@@ -304,8 +309,13 @@ class OPEX_Network {
 	 * so after switching sites one registered by a plugin that is active only
 	 * on the first site still looks present. Its content decides instead.
 	 *
+	 * A failed existence query is an error, never "empty": a site whose table
+	 * cannot be read must stop the export, not be skipped while the
+	 * watermark moves on.
+	 *
 	 * @param string $source_id Source id.
 	 * @return string One of ok, missing or empty.
+	 * @throws RuntimeException When the database reports an error.
 	 */
 	public static function source_state( string $source_id ): string {
 		global $wpdb;
@@ -319,14 +329,30 @@ class OPEX_Network {
 		if ( 'posts' === ( $src['type'] ?? '' ) && 0 === strpos( $source_id, 'posts:' ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one existence check per site, at job creation and per batch.
 			$any = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s LIMIT 1", substr( $source_id, 6 ) ) );
+			self::stop_on_error();
 			return null === $any ? 'empty' : 'ok';
 		}
 		if ( 0 === strpos( $source_id, 'terms:' ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one existence check per site, at job creation and per batch.
 			$any = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s LIMIT 1", substr( $source_id, 6 ) ) );
+			self::stop_on_error();
 			return null === $any ? 'empty' : 'ok';
 		}
 		return 'ok';
+	}
+
+	/**
+	 * Throws when the last query failed. The text stays generic: the job
+	 * shows its own message, and the database error can hold server detail.
+	 *
+	 * @return void
+	 * @throws RuntimeException When the database reports an error.
+	 */
+	private static function stop_on_error(): void {
+		global $wpdb;
+		if ( '' !== (string) $wpdb->last_error ) {
+			throw new RuntimeException( 'A site of the network could not be read.' );
+		}
 	}
 
 	/**

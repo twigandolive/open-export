@@ -50,18 +50,24 @@ class OPEX_Query_Fetch {
 	/**
 	 * Fetch one batch. Returns:
 	 *   items:  list of assoc arrays keyed by field id, in $config['fields'] order
-	 *   cursor: opaque int to pass back for the next batch
+	 *   cursor: opaque value to pass back, unchanged, for the next batch
 	 *   done:   true when the source is exhausted
+	 *   note:   only when the batch has something to tell the job, such as an
+	 *           ACF field cut at its row limit
+	 *
+	 * A raw table's key may be zero, negative or above PHP_INT_MAX, so its
+	 * cursor is an integer when the key fits and is above zero, else the key
+	 * as digit text. The integer 0 always means "from the start".
 	 *
 	 * @param array         $config Export config.
-	 * @param int           $cursor Last primary key read, 0 to start.
+	 * @param int|string    $cursor Last primary key read (or rows read when offset paging), 0 to start.
 	 * @param int           $limit  Most rows to read.
 	 * @param callable|null $tick   Called now and then while rows are assembled, so a
 	 *                              long batch can refresh its lock.
 	 * @return array The rows, the cursor for the next call, and whether the source is used up.
-	 * @throws RuntimeException When the database reports an error.
+	 * @throws RuntimeException When the database reports an error, or a raw table cursor is not a whole number.
 	 */
-	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {
+	public static function batch( array $config, $cursor, int $limit, $tick = null ): array {
 		global $wpdb;
 
 		$src = OPEX_Query::parse_source( $config['source'] );
@@ -78,15 +84,18 @@ class OPEX_Query_Fetch {
 		list( $from, $where, $args, $pk ) = self::build_query_parts( $src, $config );
 
 		$select = self::select_list( $src, $config['fields'] );
+		$table  = 'table' === $src['type'];
 
 		if ( $pk ) {
-			$where_full  = ( $where ? "({$where}) AND " : '' ) . "{$pk} > %d";
-			$args_full   = array_merge( $args, array( $cursor ) );
-			$sql         = "SELECT {$select} FROM {$from} WHERE {$where_full} ORDER BY {$pk} ASC LIMIT %d";
-			$args_full[] = $limit;
+			list( $after, $after_args ) = $table ? self::table_key_after( $pk, $cursor ) : array( "{$pk} > %d", array( (int) $cursor ) );
+			$conds                      = array_values( array_filter( array( $where ? "({$where})" : '', $after ), 'strlen' ) );
+			$sql                        = "SELECT {$select} FROM {$from}" . ( $conds ? ' WHERE ' . implode( ' AND ', $conds ) : '' ) . " ORDER BY {$pk} ASC LIMIT %d";
+			$args_full                  = array_merge( $args, $after_args, array( $limit ) );
 		} else {
 			// No usable single-column integer key: offset paging, ordered by the
 			// primary key columns when the table has any so pages never overlap.
+			// The cursor counts rows read.
+			$cursor    = (int) $cursor;
 			$order     = 'table' === $src['type'] ? self::table_order( $src['table'] ) : '';
 			$sql       = "SELECT {$select} FROM {$from}" . ( $where ? " WHERE {$where}" : '' ) . ( $order ? " ORDER BY {$order}" : '' ) . ' LIMIT %d OFFSET %d';
 			$args_full = array_merge( $args, array( $limit, $cursor ) );
@@ -119,18 +128,86 @@ class OPEX_Query_Fetch {
 
 		if ( $pk && $rows ) {
 			$last       = end( $rows );
-			$new_cursor = (int) $last->{$pk_prop};
+			$new_cursor = $table ? self::table_cursor( $last->{$pk_prop} ?? null ) : (int) $last->{$pk_prop};
 		} elseif ( ! $pk ) {
 			$new_cursor = $cursor + count( $rows );
 		}
 
+		OPEX_Acf::take_cut();
 		$items = OPEX_Query_Rows::assemble( $src, $rows, $config['fields'], $tick );
-
-		return array(
+		$out   = array(
 			'items'  => $items,
 			'cursor' => $new_cursor,
 			'done'   => $done,
 		);
+		$note  = OPEX_Acf::cut_note( OPEX_Acf::take_cut() );
+		if ( '' !== $note ) {
+			$out['note'] = $note;
+		}
+		return $out;
+	}
+
+	/**
+	 * The paging condition of a raw table: rows after the cursor key.
+	 *
+	 * The integer 0 is a fresh start, so there is no lower bound and keys of
+	 * zero and below are read too. Any other cursor is a whole number, as an
+	 * integer or as digit text. One that fits a PHP integer is bound with %d,
+	 * as before. A larger one (an unsigned BIGINT key) is bound as text and
+	 * cast to a number in SQL, so it is never cut down to PHP_INT_MAX.
+	 *
+	 * @param string     $pk     Quoted key column.
+	 * @param int|string $cursor Cursor from the last batch, 0 to start.
+	 * @return array{0: string, 1: array} The condition ('' for none) and its values.
+	 * @throws RuntimeException When the cursor is not a whole number.
+	 */
+	private static function table_key_after( string $pk, $cursor ): array {
+		if ( 0 === $cursor ) {
+			return array( '', array() );
+		}
+		$key = self::whole_number( $cursor );
+		if ( null === $key ) {
+			throw new RuntimeException( 'The export cursor is not a whole number.' );
+		}
+		if ( (string) (int) $key === $key ) {
+			return array( "{$pk} > %d", array( (int) $key ) );
+		}
+		$cast = '-' === $key[0] ? 'SIGNED' : 'UNSIGNED';
+		return array( "{$pk} > CAST(%s AS {$cast})", array( $key ) );
+	}
+
+	/**
+	 * The cursor after a raw table batch: the last key as an integer when it
+	 * is above zero and fits, else as digit text, so it can never be read as
+	 * the fresh start (0) or cut down to PHP_INT_MAX.
+	 *
+	 * @param mixed $key The last key read.
+	 * @return int|string The cursor for the next batch.
+	 * @throws RuntimeException When the key is not a whole number, which would stop paging from moving on.
+	 */
+	private static function table_cursor( $key ) {
+		$text = self::whole_number( $key );
+		if ( null === $text ) {
+			throw new RuntimeException( 'The table key holds a value that is not a whole number.' );
+		}
+		$int = (int) $text;
+		return ( $int > 0 && (string) $int === $text ) ? $int : $text;
+	}
+
+	/**
+	 * A whole number in plain digits, with no leading zeros, or null.
+	 *
+	 * @param mixed $value An integer or digit text.
+	 * @return string|null The number as text, or null when it is not a whole number.
+	 */
+	private static function whole_number( $value ): ?string {
+		if ( is_int( $value ) ) {
+			return (string) $value;
+		}
+		if ( ! is_string( $value ) || 1 !== preg_match( '/^(-?)0*(\d+)$/', trim( $value ), $m ) ) {
+			return null;
+		}
+		return '0' === $m[2] ? '0' : $m[1] . $m[2];
 	}
 
 	/**

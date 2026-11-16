@@ -165,11 +165,14 @@ class OPEX_CLI_Runner {
 	}
 
 	/**
-	 * Work a started job to the end, deliver, copy the file and report.
+	 * Work a started job to the end, deliver, copy the file and report. A
+	 * failed delivery prints the file path and each delivery error, then
+	 * exits with code 1.
 	 *
 	 * @param array  $job        Job that has started.
 	 * @param string $dest       Path to copy the finished file to, or '' for none.
-	 * @param array  $assoc_args Named command line arguments, read for --porcelain.
+	 * @param array  $assoc_args Named command line arguments, read for --porcelain and --force.
+	 * @return void
 	 */
 	public static function finish_job( array $job, string $dest, array $assoc_args ): void {
 		$porcelain = ! empty( $assoc_args['porcelain'] );
@@ -205,24 +208,118 @@ class OPEX_CLI_Runner {
 			WP_CLI::error( 'The export finished but its file is missing.' );
 		}
 		if ( '' !== $dest ) {
-			// Copy next to the target, then rename, so the target is never half written.
-			// WP_Filesystem is not used: it may ask for FTP credentials, which a shell run cannot answer.
-			$part = $dest . '.opex-part';
-			if ( ! copy( $path, $part ) || ! rename( $part, $dest ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
-				wp_delete_file( $part );
-				WP_CLI::error( 'Could not write the --output file.' );
+			$published = self::publish( $path, $dest, ! empty( $assoc_args['force'] ) );
+			if ( true !== $published ) {
+				WP_CLI::error( $published );
 			}
 			$path = $dest;
 		}
+		$failed = 0;
 		foreach ( (array) ( $record['deliveries'] ?? array() ) as $item ) {
 			if ( 'failed' === ( $item['status'] ?? '' ) ) {
+				++$failed;
 				WP_CLI::warning( sprintf( 'Delivery by %1$s failed: %2$s', (string) $item['channel'], (string) ( $item['message'] ?? '' ) ) );
 			}
 		}
 		if ( $porcelain ) {
 			WP_CLI::line( $path );
-			return;
+		} elseif ( 0 === $failed ) {
+			WP_CLI::success( sprintf( 'Exported %1$d row(s) to %2$s', (int) $job['processed'], $path ) );
+		} else {
+			WP_CLI::log( sprintf( 'Exported %1$d row(s) to %2$s', (int) $job['processed'], $path ) );
 		}
-		WP_CLI::success( sprintf( 'Exported %1$d row(s) to %2$s', (int) $job['processed'], $path ) );
+		if ( $failed > 0 ) {
+			// A shell script must see a failed delivery, so the command fails after reporting the file.
+			WP_CLI::error( sprintf( '%d delivery(ies) failed. The export file was written, and failed deliveries are tried again later.', $failed ) );
+		}
+	}
+
+	/**
+	 * Copy the finished file to --output without ever leaving it half written.
+	 *
+	 * The copy goes to a temporary file of its own in the target folder,
+	 * made with an exclusive create under a random name, so two runs never
+	 * share one. With --force it is renamed over the target. Without it the
+	 * copy is published with link(), which fails when a file already has the
+	 * target name, so a file that appeared while the export ran is never
+	 * replaced. Where the file system has no hard links, an exclusive create
+	 * of the target takes its place. The temporary file is removed on every path.
+	 *
+	 * @param string $source Finished export file.
+	 * @param string $dest   Full --output path.
+	 * @param bool   $force  True when --force was given.
+	 * @return true|string True, or the error to print.
+	 */
+	public static function publish( string $source, string $dest, bool $force ) {
+		$temp = self::temp_copy( $source, dirname( $dest ) . '/.' . basename( $dest ) );
+		if ( '' === $temp ) {
+			return 'Could not write the --output file.';
+		}
+		try {
+			// WP_Filesystem is not used: it may ask for FTP credentials, which a shell run cannot answer.
+			if ( $force ) {
+				return rename( $temp, $dest ) ? true : 'Could not write the --output file.'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
+			}
+			if ( @link( $temp, $dest ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a refusal is the expected answer when the file exists.
+				return true;
+			}
+			if ( file_exists( $dest ) || is_link( $dest ) ) {
+				return 'The --output file appeared while the export ran. Add --force to overwrite it.';
+			}
+			return self::exclusive_copy( $temp, $dest ) ? true : 'Could not write the --output file.';
+		} finally {
+			if ( file_exists( $temp ) ) {
+				wp_delete_file( $temp );
+			}
+		}
+	}
+
+	/**
+	 * Copy a file to a new, unique file whose name starts with a prefix.
+	 *
+	 * @param string $source File to copy.
+	 * @param string $prefix Path and start of the name for the copy.
+	 * @return string Path of the copy, or '' when it could not be made.
+	 */
+	private static function temp_copy( string $source, string $prefix ): string {
+		for ( $try = 0; $try < 5; $try++ ) {
+			$temp = $prefix . '.' . bin2hex( random_bytes( 6 ) ) . '.opex-part';
+			if ( self::exclusive_copy( $source, $temp ) ) {
+				return $temp;
+			}
+			if ( ! file_exists( $temp ) ) {
+				return ''; // Not a name clash: the folder refused the file.
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Copy a file to a path that must not exist yet. The target is created
+	 * with an exclusive create, so an existing file is never touched, and a
+	 * partial copy is removed.
+	 *
+	 * @param string $source File to copy.
+	 * @param string $target New file.
+	 * @return bool True when every byte was copied.
+	 */
+	private static function exclusive_copy( string $source, string $target ): bool {
+		// phpcs:disable WordPress.WP.AlternativeFunctions -- a local file the shell user named, see publish().
+		$out = @fopen( $target, 'xb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- an existing file is an expected answer.
+		if ( false === $out ) {
+			return false;
+		}
+		$in     = fopen( $source, 'rb' );
+		$copied = false === $in ? false : stream_copy_to_stream( $in, $out );
+		$ok     = false !== $copied && (int) filesize( $source ) === (int) $copied;
+		if ( false !== $in ) {
+			fclose( $in );
+		}
+		$ok = fclose( $out ) && $ok;
+		// phpcs:enable
+		if ( ! $ok ) {
+			wp_delete_file( $target );
+		}
+		return $ok;
 	}
 }

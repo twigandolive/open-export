@@ -33,6 +33,13 @@ class OPEX_Delivery {
 	private const CHANNELS    = array( 'email', 'webhook', 'destination' );
 
 	/**
+	 * Renews the lock of the delivery run in progress, or null. See keep_alive().
+	 *
+	 * @var callable|null
+	 */
+	private static $keep_alive = null;
+
+	/**
 	 * Cleans delivery settings from the browser or a schedule.
 	 *
 	 * A blank webhook secret keeps the one in $previous. The webhook input
@@ -83,15 +90,24 @@ class OPEX_Delivery {
 			$notes[] = __( 'Webhook delivery was turned off because its URL must use https unless it points at this site.', 'open-export' );
 		}
 		$secret = (string) ( $hook['secret'] ?? '' );
+		$lost   = false;
 		if ( '' !== $secret && ! OPEX_Secrets::is_encrypted( $secret ) ) {
-			$secret = OPEX_Secrets::encrypt( mb_substr( $secret, 0, self::MAX_SECRET ) );
+			$secret = static::encrypt_secret( mb_substr( $secret, 0, self::MAX_SECRET ) );
+			// A secret that was given but cannot be stored safely is not the same as no secret.
+			$lost = '' === $secret;
 		}
 		if ( '' === $secret ) {
 			$kept = (string) ( $previous['webhook']['secret'] ?? '' );
 			if ( '' !== $kept && ! OPEX_Secrets::is_encrypted( $kept ) ) {
-				$kept = OPEX_Secrets::encrypt( mb_substr( $kept, 0, self::MAX_SECRET ) ); // A plain value saved by an older build.
+				$kept = static::encrypt_secret( mb_substr( $kept, 0, self::MAX_SECRET ) ); // A plain value saved by an older build.
+				$lost = $lost || ( '' === $kept && empty( $hook['clear_secret'] ) );
 			}
 			$secret = empty( $hook['clear_secret'] ) ? $kept : '';
+		}
+		// Without its secret the webhook would go out unsigned, so it stays off until the secret is saved.
+		if ( $lost && $hon ) {
+			$hon     = false;
+			$notes[] = __( 'Webhook delivery was turned off because its signing secret could not be stored securely. This server needs the sodium extension. Save the secret again once it is available.', 'open-export' );
 		}
 
 		$dest = is_array( $raw['destination'] ?? null ) ? $raw['destination'] : array();
@@ -122,6 +138,17 @@ class OPEX_Delivery {
 	}
 
 	/**
+	 * Encrypts a webhook secret. Kept apart so a test can stand in for a
+	 * server where encryption fails.
+	 *
+	 * @param string $plain The secret as typed.
+	 * @return string The stored form, or '' when it cannot be encrypted.
+	 */
+	protected static function encrypt_secret( string $plain ): string {
+		return OPEX_Secrets::encrypt( $plain );
+	}
+
+	/**
 	 * Builds the pending items for the enabled channels.
 	 *
 	 * @param array $delivery Sanitized delivery settings.
@@ -146,42 +173,78 @@ class OPEX_Delivery {
 	/**
 	 * Runs each pending or retryable item once.
 	 *
-	 * @param array $job      Job record (uses its deliveries list when present).
-	 * @param array $delivery Delivery settings the items came from.
-	 * @param bool  $now      True when a person asked to retry now, so the wait between attempts is skipped.
-	 * @return array The updated deliveries list. The caller saves it.
+	 * With $step, the caller keeps its delivery lock alive and saves as it
+	 * goes. It is called before each channel as `$step( $i, null )` and after
+	 * it as `$step( $i, $item )` with the item's new result, which it should
+	 * save at once, so a crash later never sends that channel again. A
+	 * channel that calls keep_alive() during a long transfer reaches it as
+	 * `$step( -1, null )`, which should only renew the lock. When it
+	 * returns false (the caller lost its lock), processing stops: nothing
+	 * more is sent and the list comes back as it is.
+	 *
+	 * @param array         $job      Job record (uses its deliveries list when present).
+	 * @param array         $delivery Delivery settings the items came from.
+	 * @param bool          $now      True when a person asked to retry now, so the wait between attempts is skipped.
+	 * @param callable|null $step     Optional. See above.
+	 * @return array The updated deliveries list.
 	 */
-	public static function process( array $job, array $delivery, bool $now = false ): array {
+	public static function process( array $job, array $delivery, bool $now = false, ?callable $step = null ): array {
 		$items = isset( $job['deliveries'] ) && is_array( $job['deliveries'] ) ? array_values( $job['deliveries'] ) : self::plan( $delivery );
 		$path  = OPEX_Jobs::file_path( $job );
 
-		foreach ( $items as $i => $item ) {
-			if ( ! is_array( $item ) || ! isset( $item['channel'] ) ) {
-				continue;
-			}
-			$status   = (string) ( $item['status'] ?? 'pending' );
-			$attempts = (int) ( $item['attempts'] ?? 0 );
-			if ( 'sent' === $status || $attempts >= self::MAX_ATTEMPTS || ! in_array( $status, array( 'pending', 'failed' ), true ) ) {
-				continue;
-			}
-			if ( ! $now && $attempts > 0 && self::due_at( $item ) > time() ) {
-				continue;
-			}
+		$outer            = self::$keep_alive;
+		self::$keep_alive = null === $step ? null : static function () use ( $step ): bool {
+			return (bool) $step( -1, null );
+		};
+		try {
+			foreach ( $items as $i => $item ) {
+				if ( ! is_array( $item ) || ! isset( $item['channel'] ) ) {
+					continue;
+				}
+				$status   = (string) ( $item['status'] ?? 'pending' );
+				$attempts = (int) ( $item['attempts'] ?? 0 );
+				if ( 'sent' === $status || $attempts >= self::MAX_ATTEMPTS || ! in_array( $status, array( 'pending', 'failed' ), true ) ) {
+					continue;
+				}
+				if ( ! $now && $attempts > 0 && self::due_at( $item ) > time() ) {
+					continue;
+				}
+				if ( null !== $step && ! $step( $i, null ) ) {
+					break;
+				}
 
-			$result = self::run_channel( (string) $item['channel'], $job, $delivery, $path );
+				$result = self::run_channel( (string) $item['channel'], $job, $delivery, $path );
 
-			$item['attempts'] = $attempts + 1;
-			$item['time']     = time();
-			if ( true === $result ) {
-				$item['status']  = 'sent';
-				$item['message'] = '';
-			} else {
-				$item['status']  = 'failed';
-				$item['message'] = mb_substr( is_wp_error( $result ) ? $result->get_error_message() : __( 'The delivery failed.', 'open-export' ), 0, 300 );
+				$item['attempts'] = $attempts + 1;
+				$item['time']     = time();
+				if ( true === $result ) {
+					$item['status']  = 'sent';
+					$item['message'] = '';
+				} else {
+					$item['status']  = 'failed';
+					$item['message'] = mb_substr( is_wp_error( $result ) ? $result->get_error_message() : __( 'The delivery failed.', 'open-export' ), 0, 300 );
+				}
+				$items[ $i ] = $item;
+				if ( null !== $step && ! $step( $i, $item ) ) {
+					break;
+				}
 			}
-			$items[ $i ] = $item;
+		} finally {
+			self::$keep_alive = $outer;
 		}
 		return $items;
+	}
+
+	/**
+	 * For a channel in the middle of a long transfer: renews the lock of the
+	 * delivery run that called it. A channel may call it between chunks and
+	 * stop when it returns false, because another worker owns the delivery.
+	 * Outside a run with a step callback it does nothing and returns true.
+	 *
+	 * @return bool False when the delivery run lost its lock.
+	 */
+	public static function keep_alive(): bool {
+		return null === self::$keep_alive || (bool) ( self::$keep_alive )();
 	}
 
 	/**

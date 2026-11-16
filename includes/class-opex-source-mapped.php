@@ -13,7 +13,7 @@
  *   `terms` it is made of.
  *
  * Other keys: `group` (picker group), `type` (capability document type),
- * `format` (money, flag, local, utc, epoch or list), `values` (legal values),
+ * `format` (money, decimal, flag, local, utc, epoch or list), `values` (legal values),
  * and `terms` (the taxonomy a term-list field is made of).
  *
  * @package Open_Export
@@ -259,6 +259,8 @@ trait OPEX_Source_Mapped {
 		switch ( $format ) {
 			case 'money':
 				return OPEX_Money::format( $value, OPEX_Woo_Format::price_decimals() );
+			case 'decimal':
+				return self::decimal_text( $value );
 			case 'flag':
 				return OPEX_Woo_Format::flag( $value );
 			case 'local':
@@ -304,6 +306,22 @@ trait OPEX_Source_Mapped {
 	 */
 	public function field_values( string $field ): array {
 		return array_values( (array) ( $this->def( $field )['values'] ?? array() ) );
+	}
+
+	/**
+	 * A stored decimal padded to the price decimals like money, but never
+	 * rounded: a value with more places keeps all of them.
+	 *
+	 * @param string $value Stored text.
+	 * @return string The number as text.
+	 */
+	private static function decimal_text( string $value ): string {
+		$places = preg_match( '/\.(\d+)$/', trim( $value ), $m ) ? strlen( $m[1] ) : 0;
+		// OPEX_Money rounds past 8 places, so such a value is left as stored.
+		if ( $places > 8 ) {
+			return $value;
+		}
+		return OPEX_Money::format( $value, max( OPEX_Woo_Format::price_decimals(), $places ) );
 	}
 
 	/**

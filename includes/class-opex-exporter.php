@@ -72,36 +72,53 @@ class OPEX_Exporter {
 	/**
 	 * Create a job: count, open the file, write the format header.
 	 *
-	 * @param array  $config Sanitized export config.
-	 * @param string $label  Name shown in the job list.
-	 * @param array  $extra  Optional: mode, schedule_id, origin, delivery, since, delivery_name, notes.
+	 * @param array         $config Sanitized export config.
+	 * @param string        $label  Name shown in the job list.
+	 * @param array         $extra  Optional: mode, schedule_id, origin, delivery, since, delivery_name, notes, generation.
+	 * @param callable|null $guard  Optional. Renews the caller's lock and returns false once it is lost.
+	 *                              It runs while the rows are counted and once more right before the
+	 *                              job is saved. When it returns false then, no job is saved.
 	 * @return array|WP_Error The exposed job, or an error.
+	 * @throws OPEX_User_Error Only an unexpected one: the busy error of the store becomes a WP_Error.
 	 */
-	public static function create( array $config, string $label, array $extra = array() ) {
+	public static function create( array $config, string $label, array $extra = array(), ?callable $guard = null ) {
 		// On a network, decide once whether this job may reach shared data. See OPEX_Access::job_wide.
 		$extra['wide'] = OPEX_Access::job_wide( (string) ( $config['source'] ?? '' ), $extra );
 		if ( is_wp_error( $extra['wide'] ) ) {
 			return $extra['wide'];
 		}
-		return OPEX_Access::scope(
-			$extra['wide'],
-			static function () use ( $config, $label, $extra ) {
-				return self::start( $config, $label, $extra );
+		try {
+			return OPEX_Access::scope(
+				$extra['wide'],
+				static function () use ( $config, $label, $extra, $guard ) {
+					return self::start( $config, $label, $extra, $guard );
+				}
+			);
+		} catch ( OPEX_User_Error $e ) {
+			if ( ! OPEX_Store::is_busy( $e ) ) {
+				throw $e;
 			}
-		);
+			return new WP_Error( 'opex_busy', $e->getMessage(), array( 'status' => 503 ) );
+		}
 	}
 
 	/**
 	 * The body of create(), run inside the job's access scope.
 	 *
-	 * @param array  $config Sanitized export config.
-	 * @param string $label  Name shown in the job list.
-	 * @param array  $extra  See create().
+	 * @param array         $config Sanitized export config.
+	 * @param string        $label  Name shown in the job list.
+	 * @param array         $extra  See create().
+	 * @param callable|null $guard  See create().
 	 * @return array|WP_Error The exposed job, or an error.
+	 * @throws OPEX_User_Error When the job could not be saved (see OPEX_Store::change).
 	 */
-	private static function start( array $config, string $label, array $extra ) {
-		$config = self::freeze_date_range( $config );
-		$since  = self::clean_since( $extra['since'] ?? array(), $config );
+	private static function start( array $config, string $label, array $extra, ?callable $guard = null ) {
+		// The start time is the job's created time and the next watermark. It is
+		// taken before any source query, so a row added while the rows are
+		// counted is after the watermark and the next run still finds it.
+		$started = time();
+		$config  = self::freeze_date_range( $config );
+		$since   = self::clean_since( $extra['since'] ?? array(), $config );
 		if ( is_wp_error( $since ) ) {
 			return $since;
 		}
@@ -118,9 +135,12 @@ class OPEX_Exporter {
 		);
 		try {
 			if ( $network ) {
-				$plan = OPEX_Network::plan( self::query_config( $config, $since ) );
+				$plan = OPEX_Network::plan( self::query_config( $config, $since ), $guard );
 			} else {
 				$plan['total'] = OPEX_Query::count( self::query_config( $config, $since ) );
+			}
+			if ( null !== $guard ) {
+				$guard(); // Renews the lock after a slow count. Whether it still holds is checked before the save.
 			}
 			$total = $plan['total'];
 			// Spread ACF columns are counted now, so every batch writes the same columns.
@@ -148,7 +168,7 @@ class OPEX_Exporter {
 			'total'         => $total,
 			'processed'     => 0,
 			'cursor'        => 0,
-			'created'       => time(),
+			'created'       => $started,
 			'filename'      => $filename,
 			'filesize'      => 0,
 			'error'         => '',
@@ -164,6 +184,7 @@ class OPEX_Exporter {
 			'sites'         => $plan['sites'],
 			'site_index'    => 0,
 			'wide'          => ! empty( $extra['wide'] ),
+			'generation'    => preg_match( '/^g[a-f0-9]{12}$/', (string) ( $extra['generation'] ?? '' ) ) ? (string) $extra['generation'] : '',
 		);
 
 		$plain = $job;
@@ -186,15 +207,50 @@ class OPEX_Exporter {
 			return new WP_Error( 'opex_fs', self::public_error_message( $e ), array( 'status' => 500 ) );
 		}
 
-		OPEX_Jobs::save( $job );
+		// A caller whose lock ran out while the rows were counted no longer
+		// owns the start: another request may be starting the same thing.
+		if ( null !== $guard && ! $guard() ) {
+			OPEX_Jobs::discard_files( $job );
+			OPEX_Jobs::discard_files( $plain );
+			return new WP_Error( 'opex_busy', __( 'This export was started again elsewhere while it was being prepared.', 'open-export' ), array( 'status' => 409 ) );
+		}
+		try {
+			OPEX_Jobs::save( $job );
+		} catch ( OPEX_User_Error $e ) {
+			// Nothing was saved, so no job will ever own the file.
+			OPEX_Jobs::discard_files( $job );
+			OPEX_Jobs::discard_files( $plain );
+			throw $e;
+		}
 		if ( $plain['filename'] !== $job['filename'] ) {
 			OPEX_Compress::discard_plain( $plain );
 		}
 		if ( 'done' === $job['status'] ) {
-			do_action( 'opex_job_done', OPEX_Jobs::get( $id ) );
+			self::announce_done( OPEX_Jobs::get( $id ) );
 		}
 
 		return OPEX_Jobs::expose( OPEX_Jobs::get( $id ) );
+	}
+
+	/**
+	 * Fires `opex_job_done` for a job that is saved as done. A listener that
+	 * throws cannot undo that: the job stays done and the error goes to the
+	 * debug log, so a resume never runs a finished (and maybe zipped) job again.
+	 *
+	 * @param array|null $job The saved job.
+	 * @return void
+	 *
+	 * @internal Shared with OPEX_Export_Run only.
+	 */
+	public static function announce_done( ?array $job ): void {
+		if ( null === $job ) {
+			return;
+		}
+		try {
+			do_action( 'opex_job_done', $job );
+		} catch ( Throwable $e ) {
+			self::log_exception( $e );
+		}
 	}
 
 	/**

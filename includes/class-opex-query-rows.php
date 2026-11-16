@@ -283,18 +283,50 @@ class OPEX_Query_Rows {
 	/**
 	 * Decode serialized values to JSON for readable output.
 	 *
+	 * Stored text can come from any contributor, so it is read the way
+	 * maybe_unserialize() reads it but with classes turned off: PHP never
+	 * builds an object, so no class code (__wakeup, __destruct) can run. Only
+	 * stdClass is allowed, since it has no code. A value that holds any other
+	 * object is exported as its stored text.
+	 *
 	 * @param mixed $value Stored value.
-	 * @return string The value as text, with arrays and objects as JSON.
+	 * @return string The value as text, with arrays and plain objects as JSON.
 	 */
 	private static function flatten( $value ): string {
 		if ( is_null( $value ) ) {
 			return '';
 		}
-		$maybe = maybe_unserialize( (string) $value );
-		if ( is_array( $maybe ) || is_object( $maybe ) ) {
-			return (string) wp_json_encode( $maybe );
+		$text = (string) $value;
+		if ( ! is_serialized( $text ) ) {
+			return $text;
 		}
-		return (string) $value;
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors -- read with classes off, as maybe_unserialize() would but safely. A broken value reads as its text.
+		$data = @unserialize( trim( $text ), array( 'allowed_classes' => array( 'stdClass' ) ) );
+		if ( ( is_array( $data ) || is_object( $data ) ) && ! self::holds_class_object( $data ) ) {
+			return (string) wp_json_encode( $data );
+		}
+		return $text;
+	}
+
+	/**
+	 * Whether an unserialized value holds an object of a class that was not
+	 * allowed, which PHP leaves as __PHP_Incomplete_Class.
+	 *
+	 * @param mixed $data Unserialized value.
+	 * @return bool True when the value holds such an object at any depth.
+	 */
+	private static function holds_class_object( $data ): bool {
+		if ( is_object( $data ) && ! $data instanceof stdClass ) {
+			return true;
+		}
+		if ( is_array( $data ) || is_object( $data ) ) {
+			foreach ( (array) $data as $item ) {
+				if ( self::holds_class_object( $item ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

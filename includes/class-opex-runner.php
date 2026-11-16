@@ -236,8 +236,8 @@ class OPEX_Runner {
 			if ( ! $job || ! self::has_pending( $job ) ) {
 				return;
 			}
-			$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ) );
-			if ( self::save_deliveries( $job_id, $deliveries ) ) {
+			$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), false, self::step( $job_id, $token ) );
+			if ( self::save_deliveries( $job_id, $deliveries, $token ) ) {
 				self::queue_retry( $job_id, $deliveries );
 			}
 		} finally {
@@ -268,8 +268,8 @@ class OPEX_Runner {
 		try {
 			$job = OPEX_Jobs::get( $job_id );
 			if ( $job && self::has_pending( $job ) ) {
-				$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), true );
-				if ( self::save_deliveries( $job_id, $deliveries ) ) {
+				$deliveries = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), true, self::step( $job_id, $token ) );
+				if ( self::save_deliveries( $job_id, $deliveries, $token ) ) {
 					self::queue_retry( $job_id, $deliveries );
 				}
 			}
@@ -281,13 +281,55 @@ class OPEX_Runner {
 	}
 
 	/**
-	 * Store the delivery list on the job as it is stored now.
+	 * The step callback for OPEX_Delivery::process(). Before each channel it
+	 * renews the delivery lock and says stop when the lock is lost, so a
+	 * worker that took over never sends the same file twice with this one.
+	 * After each channel it saves that one item's result at once, under the
+	 * job registry lock and only while this worker still owns the delivery.
 	 *
 	 * @param string $job_id Job id.
-	 * @param array  $deliveries   The job's deliveries after this pass.
-	 * @return bool False when the job was deleted meanwhile.
+	 * @param string $token  This worker's delivery lock token.
+	 * @return callable The step callback: ( int $index, ?array $item ) => bool.
 	 */
-	private static function save_deliveries( string $job_id, array $deliveries ): bool {
+	private static function step( string $job_id, string $token ): callable {
+		return static function ( int $index, ?array $item ) use ( $job_id, $token ): bool {
+			if ( ! OPEX_Lock::refresh( 'deliver_' . $job_id, $token, self::DELIVER_LOCK ) ) {
+				return false;
+			}
+			if ( null === $item || $index < 0 ) {
+				return true;
+			}
+			$saved = OPEX_Jobs::update(
+				$job_id,
+				static function ( array $job ) use ( $index, $item ): ?array {
+					$list = array_values( (array) $job['deliveries'] );
+					// Only the same channel at the same place is replaced, never a list someone rebuilt.
+					if ( ! isset( $list[ $index ] ) || (string) ( $list[ $index ]['channel'] ?? '' ) !== (string) $item['channel'] ) {
+						return null;
+					}
+					$list[ $index ]    = $item;
+					$job['deliveries'] = $list;
+					return $job;
+				}
+			);
+			return null !== $saved;
+		};
+	}
+
+	/**
+	 * Store the delivery list on the job as it is stored now, but only while
+	 * this worker still owns the delivery lock. A worker whose lock ran out
+	 * must not put its older results over a newer worker's.
+	 *
+	 * @param string $job_id     Job id.
+	 * @param array  $deliveries The job's deliveries after this pass.
+	 * @param string $token      This worker's delivery lock token.
+	 * @return bool False when the job was deleted meanwhile or the lock was lost.
+	 */
+	private static function save_deliveries( string $job_id, array $deliveries, string $token ): bool {
+		if ( ! OPEX_Lock::refresh( 'deliver_' . $job_id, $token, self::DELIVER_LOCK ) ) {
+			return false;
+		}
 		$saved = OPEX_Jobs::update(
 			$job_id,
 			static function ( array $job ) use ( $deliveries ): array {

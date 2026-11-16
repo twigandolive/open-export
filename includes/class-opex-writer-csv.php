@@ -53,6 +53,13 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	private bool $quote_all;
 
 	/**
+	 * Memory stream that fputcsv writes each record into, opened on first use.
+	 *
+	 * @var resource|null
+	 */
+	private $temp = null;
+
+	/**
 	 * Sets up the CSV options. An unknown value falls back to the default.
 	 *
 	 * @param string $path      Output file path.
@@ -74,17 +81,18 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 
 	/**
 	 * Writes the byte order mark the encoding needs, then the header row.
+	 *
+	 * @return void
 	 */
 	public function start(): void {
-		$handle = $this->open();
+		$bom = '';
 		if ( 'utf16le' === $this->encoding ) {
-			fwrite( $handle, "\xFF\xFE" );
+			$bom = "\xFF\xFE";
 		} elseif ( 'utf8_bom' === $this->encoding ) {
 			// UTF-8 BOM so Excel opens accented characters correctly.
-			fwrite( $handle, "\xEF\xBB\xBF" );
+			$bom = "\xEF\xBB\xBF";
 		}
-		$this->put( $handle, array_map( array( __CLASS__, 'guard_cell' ), array_map( 'strval', array_values( $this->headers ) ) ) );
-		fclose( $handle );
+		$this->append_text( $bom . $this->record( array_map( 'strval', array_values( $this->headers ) ) ) );
 	}
 
 	/**
@@ -92,51 +100,83 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 *
 	 * @param array $rows        Rows keyed by field id.
 	 * @param bool  $first_batch Unused: CSV rows need no separator.
+	 * @return void
 	 */
 	public function append( array $rows, bool $first_batch ): void {
-		$handle = $this->open();
+		$out = '';
 		foreach ( $rows as $row ) {
 			$line = array();
 			foreach ( array_keys( $this->headers ) as $field ) {
-				$line[] = self::guard_cell( (string) ( $row[ $field ] ?? '' ) );
+				$line[] = (string) ( $row[ $field ] ?? '' );
 			}
-			$this->put( $handle, $line );
+			$out .= $this->record( $line );
 		}
-		fclose( $handle );
+		if ( '' !== $out ) {
+			$this->append_text( $out );
+		}
 	}
 
 	/**
 	 * CSV has nothing after the last row.
+	 *
+	 * @return void
 	 */
 	public function finish(): void {}
 
 	/**
-	 * Writes one record, applying the line ending and encoding options.
+	 * One record as bytes in the chosen encoding, line ending included.
+	 *
+	 * Each cell is put into the target encoding first. The formula guard and
+	 * the quoting then see the characters the file will really hold, so a
+	 * character that becomes a comma, a quote or "=" in Windows-1252 is
+	 * quoted or guarded like any other. Nothing after the quoting changes
+	 * which characters a cell holds.
 	 *
 	 * The escape argument is empty on purpose. With PHP's default backslash,
 	 * a cell holding a backslash before a quote is written in a way RFC 4180
 	 * readers (Excel, Google Sheets, Python's csv module) read back wrong.
 	 * Empty means a quote inside a cell is always doubled, the RFC rule.
 	 *
-	 * @param resource $handle Open file handle.
-	 * @param array    $fields Cell values.
+	 * @param array $fields Raw cell values, not yet guarded.
+	 * @return string The record, ready to write.
 	 */
-	private function put( $handle, array $fields ): void {
-		if ( ! $this->quote_all && in_array( $this->encoding, array( 'utf8_bom', 'utf8' ), true ) && 'lf' === $this->eol ) {
-			fputcsv( $handle, $fields, $this->delimiter, $this->enclosure, '' );
-			return;
+	private function record( array $fields ): string {
+		$cells = array();
+		foreach ( $fields as $field ) {
+			$cells[] = self::guard_cell( $this->encode_cell( (string) $field ) );
 		}
-		$line = $this->quote_all ? $this->quoted_line( $fields ) : $this->csv_line( $fields );
+		$line = $this->quote_all ? $this->quoted_line( $cells ) : $this->csv_line( $cells );
 		// Only the record terminator changes: breaks inside a quoted cell stay as they are.
 		if ( 'crlf' === $this->eol && "\n" === substr( $line, -1 ) ) {
 			$line = substr( $line, 0, -1 ) . "\r\n";
 		}
-		if ( 'win1252' === $this->encoding ) {
-			$line = $this->to_win1252( $line );
-		} elseif ( 'utf16le' === $this->encoding ) {
-			$line = $this->convert( $line, 'UTF-16LE' );
+		if ( 'utf16le' === $this->encoding ) {
+			// The cells are valid UTF-8 by now, so this maps each character one to one.
+			$line = $this->convert( $line, 'UTF-8', 'UTF-16LE' );
 		}
-		fwrite( $handle, $line );
+		return $line;
+	}
+
+	/**
+	 * One cell in the target encoding, before any quoting.
+	 *
+	 * Windows-1252 cells become their final single-byte form here. Quoting
+	 * works on those bytes, because every special character is ASCII and
+	 * Windows-1252 keeps ASCII as it is. UTF-16 LE cells go through UTF-16
+	 * and back, so text that cannot be encoded is replaced or dropped now,
+	 * before the guard and the quoting look at it.
+	 *
+	 * @param string $cell UTF-8 cell text.
+	 * @return string The cell, ready for the guard and the quoting.
+	 */
+	private function encode_cell( string $cell ): string {
+		if ( 'win1252' === $this->encoding ) {
+			return $this->to_win1252( $cell );
+		}
+		if ( 'utf16le' === $this->encoding && '' !== $cell ) {
+			return $this->convert( $this->convert( $cell, 'UTF-8', 'UTF-16LE' ), 'UTF-16LE', 'UTF-8' );
+		}
+		return $cell;
 	}
 
 	/**
@@ -147,15 +187,19 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * @throws RuntimeException When no temporary stream can be opened.
 	 */
 	private function csv_line( array $fields ): string {
-		$temp = fopen( 'php://temp', 'w+b' );
-		if ( false === $temp ) {
-			throw new RuntimeException( 'Could not open export file for writing.' );
+		if ( null === $this->temp ) {
+			$temp = fopen( 'php://temp', 'w+b' );
+			if ( false === $temp ) {
+				throw new RuntimeException( 'Could not open export file for writing.' );
+			}
+			$this->temp = $temp;
 		}
-		fputcsv( $temp, $fields, $this->delimiter, $this->enclosure, '' );
-		rewind( $temp );
-		$line = (string) stream_get_contents( $temp );
-		fclose( $temp );
-		return $line;
+		// One memory stream serves every record of the batch: it is emptied before each one.
+		ftruncate( $this->temp, 0 );
+		rewind( $this->temp );
+		fputcsv( $this->temp, $fields, $this->delimiter, $this->enclosure, '' );
+		rewind( $this->temp );
+		return (string) stream_get_contents( $this->temp );
 	}
 
 	/**
@@ -176,26 +220,27 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	}
 
 	/**
-	 * Converts UTF-8 text to another encoding with mbstring or iconv.
+	 * Converts text between encodings with mbstring or iconv.
 	 *
-	 * @param string $text UTF-8 text.
+	 * @param string $text Text to convert.
+	 * @param string $from Its encoding.
 	 * @param string $to   Target encoding.
 	 * @return string The converted text.
 	 */
-	private function convert( string $text, string $to ): string {
+	private function convert( string $text, string $from, string $to ): string {
 		if ( function_exists( 'mb_convert_encoding' ) ) {
-			return (string) mb_convert_encoding( $text, $to, 'UTF-8' );
+			return (string) mb_convert_encoding( $text, $to, $from );
 		}
-		return (string) iconv( 'UTF-8', $to . '//IGNORE', $text );
+		return (string) iconv( $from, $to . '//IGNORE', $text );
 	}
 
 	/**
-	 * Converts a line to Windows-1252 one character at a time. A character
+	 * Converts one cell to Windows-1252 one character at a time. A character
 	 * with no mapping is transliterated when possible, else becomes "?".
-	 * The rest of the line is never dropped.
+	 * The rest of the cell is never dropped.
 	 *
-	 * @param string $line UTF-8 line.
-	 * @return string The line in Windows-1252.
+	 * @param string $line UTF-8 cell text.
+	 * @return string The cell in Windows-1252.
 	 */
 	private function to_win1252( string $line ): string {
 		if ( ! preg_match( '/[^\x00-\x7F]/', $line ) ) {
@@ -203,7 +248,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		}
 		$chars = preg_split( '//u', $line, -1, PREG_SPLIT_NO_EMPTY );
 		if ( false === $chars ) {
-			// Invalid UTF-8: keep the line and mark the bad bytes.
+			// Invalid UTF-8: keep the cell and mark the bad bytes.
 			return preg_replace( '/[^\x00-\x7F]/', '?', $line );
 		}
 		$out = '';

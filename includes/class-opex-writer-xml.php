@@ -20,9 +20,7 @@ class OPEX_Writer_XML extends OPEX_Writer {
 	 * Writes the declaration and opens the root element.
 	 */
 	public function start(): void {
-		$handle = $this->open();
-		fwrite( $handle, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<records>\n" );
-		fclose( $handle );
+		$this->append_text( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<records>\n" );
 	}
 
 	/**
@@ -32,25 +30,25 @@ class OPEX_Writer_XML extends OPEX_Writer {
 	 * @param bool  $first_batch Unused: XML records need no separator.
 	 */
 	public function append( array $rows, bool $first_batch ): void {
-		$handle = $this->open();
+		$out = '';
 		foreach ( $rows as $row ) {
-			fwrite( $handle, "  <record>\n" );
+			$out .= "  <record>\n";
 			foreach ( $this->headers as $field => $label ) {
-				$el = $this->element_name( $label );
-				fwrite( $handle, "    <{$el}>" . self::xml_escape( (string) ( $row[ $field ] ?? '' ) ) . "</{$el}>\n" );
+				$el   = $this->element_name( $label );
+				$out .= "    <{$el}>" . self::xml_escape( (string) ( $row[ $field ] ?? '' ) ) . "</{$el}>\n";
 			}
-			fwrite( $handle, "  </record>\n" );
+			$out .= "  </record>\n";
 		}
-		fclose( $handle );
+		if ( '' !== $out ) {
+			$this->append_text( $out );
+		}
 	}
 
 	/**
 	 * Closes the root element.
 	 */
 	public function finish(): void {
-		$handle = $this->open();
-		fwrite( $handle, "</records>\n" );
-		fclose( $handle );
+		$this->append_text( "</records>\n" );
 	}
 
 	/**

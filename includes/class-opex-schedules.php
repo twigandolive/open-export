@@ -20,6 +20,9 @@ class OPEX_Schedules {
 	public const MAX     = 50;
 	private const HOOK   = 'opex_run_schedule';
 
+	/** Seconds the start lock lives between renewals. */
+	private const START_LOCK = 60;
+
 	/**
 	 * Default values for every key of a schedule record. See OPEX_Schedule_Rules.
 	 *
@@ -139,6 +142,7 @@ class OPEX_Schedules {
 
 	/**
 	 * Clear the watermark, so the next incremental run exports every row again.
+	 * The generation changes too, so a run still going cannot set it back when it ends.
 	 *
 	 * @param string $id Schedule id.
 	 * @return array|null The saved record, or null when there is no such schedule.
@@ -147,8 +151,9 @@ class OPEX_Schedules {
 		return self::patch(
 			$id,
 			static function ( array $rec ): array {
-				$rec['watermark'] = '';
-				$rec['updated']   = time();
+				$rec['watermark']  = '';
+				$rec['updated']    = time();
+				$rec['generation'] = OPEX_Schedule_Rules::new_generation();
 				return $rec;
 			}
 		);
@@ -178,7 +183,8 @@ class OPEX_Schedules {
 	public static function expose( array $schedule ): array {
 		$s   = self::fill( $schedule, (string) ( $schedule['id'] ?? '' ) );
 		$key = (string) $s['trigger_key'];
-		unset( $s['trigger_key'], $s['wide'] );
+		// The generation is internal bookkeeping, not a setting.
+		unset( $s['trigger_key'], $s['wide'], $s['generation'] );
 		$s['delivery']['webhook']['has_secret'] = '' !== (string) $s['delivery']['webhook']['secret'];
 		unset( $s['delivery']['webhook']['secret'] );
 		$s['trigger_url'] = add_query_arg( 'key', $key, rest_url( 'open-export/v1/schedules/' . $s['id'] . '/trigger' ) );
@@ -278,18 +284,23 @@ class OPEX_Schedules {
 			return new WP_Error( 'opex_disabled', __( 'This schedule is turned off.', 'open-export' ), array( 'status' => 409 ) );
 		}
 		// The check and the job creation happen under one lock, so two starts
-		// (the trigger URL, cron, a person) cannot both see "idle".
-		$token = OPEX_Lock::acquire( 'sched_' . $id, 60 );
+		// (the trigger URL, cron, a person) cannot both see "idle". Counting the
+		// rows can outlast the lock, so create() renews it as it goes and saves
+		// no job when it was lost: another start owns the schedule then.
+		$token = OPEX_Lock::acquire( 'sched_' . $id, self::START_LOCK );
 		if ( false === $token ) {
 			return self::busy();
 		}
+		$guard = static function () use ( $id, $token ): bool {
+			return OPEX_Lock::refresh( 'sched_' . $id, $token, self::START_LOCK );
+		};
 		try {
 			foreach ( OPEX_Jobs::all() as $job ) {
 				if ( ( $job['schedule_id'] ?? '' ) === $id && 'running' === $job['status'] ) {
 					return self::busy();
 				}
 			}
-			$job = OPEX_Exporter::create( $s['config'], $s['name'], self::job_extra( $s, $origin ) );
+			$job = OPEX_Exporter::create( $s['config'], $s['name'], self::job_extra( $s, $origin ), $guard );
 		} finally {
 			OPEX_Lock::release( 'sched_' . $id, $token );
 		}
@@ -330,7 +341,7 @@ class OPEX_Schedules {
 	 *
 	 * @param array  $s      Schedule record.
 	 * @param string $origin Who started it.
-	 * @return array Extra job settings: mode, origin, delivery, file name and since.
+	 * @return array Extra job settings: mode, origin, delivery, file name, generation and since.
 	 */
 	private static function job_extra( array $s, string $origin ): array {
 		$extra = array(
@@ -339,6 +350,7 @@ class OPEX_Schedules {
 			'origin'        => in_array( $origin, array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? $origin : 'manual',
 			'delivery'      => $s['delivery'],
 			'wide'          => ! empty( $s['wide'] ),
+			'generation'    => (string) $s['generation'],
 			'delivery_name' => OPEX_Filename::render(
 				(string) $s['filename'],
 				array(
@@ -361,6 +373,9 @@ class OPEX_Schedules {
 	/**
 	 * Hook for `opex_job_done`. Updates last_run and, on success, the watermark
 	 * to the job's start time so rows changed during the run are picked up next time.
+	 * Only a job of the schedule's current generation moves the watermark: a
+	 * run that started before a reset or a change of source or date field
+	 * leaves it alone.
 	 *
 	 * @param array $job Finished job record.
 	 */
@@ -373,7 +388,7 @@ class OPEX_Schedules {
 			$sid,
 			static function ( array $s ) use ( $job ): array {
 				$s['last_run'] = self::last_run_of( $job );
-				if ( 'done' === ( $job['status'] ?? '' ) ) {
+				if ( 'done' === ( $job['status'] ?? '' ) && (string) ( $job['generation'] ?? '' ) === (string) $s['generation'] ) {
 					$mark = gmdate( 'Y-m-d H:i:s', (int) ( $job['created'] ?? time() ) );
 					if ( $mark > (string) $s['watermark'] ) {
 						$s['watermark'] = $mark;

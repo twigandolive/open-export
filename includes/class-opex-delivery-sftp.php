@@ -83,15 +83,17 @@ class OPEX_Delivery_Sftp {
 
 	/**
 	 * Pins the fingerprint after a good transfer when none is stored yet.
+	 * The record this connection used goes along, so the pin is dropped when
+	 * someone pointed the destination at another server in the meantime.
 	 *
-	 * @param array         $d           Destination record.
+	 * @param array         $d           Destination record the connection used.
 	 * @param string        $fingerprint Fingerprint seen on this connection.
 	 * @param true|WP_Error $result      Outcome of the transfer.
 	 * @return void
 	 */
 	private static function remember( array $d, string $fingerprint, $result ): void {
 		if ( true === $result && '' === (string) ( $d['host_key'] ?? '' ) && '' !== (string) ( $d['id'] ?? '' ) && '' !== $fingerprint ) {
-			OPEX_Destinations::pin_host_key( (string) $d['id'], $fingerprint );
+			OPEX_Destinations::pin_host_key( (string) $d['id'], $fingerprint, $d );
 		}
 	}
 
@@ -208,26 +210,67 @@ class OPEX_Delivery_Sftp {
 	}
 
 	/**
-	 * Uploads to a temporary name, then renames.
+	 * Uploads to a temporary name, then renames it to the final name.
+	 *
+	 * The plain SFTP rename never replaces a file. When the server offers
+	 * the posix-rename extension (OpenSSH does), that replaces the old file
+	 * in one step. Otherwise the old file is renamed aside to a backup name,
+	 * the upload takes its place, and only then is the backup removed. If
+	 * the upload cannot take its place, the backup is renamed back. The old
+	 * file is never deleted before the new one is in place, and on any
+	 * failure the only file removed is this run's own temporary upload.
 	 *
 	 * @param object $sftp  Connected SFTP object.
 	 * @param string $local Local file.
 	 * @param string $name  Final remote name.
-	 * @return true|WP_Error
+	 * @return true|WP_Error True, or why the file is not in place.
 	 */
 	private static function upload( $sftp, string $local, string $name ) {
-		$temp = '.' . $name . '.' . bin2hex( random_bytes( 4 ) ) . '.part';
+		$tag  = bin2hex( random_bytes( 4 ) );
+		$temp = '.' . $name . '.' . $tag . '.part';
 		if ( ! $sftp->put( $temp, $local, \phpseclib3\Net\SFTP::SOURCE_LOCAL_FILE ) ) {
 			$sftp->delete( $temp );
 			return new WP_Error( 'opex_sftp_put', __( 'The upload failed. Check that the folder is writable.', 'open-export' ) );
 		}
-		if ( ! $sftp->rename( $temp, $name ) ) {
-			$sftp->delete( $name );
-			if ( ! $sftp->rename( $temp, $name ) ) {
-				$sftp->delete( $temp );
-				return new WP_Error( 'opex_sftp_rename', __( 'The file was uploaded but could not be renamed.', 'open-export' ) );
-			}
+		if ( self::posix_rename( $sftp, $temp, $name ) || $sftp->rename( $temp, $name ) ) {
+			return true;
 		}
-		return true;
+		// The rename failed. If a file has the final name, move it aside, never delete it first.
+		$backup = '.' . $name . '.' . $tag . '.old';
+		if ( ! $sftp->rename( $name, $backup ) ) {
+			$sftp->delete( $temp );
+			return new WP_Error( 'opex_sftp_rename', __( 'The file was uploaded but could not be renamed. The server may not allow renaming files in this folder. Nothing on the server was changed.', 'open-export' ) );
+		}
+		if ( $sftp->rename( $temp, $name ) ) {
+			$sftp->delete( $backup );
+			return true;
+		}
+		$restored = $sftp->rename( $backup, $name );
+		$sftp->delete( $temp );
+		return OPEX_Delivery_Ftp::rename_failed( 'opex_sftp_rename', $restored, $backup );
+	}
+
+	/**
+	 * Renames over an existing file with the posix-rename extension, when
+	 * the server offers it and the loaded phpseclib knows it.
+	 *
+	 * @param object $sftp Connected SFTP object.
+	 * @param string $from Temporary name.
+	 * @param string $to   Final name.
+	 * @return bool True when the file now has the final name.
+	 */
+	private static function posix_rename( $sftp, string $from, string $to ): bool {
+		if ( ! method_exists( $sftp, 'posix_rename' ) || ! method_exists( $sftp, 'getSupportedExtensions' ) ) {
+			return false;
+		}
+		try {
+			$extensions = $sftp->getSupportedExtensions();
+			if ( ! is_array( $extensions ) || '1' !== (string) ( $extensions['posix-rename@openssh.com'] ?? '' ) ) {
+				return false;
+			}
+			return true === $sftp->posix_rename( $from, $to );
+		} catch ( Throwable $e ) {
+			return false;
+		}
 	}
 }

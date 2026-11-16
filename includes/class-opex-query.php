@@ -370,14 +370,14 @@ class OPEX_Query {
 	 * Fetch one batch of rows. See OPEX_Query_Fetch.
 	 *
 	 * @param array         $config Export config.
-	 * @param int           $cursor Cursor from the last batch, 0 to start.
+	 * @param int|string    $cursor Cursor from the last batch, passed back as it came (never cast), 0 to start.
 	 * @param int           $limit  Rows to fetch.
 	 * @param callable|null $tick   Called now and then while rows are assembled, so a
 	 *                              long batch can refresh its lock.
-	 * @return array The rows, the cursor for the next call, and whether the source is used up.
+	 * @return array The rows, the cursor for the next call, whether the source is used up, and maybe a note for the job.
 	 * @throws RuntimeException When the database reports an error.
 	 */
-	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {
+	public static function batch( array $config, $cursor, int $limit, $tick = null ): array {
 		return OPEX_Query_Fetch::batch( $config, $cursor, $limit, $tick );
 	}
 

@@ -144,10 +144,7 @@ class WooCustomersTest extends WooSourceCase {
 		$cases = array(
 			array( 'woo:order_count', 'gt', '1', array( 'Buyer' ) ),
 			array( 'woo:order_count', 'eq', '0', array( 'Idle' ) ),
-			array( 'woo:total_spend', 'gte', '15', array( 'Buyer', 'Guest' ) ),
-			array( 'woo:total_spend', 'lt', '1', array( 'Idle' ) ),
-			array( 'woo:avg_order_value', 'gt', '10', array( 'Guest' ) ),
-			array( 'woo:avg_order_value', 'empty', '', array( 'Idle' ) ),
+			// Total spend and average order value cannot be filtered (R1-3.3): CodexSourceWooTest checks the refusal.
 			array( 'woo:user_id', 'empty', '', array( 'Guest' ) ),
 			array( 'woo:user_id', 'not_empty', '', array( 'Buyer', 'Idle' ) ),
 			array( 'woo:email', 'ends_with', '@example.test', array( 'Buyer', 'Guest', 'Idle' ) ),

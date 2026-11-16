@@ -21,14 +21,30 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Store {
 
+	/** Exception code of the error a change throws when it cannot be saved. */
+	public const BUSY = 7002;
+
 	/** Seconds a write lock lives. A write takes milliseconds, so this only matters after a crash. */
 	private const LOCK_TTL = 15;
 
-	/** Seconds a writer waits for the lock before it writes without it. */
+	/** Seconds a writer waits for the lock before it gives up. */
 	private const WAIT = 20;
 
 	/** Microseconds between tries while waiting. */
 	private const PAUSE = 25000;
+
+	/** Times a change runs before it gives up because others keep saving first. */
+	private const TRIES = 3;
+
+	/** Exception code that sends a change back to read again. It never leaves this class. */
+	private const CONFLICT = 7003;
+
+	/**
+	 * Seconds take() waits. Only tests shorten it, through reflection.
+	 *
+	 * @var float
+	 */
+	private static $wait = self::WAIT;
 
 	/**
 	 * Lock tokens this process holds, by option name. A change made inside
@@ -57,9 +73,16 @@ class OPEX_Store {
 	 * lock. The outer callback must then leave its own copy alone, because
 	 * writing it would replace what the inner change saved.
 	 *
+	 * The write only lands when this process still holds the lock and the
+	 * stored value is still the one the callback started from. Otherwise the
+	 * callback runs again on a fresh copy, so it may run more than once. After
+	 * TRIES runs, or when the lock cannot be had, nothing is written and an
+	 * OPEX_User_Error with the code BUSY is thrown.
+	 *
 	 * @param string   $option Option name.
 	 * @param callable $change Receives `array &$value` and returns any result.
 	 * @return mixed What the callback returned.
+	 * @throws OPEX_User_Error With the code BUSY when the change could not be saved.
 	 */
 	public static function change( string $option, callable $change ) {
 		if ( isset( self::$held[ $option ] ) ) {
@@ -67,46 +90,133 @@ class OPEX_Store {
 		}
 		$name  = 'store_' . $option;
 		$token = self::take( $name );
-		if ( '' !== $token ) {
-			self::$held[ $option ] = $token;
+		if ( '' === $token ) {
+			throw self::busy();
 		}
+		self::$held[ $option ] = $token;
 		try {
-			return self::apply( $option, $change );
-		} finally {
-			unset( self::$held[ $option ] );
-			if ( '' !== $token ) {
-				OPEX_Lock::release( $name, $token );
+			for ( $try = 1; ; $try++ ) {
+				try {
+					return self::apply( $option, $change );
+				} catch ( RuntimeException $e ) {
+					if ( self::CONFLICT !== $e->getCode() || $try >= self::TRIES ) {
+						throw self::CONFLICT === $e->getCode() ? self::busy() : $e;
+					}
+				}
+				// Another writer came first. Hold the lock again before the next run.
+				if ( ! OPEX_Lock::owns( $name, self::$held[ $option ] ) ) {
+					$token = self::take( $name );
+					if ( '' === $token ) {
+						throw self::busy();
+					}
+					self::$held[ $option ] = $token;
+				}
 			}
+		} finally {
+			OPEX_Lock::release( $name, self::$held[ $option ] );
+			unset( self::$held[ $option ] );
 		}
 	}
 
 	/**
-	 * Reads, runs the callback and writes when something changed.
+	 * Whether an error is the one change() throws when it could not save.
+	 *
+	 * @param Throwable $e What was thrown.
+	 * @return bool True for the busy error.
+	 */
+	public static function is_busy( Throwable $e ): bool {
+		return $e instanceof OPEX_User_Error && self::BUSY === $e->getCode();
+	}
+
+	/**
+	 * Reads, runs the callback and writes when something changed. The write
+	 * compares against the value read here, so it never replaces a newer one.
 	 *
 	 * @param string   $option Option name.
 	 * @param callable $change The edit.
-	 * @return mixed
+	 * @return mixed What the callback returned.
+	 * @throws RuntimeException With the code CONFLICT when the write did not land.
 	 */
 	private static function apply( string $option, callable $change ) {
-		$value  = self::read( $option );
+		$row    = self::row( $option );
+		$value  = null === $row ? array() : maybe_unserialize( $row[0] );
+		$value  = is_array( $value ) ? $value : array();
 		$before = $value;
 		$result = $change( $value );
-		if ( $value !== $before ) {
-			update_option( $option, $value, false );
+		if ( $value === $before ) {
+			return $result;
 		}
+		// A lock that expired while the callback ran may belong to someone else now.
+		$token = self::$held[ $option ] ?? '';
+		if ( ! OPEX_Lock::refresh( 'store_' . $option, $token, self::LOCK_TTL ) || ! self::commit( $option, $row, $value ) ) {
+			self::forget( $option );
+			throw new RuntimeException( 'The option changed meanwhile.', self::CONFLICT ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- an internal signal, caught in change() and never shown.
+		}
+		self::forget( $option );
 		return $result;
 	}
 
 	/**
-	 * Waits for the lock. Gives up after WAIT seconds and returns '', so a
-	 * lock left by a crashed process can delay a save but never lose it.
-	 * By then the stale lock has expired and the next writer takes it over.
+	 * The stored text of the option and its MD5, both from the database, or
+	 * null when there is no row. The database makes the hash, so it matches
+	 * what a later compare sees whatever the character sets are.
+	 *
+	 * @param string $option Option name.
+	 * @return array|null The raw value and its hash, or null.
+	 */
+	private static function row( string $option ): ?array {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the compare-and-swap needs the stored text, never a cached copy.
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value, MD5(option_value) FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $option ), ARRAY_N );
+		return is_array( $row ) ? array( (string) $row[0], strtolower( (string) $row[1] ) ) : null;
+	}
+
+	/**
+	 * Writes the new value only if the row still holds what was read: an
+	 * UPDATE that matches the old hash, or an INSERT when there was no row.
+	 *
+	 * @param string     $option Option name.
+	 * @param array|null $row    What row() returned before the callback ran.
+	 * @param array      $value  The new value.
+	 * @return bool True when the write landed.
+	 */
+	private static function commit( string $option, ?array $row, array $value ): bool {
+		global $wpdb;
+		$raw = maybe_serialize( $value );
+		if ( null === $row ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- an insert that loses to any row written meanwhile.
+			$done = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'off' )", $option, $raw ) );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- compare-and-swap on the option row.
+			$done = $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND MD5(option_value) = %s", $raw, $option, $row[1] ) );
+		}
+		if ( 1 === (int) $done ) {
+			return true;
+		}
+		// Some drivers count no row when the stored text already equals the new text.
+		$now = self::row( $option );
+		return null !== $now && $now[0] === $raw;
+	}
+
+	/**
+	 * The error change() throws when it cannot save.
+	 *
+	 * @return OPEX_User_Error The error, with the code BUSY.
+	 */
+	private static function busy(): OPEX_User_Error {
+		return new OPEX_User_Error( esc_html__( 'Open Export could not save because another request kept changing the same data. Try again in a minute.', 'open-export' ), self::BUSY );
+	}
+
+	/**
+	 * Waits for the lock. Gives up after the wait and returns ''. A lock left
+	 * by a crashed process expires before the wait ends, so only a live
+	 * holder can make a writer give up.
 	 *
 	 * @param string $name Lock name.
 	 * @return string The owner token, or '' when the lock could not be had.
 	 */
 	private static function take( string $name ): string {
-		$until = microtime( true ) + self::WAIT;
+		$until = microtime( true ) + (float) self::$wait;
 		do {
 			$token = OPEX_Lock::acquire( $name, self::LOCK_TTL );
 			if ( false !== $token ) {
@@ -123,6 +233,7 @@ class OPEX_Store {
 	 * clears the shared copy too, which is what other processes read.
 	 *
 	 * @param string $option Option name.
+	 * @return void
 	 */
 	private static function forget( string $option ): void {
 		wp_cache_delete( $option, 'options' );

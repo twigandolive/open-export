@@ -151,25 +151,51 @@ class OPEX_Dates {
 	}
 
 	/**
+	 * A calendar date moved by whole days, as Y-m-d. The days are counted on
+	 * the calendar (in UTC, which has no DST), so no time of day is involved.
+	 *
+	 * @param string $date       Calendar date as Y-m-d.
+	 * @param int    $day_offset Days to add (may be negative).
+	 * @return string The date as Y-m-d, or '' when the date is not valid.
+	 */
+	public static function calendar_day( string $date, int $day_offset = 0 ): string {
+		$date = self::normalize_date( $date );
+		if ( '' === $date || 0 === $day_offset ) {
+			return $date;
+		}
+		try {
+			$day = ( new DateTimeImmutable( $date, new DateTimeZone( 'UTC' ) ) )->modify( sprintf( '%+d days', $day_offset ) );
+		} catch ( Exception $e ) {
+			unset( $e );
+			return '';
+		}
+		return $day instanceof DateTimeImmutable ? $day->format( 'Y-m-d' ) : '';
+	}
+
+	/**
 	 * Midnight of a calendar date in the site's timezone, moved by whole days.
-	 * DateTimeImmutable resolves DST for us, including days where 00:00 does not
-	 * exist locally, and days are added as days, not as 86400-second blocks.
+	 *
+	 * The days are added to the calendar date first, and only then is that
+	 * day's midnight built. On a day whose 00:00 does not exist locally
+	 * (a DST change at midnight), DateTimeImmutable gives the first moment
+	 * that does, such as 01:00. Adding a day to that moment would keep the
+	 * 01:00 and stretch a range an hour into the next day.
 	 *
 	 * @param string $date       A date that passed normalize_date().
 	 * @param int    $day_offset Days to add (may be negative).
 	 * @return DateTimeImmutable|null Midnight of that day, or null when the date is not valid.
 	 */
 	private static function midnight( string $date, int $day_offset ): ?DateTimeImmutable {
+		$day = self::calendar_day( $date, $day_offset );
+		if ( '' === $day ) {
+			return null;
+		}
 		try {
-			$moment = new DateTimeImmutable( $date . ' 00:00:00', self::site_timezone() );
-			if ( 0 !== $day_offset ) {
-				$moment = $moment->modify( sprintf( '%+d days', $day_offset ) );
-			}
+			return new DateTimeImmutable( $day . ' 00:00:00', self::site_timezone() );
 		} catch ( Exception $e ) {
 			unset( $e );
 			return null;
 		}
-		return $moment instanceof DateTimeImmutable ? $moment : null;
 	}
 
 	/**

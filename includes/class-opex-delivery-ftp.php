@@ -114,8 +114,9 @@ class OPEX_Delivery_Ftp {
 			@ftp_close( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			return new WP_Error( 'opex_ftp_pasv', __( 'Could not set the transfer mode.', 'open-export' ) );
 		}
+		// "/" is changed to as well: a login folder is often not the server's root.
 		$path = (string) ( $d['path'] ?? '/' );
-		if ( '' !== $path && '/' !== $path && ! @ftp_chdir( $conn, $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( '' !== $path && ! @ftp_chdir( $conn, $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_close( $conn ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			return new WP_Error( 'opex_ftp_path', __( 'The remote folder was not found.', 'open-export' ) );
 		}
@@ -123,27 +124,64 @@ class OPEX_Delivery_Ftp {
 	}
 
 	/**
-	 * Uploads to a temporary name, then renames.
+	 * Uploads to a temporary name, then renames it to the final name.
+	 *
+	 * Most servers rename over an existing file. Some refuse to (IIS does).
+	 * Then the old file is first renamed aside to a backup name, the upload
+	 * takes its place, and only then is the backup removed. If the upload
+	 * cannot take its place, the backup is renamed back. The old file is
+	 * never deleted before the new one is in place, and on any failure the
+	 * only file removed is this run's own temporary upload.
 	 *
 	 * @param resource|object $conn  Connection.
 	 * @param string          $local Local file.
 	 * @param string          $name  Final remote name.
-	 * @return true|WP_Error
+	 * @return true|WP_Error True, or why the file is not in place.
 	 */
 	private static function upload( $conn, string $local, string $name ) {
-		$temp = '.' . $name . '.' . bin2hex( random_bytes( 4 ) ) . '.part';
+		$tag  = bin2hex( random_bytes( 4 ) );
+		$temp = '.' . $name . '.' . $tag . '.part';
 		if ( ! @ftp_put( $conn, $temp, $local, FTP_BINARY ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			return new WP_Error( 'opex_ftp_put', __( 'The upload failed. Check that the folder is writable.', 'open-export' ) );
 		}
-		if ( ! @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			// Some servers refuse to rename over an existing file.
-			@ftp_delete( $conn, $name ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			if ( ! @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-				@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-				return new WP_Error( 'opex_ftp_rename', __( 'The file was uploaded but could not be renamed.', 'open-export' ) );
-			}
+		if ( @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			return true;
 		}
-		return true;
+		// The rename failed. If a file has the final name, move it aside, never delete it first.
+		$backup = '.' . $name . '.' . $tag . '.old';
+		if ( ! @ftp_rename( $conn, $name, $backup ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			return new WP_Error( 'opex_ftp_rename', __( 'The file was uploaded but could not be renamed. The server may not allow renaming files in this folder. Nothing on the server was changed.', 'open-export' ) );
+		}
+		if ( @ftp_rename( $conn, $temp, $name ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@ftp_delete( $conn, $backup ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			return true;
+		}
+		$restored = @ftp_rename( $conn, $backup, $name ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@ftp_delete( $conn, $temp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		return self::rename_failed( 'opex_ftp_rename', $restored, $backup );
+	}
+
+	/**
+	 * The error for an upload that could not take the final name.
+	 *
+	 * @param string $code     Error code.
+	 * @param bool   $restored True when the old file is back under its name.
+	 * @param string $backup   Name the old file is kept under when it is not.
+	 * @return WP_Error The error to report.
+	 */
+	public static function rename_failed( string $code, bool $restored, string $backup ): WP_Error {
+		if ( $restored ) {
+			return new WP_Error( $code, __( 'The file was uploaded but could not replace the file already on the server. The old file was kept.', 'open-export' ) );
+		}
+		return new WP_Error(
+			$code,
+			sprintf(
+				/* translators: %s: the name the old file is kept under on the server. */
+				__( 'The file was uploaded but could not replace the file already on the server. The old file is kept on the server as %s.', 'open-export' ),
+				$backup
+			)
+		);
 	}
 }

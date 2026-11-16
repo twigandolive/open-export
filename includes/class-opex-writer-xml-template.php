@@ -17,8 +17,14 @@ defined( 'ABSPATH' ) || exit;
  */
 class OPEX_Writer_XML_Template extends OPEX_Writer {
 
-	/** Matches {id} and {id|cdata}. */
-	const PLACEHOLDER = '/\{([^{}|\r\n]+)(\|cdata)?\}/';
+	/**
+	 * Matches {id} and {id|cdata}. An id may hold pipes, as spread ACF
+	 * columns do ("acf:team|1|name"): only a trailing "|cdata" is a modifier.
+	 */
+	const PLACEHOLDER = '/\{([^{}\r\n]+?)(\|cdata)?\}/';
+
+	/** A spread ACF column key: "<field id>|<row number>|<sub field>". */
+	const SPREAD = '/^([^|]+)\|[1-9][0-9]*\|[^|]+$/';
 
 	/**
 	 * Written once, before the first row.
@@ -84,11 +90,17 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	}
 
 	/**
-	 * Checks a template: known fields, no DOCTYPE or entities, well-formed XML.
+	 * Checks a template: known fields, no DOCTYPE or entities, well-formed XML
+	 * with no rows, one row and two rows, as an export of any size writes it.
+	 *
+	 * A spread ACF column such as {acf:team|1|name} counts as known when its
+	 * field is chosen, because its columns are only counted when the export
+	 * starts. Other text with a pipe in braces that names no chosen field,
+	 * such as {a|b}, is left as text, as it always was.
 	 *
 	 * @param array $template  Keys header, row, footer.
 	 * @param array $field_ids Allowed field ids.
-	 * @return true|WP_Error
+	 * @return true|WP_Error True, or the first problem found.
 	 */
 	public static function validate( array $template, array $field_ids ) {
 		$parts = array();
@@ -97,11 +109,25 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 		}
 		$all     = implode( "\n", $parts );
 		$unknown = array();
+		$samples = array();
+		foreach ( $field_ids as $id ) {
+			$samples[ (string) $id ] = 'sample';
+		}
 		if ( preg_match_all( self::PLACEHOLDER, $all, $found ) ) {
 			foreach ( $found[1] as $id ) {
-				if ( ! in_array( $id, $field_ids, true ) ) {
-					$unknown[ $id ] = true;
+				if ( in_array( $id, $field_ids, true ) ) {
+					continue;
 				}
+				$base   = false !== strpos( $id, '|' ) ? strstr( $id, '|', true ) : $id;
+				$spread = $base !== $id && 1 === preg_match( self::SPREAD, $id );
+				if ( $spread && in_array( $base, $field_ids, true ) ) {
+					$samples[ $id ] = 'sample';
+					continue;
+				}
+				if ( $base !== $id && ! in_array( $base, $field_ids, true ) && ! ( $spread && 0 === strpos( $id, OPEX_Acf::PREFIX ) ) ) {
+					continue; // Text with a pipe that names no chosen field stays text.
+				}
+				$unknown[ $id ] = true;
 			}
 		}
 		if ( $unknown ) {
@@ -117,19 +143,22 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 		if ( preg_match( '/<!\s*(DOCTYPE|ENTITY)/i', $all ) ) {
 			return new WP_Error( 'opex_template_doctype', __( 'The template cannot contain a DOCTYPE or entity declaration.', 'open-export' ) );
 		}
-		$samples = array();
-		foreach ( $field_ids as $id ) {
-			$samples[ (string) $id ] = 'sample';
-		}
-		$doc = $parts['header'] . "\n" . self::render( $parts['row'], $samples, $samples ) . "\n" . $parts['footer'];
-		if ( ! self::well_formed( $doc ) ) {
-			return new WP_Error( 'opex_template_malformed', __( 'The header, row and footer together are not well-formed XML.', 'open-export' ) );
+		$row = self::render( $parts['row'], $samples, $samples );
+		foreach ( array( 0, 1, 2 ) as $count ) {
+			$doc = $parts['header'] . "\n" . str_repeat( $row . "\n", $count ) . $parts['footer'];
+			if ( ! self::well_formed( $doc ) ) {
+				return new WP_Error( 'opex_template_malformed', __( 'The header, row and footer together are not well-formed XML. Check them with no rows, one row and two rows: the rows need one root element around them in the header and footer.', 'open-export' ) );
+			}
 		}
 		return true;
 	}
 
 	/**
 	 * Fills a template with one record.
+	 *
+	 * A known id gets its value. An unknown plain id becomes empty, and so
+	 * does an ACF spread column for a row this export has no column for.
+	 * Other text with a pipe in braces is not a placeholder and stays as it is.
 	 *
 	 * @param string $template Template text.
 	 * @param array  $row      Values keyed by field id.
@@ -141,7 +170,9 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 			self::PLACEHOLDER,
 			static function ( array $m ) use ( $row, $known ): string {
 				if ( ! array_key_exists( $m[1], $known ) ) {
-					return '';
+					$plain  = false === strpos( $m[1], '|' );
+					$spread = 0 === strpos( $m[1], OPEX_Acf::PREFIX ) && 1 === preg_match( self::SPREAD, $m[1] );
+					return ( $plain || $spread ) ? '' : $m[0];
 				}
 				$value = (string) ( $row[ $m[1] ] ?? '' );
 				if ( isset( $m[2] ) && '' !== $m[2] ) {
@@ -199,18 +230,14 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 	}
 
 	/**
-	 * Appends text to the output file.
+	 * Appends text to the output file, every byte or an error.
 	 *
 	 * @param string $text Text.
-	 * @throws RuntimeException When the file cannot be written.
+	 * @return void
+	 * @throws OPEX_User_Error When the file cannot be written in full.
 	 */
 	private function write( string $text ): void {
-		$handle = $this->open();
-		if ( false === fwrite( $handle, $text ) ) {
-			fclose( $handle );
-			throw new RuntimeException( 'Could not write the export file.' );
-		}
-		fclose( $handle );
+		$this->append_text( $text );
 	}
 }
 

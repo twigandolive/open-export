@@ -40,7 +40,7 @@ class OPEX_Jobs {
 		'status'        => 'running',
 		'total'         => 0,
 		'processed'     => 0,
-		'cursor'        => 0,
+		'cursor'        => 0, // An int, or digit text for a raw table key that is zero, negative or too large.
 		'created'       => 0,
 		'filename'      => '',
 		'filesize'      => 0,
@@ -60,6 +60,7 @@ class OPEX_Jobs {
 		'notes'         => array(),
 		'checkpoint'    => array(),
 		'wide'          => false,
+		'generation'    => '',
 	);
 
 	/** Config keys an old record might lack, with their defaults. */
@@ -437,6 +438,10 @@ class OPEX_Jobs {
 		// Zip compression leaves the plain file next to the zip if it stops
 		// before the plain file is removed, and a half-built zip if it stops sooner.
 		$files = array_merge( $files, OPEX_Compress::related_files( $path ) );
+		// The lock file a batch keeps next to the plain file (see OPEX_File_Lock).
+		foreach ( array_merge( array( $path ), OPEX_Compress::related_files( $path ) ) as $file ) {
+			$files[] = OPEX_File_Lock::path( $file );
+		}
 		foreach ( $files as $file ) {
 			if ( file_exists( $file ) ) {
 				wp_delete_file( $file );

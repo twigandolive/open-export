@@ -110,12 +110,19 @@ class OPEX_Query_Dates {
 					// A bare table tells us nothing about its timezone, so go by
 					// the naming convention every WordPress and WooCommerce table
 					// follows and treat the rest as site-local.
-					$utc                          = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
-					$out[ 'col:' . $col['name'] ] = array(
+					$utc = (bool) preg_match( '/(_gmt|_utc)$/i', $col['name'] );
+					$def = array(
 						'label' => $col['name'] . ( $utc ? ' (UTC)' : '' ),
 						'tz'    => $utc ? OPEX_Dates::TZ_UTC : OPEX_Dates::TZ_LOCAL,
 						'sql'   => '`' . str_replace( '`', '', $col['name'] ) . '`',
 					);
+					// A DATE column holds no time. It is compared with plain
+					// Y-m-d days: SQLite compares text, and 2026-03-31 sorts
+					// before 2026-03-31 00:00:00, which would drop the first day.
+					if ( preg_match( '/^date\b/i', $col['type'] ) ) {
+						$def['date_only'] = true;
+					}
+					$out[ 'col:' . $col['name'] ] = $def;
 				}
 				return $out;
 		}
@@ -167,14 +174,14 @@ class OPEX_Query_Dates {
 
 		$parts = array();
 
-		$start = OPEX_Dates::boundary( $from, $def['tz'], 0 );
+		$start = self::day_bound( $def, $from, 0 );
 		if ( '' !== $start ) {
 			$args[]  = $start;
 			$parts[] = "{$def['sql']} >= %s";
 		}
 
 		// +1 day turns the user's inclusive end date into the exclusive bound.
-		$end = OPEX_Dates::boundary( $to, $def['tz'], 1 );
+		$end = self::day_bound( $def, $to, 1 );
 		if ( '' !== $end ) {
 			$args[]  = $end;
 			$parts[] = "{$def['sql']} < %s";
@@ -224,8 +231,26 @@ class OPEX_Query_Dates {
 		}
 
 		$moment = OPEX_Dates::TZ_UTC === $def['tz'] ? $utc : $utc->setTimezone( OPEX_Dates::site_timezone() );
-		$args[] = $moment->format( 'Y-m-d H:i:s' );
+		// A DATE column is later than the moment when its day is later than the moment's day.
+		$args[] = $moment->format( empty( $def['date_only'] ) ? 'Y-m-d H:i:s' : 'Y-m-d' );
 		return "({$def['sql']} > %s AND {$def['sql']} IS NOT NULL)";
+	}
+
+	/**
+	 * The start of a calendar day, moved by whole days, in the form the column
+	 * compares: a datetime in the column's timezone, or a plain Y-m-d for a
+	 * DATE column, which has no time and no timezone to shift into.
+	 *
+	 * @param array  $def        Date field definition.
+	 * @param string $date       Calendar date as Y-m-d.
+	 * @param int    $day_offset Days to add. 1 gives the exclusive end of that day.
+	 * @return string The bound, or '' when the date is unusable.
+	 */
+	private static function day_bound( array $def, string $date, int $day_offset ): string {
+		if ( ! empty( $def['date_only'] ) ) {
+			return OPEX_Dates::calendar_day( $date, $day_offset );
+		}
+		return OPEX_Dates::boundary( $date, $def['tz'], $day_offset );
 	}
 
 	/**
@@ -321,8 +346,8 @@ class OPEX_Query_Dates {
 			return "{$col} {$sym} %s";
 		}
 
-		$day_start  = OPEX_Dates::boundary( $stamp, $def['tz'], 0 );
-		$next_start = OPEX_Dates::boundary( $stamp, $def['tz'], 1 );
+		$day_start  = self::day_bound( $def, $stamp, 0 );
+		$next_start = self::day_bound( $def, $stamp, 1 );
 		if ( '' === $day_start || '' === $next_start ) {
 			return null;
 		}

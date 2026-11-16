@@ -52,15 +52,22 @@ class OPEX_Settings {
 	}
 
 	/**
-	 * Sanitizes and saves. Unknown keys are dropped.
+	 * Sanitizes and saves. Unknown keys are dropped. The merge happens under
+	 * the option's lock with a fresh read, so two people saving different
+	 * settings at once both keep their change.
 	 *
 	 * @param array $raw Raw input.
 	 * @return array The saved settings.
+	 * @throws OPEX_User_Error When the save could not be made (see OPEX_Store::change).
 	 */
 	public static function save( array $raw ): array {
-		$clean = self::clean( array_merge( self::all(), $raw ) );
-		update_option( self::OPTION, $clean, false );
-		return $clean;
+		return OPEX_Store::change(
+			self::OPTION,
+			static function ( array &$stored ) use ( $raw ): array {
+				$stored = self::clean( array_merge( self::clean( $stored ), $raw ) );
+				return $stored;
+			}
+		);
 	}
 
 	/**

@@ -91,7 +91,9 @@ class OPEX_Query_Filters {
 			if ( ! OPEX_Query::valid_core_col( $src['type'], $col ) ) {
 				return self::MATCH_NOTHING;
 			}
-			return self::value_condition( OPEX_Query::alias( $src['type'] ) . '.' . $col, $op, $value, $args );
+			// A term's description, parent and count live in term_taxonomy (tt), not in terms (t).
+			$alias = 'terms' === $src['type'] && in_array( $col, self::TERM_TAXONOMY_COLS, true ) ? 'tt' : OPEX_Query::alias( $src['type'] );
+			return self::value_condition( $alias . '.' . $col, $op, $value, $args );
 		}
 
 		// Raw table column rule, e.g. col:option_name.
@@ -144,8 +146,12 @@ class OPEX_Query_Filters {
 	/** SQL that is true for every row. */
 	private const MATCH_ALL = '1=1';
 
+	/** Term core columns kept in the term_taxonomy table. */
+	private const TERM_TAXONOMY_COLS = array( 'description', 'parent', 'count' );
+
 	/**
-	 * Role rule for users. The list operators take several roles.
+	 * Role rule for users. The list operators take several roles. Empty and
+	 * not empty ask whether the user has any registered role.
 	 *
 	 * @param string $op    Filter operator.
 	 * @param string $value Role, or a comma-separated list of roles.
@@ -155,10 +161,22 @@ class OPEX_Query_Filters {
 	private static function roles_clause( string $op, string $value, array &$args ): string {
 		global $wpdb;
 
+		// No value asks whether the user has a role at all, as it does for meta.
+		if ( '' === trim( $value ) && in_array( $op, array( 'eq', 'neq' ), true ) ) {
+			$op = 'eq' === $op ? 'empty' : 'not_empty';
+		}
 		$is_list = in_array( $op, array( 'in', 'not_in' ), true );
-		$roles   = $is_list
-			? array_values( array_filter( array_map( 'sanitize_key', array_map( 'trim', explode( ',', $value ) ) ), 'strlen' ) )
-			: array( sanitize_key( $value ) );
+		if ( 'empty' === $op || 'not_empty' === $op ) {
+			// A user has a role when any registered role is in the capabilities,
+			// which is how WordPress fills WP_User::$roles. Searching for an
+			// empty name would match nobody.
+			$roles = array_values( array_filter( array_map( 'strval', array_keys( wp_roles()->roles ) ), 'strlen' ) );
+			$op    = 'empty' === $op ? 'not_in' : 'in';
+		} elseif ( $is_list ) {
+			$roles = array_values( array_filter( array_map( 'sanitize_key', array_map( 'trim', explode( ',', $value ) ) ), 'strlen' ) );
+		} else {
+			$roles = array( sanitize_key( $value ) );
+		}
 		if ( ! $roles ) {
 			return 'in' === $op ? self::MATCH_NOTHING : self::MATCH_ALL;
 		}

@@ -100,9 +100,16 @@ class OPEX_Schedule_Clock {
 	}
 
 	/**
-	 * Convert a wall-clock time to a UTC timestamp. A time that does not exist
+	 * Convert a wall-clock time to a UTC timestamp.
+	 *
+	 * A time that does not exist (the hour skipped when clocks go forward)
 	 * becomes the first valid minute after the gap. A time that happens twice
-	 * resolves to its first occurrence, so it runs once.
+	 * (the hour repeated when clocks go back) resolves to its first
+	 * occurrence, the earlier UTC moment, still on summer time. So the run
+	 * happens once and never an hour late. PHP alone does not do this: it
+	 * picks the first occurrence in some zones (America/New_York) and the
+	 * second in others (Europe/Berlin), so every offset in use around the
+	 * time is tried and the earliest match wins.
 	 *
 	 * @param string       $wall 'Y-m-d H:i'.
 	 * @param DateTimeZone $tz   Timezone.
@@ -111,10 +118,26 @@ class OPEX_Schedule_Clock {
 	private static function wall_to_ts( string $wall, DateTimeZone $tz ): int {
 		$dt = new DateTimeImmutable( $wall . ':00', $tz );
 		$ts = $dt->getTimestamp();
-		if ( $dt->format( 'Y-m-d H:i' ) === $wall ) {
-			return $ts;
+		// The wall time read as if it were UTC. Less an offset, it is a real moment.
+		$plain   = ( new DateTimeImmutable( $wall . ':00', new DateTimeZone( 'UTC' ) ) )->getTimestamp();
+		$offsets = array( $dt->getOffset() );
+		// A fixed offset such as +02:00 has no transitions, and PHP returns false then.
+		$list = $tz->getTransitions( $plain - 2 * DAY_IN_SECONDS, $plain + 2 * DAY_IN_SECONDS );
+		foreach ( is_array( $list ) ? $list : array() as $t ) {
+			$offsets[] = (int) $t['offset'];
 		}
-		// PHP moved the time forward out of a gap. The gap ends at the transition.
+		$best = 0;
+		foreach ( array_unique( $offsets ) as $offset ) {
+			$try = $plain - (int) $offset;
+			if ( ( 0 === $best || $try < $best ) && ( new DateTimeImmutable( '@' . $try ) )->setTimezone( $tz )->format( 'Y-m-d H:i' ) === $wall ) {
+				$best = $try;
+			}
+		}
+		if ( $best > 0 ) {
+			return $best;
+		}
+		// No offset gives this wall time, so it falls in a gap. PHP moved it
+		// forward out of the gap. The gap ends at the transition.
 		$found = $ts;
 		foreach ( $tz->getTransitions( $ts - 2 * DAY_IN_SECONDS, $ts + 2 * DAY_IN_SECONDS ) as $t ) {
 			if ( (int) $t['ts'] <= $ts && (int) $t['ts'] > $ts - 2 * DAY_IN_SECONDS ) {

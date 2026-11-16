@@ -20,9 +20,7 @@ class OPEX_Writer_JSON extends OPEX_Writer {
 	 * Opens the array.
 	 */
 	public function start(): void {
-		$handle = $this->open();
-		fwrite( $handle, "[\n" );
-		fclose( $handle );
+		$this->append_text( "[\n" );
 	}
 
 	/**
@@ -32,26 +30,26 @@ class OPEX_Writer_JSON extends OPEX_Writer {
 	 * @param bool  $first_batch True when no row has been written yet, so no comma comes first.
 	 */
 	public function append( array $rows, bool $first_batch ): void {
-		$handle = $this->open();
-		$first  = $first_batch;
+		$out   = '';
+		$first = $first_batch;
 		foreach ( $rows as $row ) {
 			$item = array();
 			foreach ( $this->headers as $field => $label ) {
 				$item[ $label ] = (string) ( $row[ $field ] ?? '' );
 			}
-			fwrite( $handle, ( $first ? '' : ",\n" ) . '  ' . wp_json_encode( $item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) );
+			$out  .= ( $first ? '' : ",\n" ) . '  ' . wp_json_encode( $item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
 			$first = false;
 		}
-		fclose( $handle );
+		if ( '' !== $out ) {
+			$this->append_text( $out );
+		}
 	}
 
 	/**
 	 * Closes the array.
 	 */
 	public function finish(): void {
-		$handle = $this->open();
-		fwrite( $handle, "\n]\n" );
-		fclose( $handle );
+		$this->append_text( "\n]\n" );
 	}
 }
 

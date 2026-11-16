@@ -29,6 +29,7 @@ class OPEX_Export_Run {
 	 * @param string $id     Job id.
 	 * @param bool   $resume True when a person asked to resume a paused job.
 	 * @return array|WP_Error The job as the screen shows it, or an error.
+	 * @throws OPEX_User_Error Only an unexpected one: the busy error of the store becomes a WP_Error.
 	 */
 	public static function run( string $id, bool $resume = false ) {
 		$job = OPEX_Jobs::get( $id );
@@ -43,22 +44,76 @@ class OPEX_Export_Run {
 		}
 
 		if ( ! OPEX_Jobs::acquire_lock( $id ) ) {
-			return new WP_Error(
-				'opex_locked',
-				__( 'This export is already running in another window.', 'open-export' ),
-				array( 'status' => 409 )
-			);
+			return self::locked();
 		}
+		// The job lock can expire while a slow batch still writes. The file lock
+		// cannot, so a worker that took over an expired job lock stops here
+		// instead of writing the same file. It is held across the restore, the
+		// write, the finish and the save of the checkpoint.
+		$path = OPEX_Jobs::file_path( $job );
+		$file = OPEX_File_Lock::take( $path );
+		if ( OPEX_File_Lock::BUSY === $file || ! OPEX_Jobs::refresh_lock( $id ) ) {
+			OPEX_File_Lock::release( $file, $path, false );
+			OPEX_Jobs::release_lock( $id );
+			return self::locked();
+		}
+		$ended = false;
 		try {
-			return OPEX_Access::scope(
+			if ( OPEX_File_Lock::UNSUPPORTED === $file ) {
+				self::note_once( $id, __( 'This server cannot lock the export file, so only the job lock keeps two workers apart. Avoid running this export from two places at once.', 'open-export' ) );
+			}
+			$out   = OPEX_Access::scope(
 				! empty( $job['wide'] ),
 				static function () use ( $id, $resume ) {
 					return self::run_locked( $id, $resume );
 				}
 			);
+			$now   = OPEX_Jobs::get( $id );
+			$ended = null === $now || 'done' === $now['status'];
+			return $out;
+		} catch ( OPEX_User_Error $e ) {
+			if ( ! OPEX_Store::is_busy( $e ) ) {
+				throw $e;
+			}
+			return new WP_Error( 'opex_busy', $e->getMessage(), array( 'status' => 503 ) );
 		} finally {
+			// A finished or deleted job needs no lock file. It goes while still held.
+			OPEX_File_Lock::release( $file, $path, $ended );
 			OPEX_Jobs::release_lock( $id );
 		}
+	}
+
+	/**
+	 * The error for a job another worker is running.
+	 *
+	 * @return WP_Error The 409 error.
+	 */
+	private static function locked(): WP_Error {
+		return new WP_Error(
+			'opex_locked',
+			__( 'This export is already running in another window.', 'open-export' ),
+			array( 'status' => 409 )
+		);
+	}
+
+	/**
+	 * Adds a note to a job unless it has it already.
+	 *
+	 * @param string $id   Job id.
+	 * @param string $note The note.
+	 * @return void
+	 */
+	private static function note_once( string $id, string $note ): void {
+		OPEX_Jobs::update(
+			$id,
+			static function ( array $stored ) use ( $note ): ?array {
+				if ( in_array( $note, (array) $stored['notes'], true ) ) {
+					return null;
+				}
+				$stored['notes'] = array_merge( (array) $stored['notes'], array( $note ) );
+				return $stored;
+			}
+		);
 	}
 
 	/**
@@ -117,8 +172,10 @@ class OPEX_Export_Run {
 				$batch = OPEX_Network::batch( $job, $query, $guard );
 				$rows  = $batch['items'];
 			} else {
-				$batch = OPEX_Query::batch( $query, (int) $job['cursor'], (int) $config['batch_size'], $guard );
-				$rows  = OPEX_Acf_Spread::output( $batch['items'], $config, $job['headers'] );
+				// A raw table's cursor may be digit text (zero, negative or very large keys). Kept as stored.
+				$cursor = is_string( $job['cursor'] ) ? $job['cursor'] : (int) $job['cursor'];
+				$batch  = OPEX_Query::batch( $query, $cursor, (int) $config['batch_size'], $guard );
+				$rows   = OPEX_Acf_Spread::output( $batch['items'], $config, $job['headers'] );
 			}
 			$guard();
 			$writer->append( $rows, 0 === (int) $job['processed'] );
@@ -167,7 +224,8 @@ class OPEX_Export_Run {
 				if ( $plain['filename'] !== $saved['filename'] ) {
 					OPEX_Compress::discard_plain( $plain );
 				}
-				do_action( 'opex_job_done', $saved );
+				// The job is saved as done. A listener that throws must not turn it into an error.
+				OPEX_Exporter::announce_done( $saved );
 			}
 			return OPEX_Jobs::expose( $saved );
 		} catch ( Throwable $e ) {
@@ -177,11 +235,7 @@ class OPEX_Export_Run {
 					OPEX_Jobs::discard_files( $job );
 					return self::missing();
 				}
-				return new WP_Error(
-					'opex_locked',
-					__( 'This export is already running in another window.', 'open-export' ),
-					array( 'status' => 409 )
-				);
+				return self::locked();
 			}
 			OPEX_Exporter::log_exception( $e );
 			$message = OPEX_Exporter::public_error_message( $e );

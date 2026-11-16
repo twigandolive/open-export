@@ -66,6 +66,7 @@ require_once OPEX_DIR . 'includes/class-opex-acf-spread.php';
 require_once OPEX_DIR . 'includes/class-opex-transforms.php';
 require_once OPEX_DIR . 'includes/class-opex-lock.php';
 require_once OPEX_DIR . 'includes/class-opex-store.php';
+require_once OPEX_DIR . 'includes/class-opex-file-lock.php';
 require_once OPEX_DIR . 'includes/class-opex-user-error.php';
 require_once OPEX_DIR . 'includes/class-opex-jobs.php';
 require_once OPEX_DIR . 'includes/class-opex-compress.php';

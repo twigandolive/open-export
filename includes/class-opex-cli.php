@@ -181,6 +181,9 @@ class OPEX_CLI {
 	 * matches more than one template or schedule is an error that lists the ids.
 	 * A schedule starts as if triggered from the command line, so its delivery
 	 * and incremental settings apply. Exit code 0 on success, 1 on any failure.
+	 * A failed delivery is a failure too: the command prints the file path and
+	 * each delivery error, then exits with code 1. The delivery is still tried
+	 * again later, as for any export.
 	 *
 	 * ## OPTIONS
 	 *
@@ -196,7 +199,8 @@ class OPEX_CLI {
 	 * writable, and the path cannot be inside the plugin folder.
 	 *
 	 * [--force]
-	 * : Overwrite the --output file if it already exists.
+	 * : Overwrite the --output file if it already exists. Without it, a file
+	 * that appears at that path while the export runs is not replaced either.
 	 *
 	 * [--since=<datetime>]
 	 * : Only export rows newer than this site-time value, as YYYY-MM-DD or
@@ -210,7 +214,8 @@ class OPEX_CLI {
 	 * as a network export already runs that way. Not allowed for a schedule.
 	 *
 	 * [--porcelain]
-	 * : Print only the final file path.
+	 * : Print only the final file path. Warnings and errors, such as a
+	 * failed delivery, still go to STDERR.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -265,7 +270,8 @@ class OPEX_CLI {
 	 * Runs a one-off export from a JSON file.
 	 *
 	 * The file holds either an export config or an assistant recipe (it has an
-	 * "opex_recipe" key). Notes about a recipe print as warnings.
+	 * "opex_recipe" key). Notes about a recipe print as warnings. Exit code 0
+	 * on success, 1 on any failure.
 	 *
 	 * ## OPTIONS
 	 *
@@ -277,10 +283,11 @@ class OPEX_CLI {
 	 * writable, and the path cannot be inside the plugin folder.
 	 *
 	 * [--force]
-	 * : Overwrite the --output file if it already exists.
+	 * : Overwrite the --output file if it already exists. Without it, a file
+	 * that appears at that path while the export runs is not replaced either.
 	 *
 	 * [--porcelain]
-	 * : Print only the final file path.
+	 * : Print only the final file path. Warnings and errors still go to STDERR.
 	 *
 	 * ## EXAMPLES
 	 *

@@ -150,11 +150,13 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 				'read'   => 'meta:discount_type',
 				'values' => $types,
 			),
+			// A percent coupon's amount is not money: 12.5 percent must stay 12.5
+			// even when prices show no decimals, so it is padded but never rounded.
 			'woo:amount'               => array(
 				'group'  => $coupon,
 				'type'   => 'number',
 				'read'   => 'meta:coupon_amount',
-				'format' => 'money',
+				'format' => 'decimal',
 			),
 			'woo:date_expires'         => array(
 				'group'  => $coupon,

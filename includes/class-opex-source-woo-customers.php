@@ -9,7 +9,8 @@
  *
  * wc_order_stats keeps totals as DOUBLE. Summing those in SQL would be float
  * math, so spend and average are added up in PHP as exact decimal strings.
- * Rules on them compare a SQL sum, which is close enough to choose rows.
+ * A rule cannot use them: it would have to compare a float SQL sum, which
+ * can disagree with the exact amount the export prints.
  *
  * @package Open_Export
  */
@@ -319,14 +320,12 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 				'type'   => 'number',
 				'php'    => true,
 				'format' => 'money',
-				'filter' => "(SELECT COALESCE(SUM(s.total_sales), 0) FROM `{$stats}` s WHERE {$scope})",
 			),
 			'woo:avg_order_value'  => array(
 				'group'  => $money,
 				'type'   => 'number',
 				'php'    => true,
 				'format' => 'money',
-				'filter' => "(SELECT CASE WHEN SUM({$count}) = 0 THEN NULL ELSE SUM(s.total_sales) / SUM({$count}) END FROM `{$stats}` s WHERE {$scope})",
 			),
 			'woo:date_registered'  => array(
 				'group'  => $dates,
