@@ -42,6 +42,11 @@
 	// Job id to the clock value of the list's copy. A poll answer never
 	// replaces a copy written after the poll was sent.
 	const written = new Map();
+	// Job id to the clock value of its deletion. A poll sent before that
+	// would bring the deleted job back, so its rows for the id are dropped.
+	const gone = new Map();
+	// Clock values of the polls still waiting for an answer.
+	const asking = new Set();
 	let clock = 0;
 
 	/**
@@ -74,8 +79,10 @@
 		if ( ! job || ! job.id ) {
 			return job;
 		}
-		// Marks the copy as newer than any poll already sent.
+		// Marks the copy as newer than any poll already sent. A job written
+		// again is no longer treated as deleted.
 		written.set( job.id, ++clock );
+		gone.delete( job.id );
 		const jobs = list().filter( ( item ) => item.id !== job.id );
 		jobs.push( job );
 		store.set( 'jobs', sorted( jobs ) );
@@ -83,13 +90,35 @@
 	}
 
 	/**
-	 * Removes a job from the store and stops driving it.
+	 * Removes a job from the store and stops driving it. The deletion is
+	 * remembered while an older poll is still out, so its answer cannot
+	 * put the job back.
+	 *
+	 * @param {string} id Job id.
+	 * @return {void}
 	 */
 	function forget( id ) {
 		driving.delete( id );
 		owner.delete( id );
 		written.delete( id );
+		gone.set( id, ++clock );
+		prune();
 		store.set( 'jobs', list().filter( ( item ) => item.id !== id ) );
+	}
+
+	/**
+	 * Drops the deletions no poll still out was sent before. Only a poll
+	 * sent before a deletion can bring that job back.
+	 *
+	 * @return {void}
+	 */
+	function prune() {
+		const oldest = asking.size ? Math.min( ...asking ) : Infinity;
+		gone.forEach( ( time, id ) => {
+			if ( time < oldest ) {
+				gone.delete( id );
+			}
+		} );
 	}
 
 	/**
@@ -121,19 +150,26 @@
 	 * it, or when that copy was written after this request was sent, because
 	 * the answer can then be older than what the screen already shows. A job
 	 * written after the request and missing from the answer is kept too, so
-	 * a new job does not vanish until the next poll.
+	 * a new job does not vanish until the next poll. A job deleted after
+	 * this request was sent is left out of the answer.
 	 *
 	 * @return {Promise<Array>} Jobs.
 	 */
 	function load() {
 		const asked = ++clock;
+		asking.add( asked );
+		const done = () => {
+			asking.delete( asked );
+			prune();
+		};
 		return api.get( '/jobs' ).then( ( fresh ) => {
 			const local = {};
 			list().forEach( ( job ) => {
 				local[ job.id ] = job;
 			} );
 			const newer = ( id ) => ( written.get( id ) || 0 ) > asked;
-			const rows = Array.isArray( fresh ) ? fresh : [];
+			const deleted = ( id ) => ( gone.get( id ) || 0 ) > asked;
+			const rows = ( Array.isArray( fresh ) ? fresh : [] ).filter( ( job ) => ! deleted( job.id ) );
 			const seen = {};
 			const merged = rows.map( ( job ) => {
 				seen[ job.id ] = true;
@@ -149,7 +185,11 @@
 					merged.push( local[ id ] );
 				}
 			} );
+			done();
 			return store.set( 'jobs', sorted( merged ) );
+		}, ( err ) => {
+			done();
+			throw err;
 		} );
 	}
 

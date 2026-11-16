@@ -321,7 +321,7 @@ class CodexIntegrationBusyTest extends TestCase {
 		}
 
 		$this->assertSame( 1, $code, $out . $err );
-		$this->assertStringContainsString( 'Error: Open Export could not save because another request kept changing the same data.', $err );
+		$this->assertStringContainsString( 'Error: The site is busy. Try again in a moment.', $err );
 		$this->assertStringNotContainsString( 'Uncaught', $out . $err );
 	}
 }

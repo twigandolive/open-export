@@ -259,9 +259,9 @@ class OPEX_Catalog {
 			return array();
 		}
 
-		$safe = str_replace( '`', '', $table );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a table name cannot be a placeholder; it is checked against SHOW TABLE STATUS above.
-		$cols = $wpdb->get_results( "DESCRIBE `{$safe}`", ARRAY_A );
+		// The table was checked against SHOW TABLE STATUS above, and %i quotes it as an identifier.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the result is kept in the memo below.
+		$cols = $wpdb->get_results( $wpdb->prepare( 'DESCRIBE %i', $table ), ARRAY_A );
 
 		$out = array();
 		foreach ( (array) $cols as $col ) {

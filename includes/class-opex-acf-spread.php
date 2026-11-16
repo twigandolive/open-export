@@ -173,7 +173,7 @@ class OPEX_Acf_Spread {
 				return 0;
 		}
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; read once at job creation.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above: the tables come from $wpdb and the scope terms from OPEX_Access hold only placeholders. Read once at job creation.
 		$values = $wpdb->get_col( $sql );
 		OPEX_Query::throw_on_db_error();
 		$max = 0;

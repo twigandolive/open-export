@@ -195,7 +195,7 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 			array_merge( $ids, $status_args )
 		);
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; export batches are uncached.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above: the table names come from $wpdb and OPEX_Woo::table(), countable_sql() is a fixed expression, and the lists hold only placeholders. Export batches are uncached.
 		$rows = $wpdb->get_results( $sql );
 		OPEX_Query::throw_on_db_error();
 		foreach ( (array) $rows as $row ) {

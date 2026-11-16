@@ -24,6 +24,15 @@ class OPEX_CLI_Runner {
 	private static $link = 'link';
 
 	/**
+	 * The function publish() renames the finished copy into place with.
+	 * Only tests change it, through reflection, to fail a rename or to act
+	 * at the moment before it.
+	 *
+	 * @var callable
+	 */
+	private static $rename = 'rename';
+
+	/**
 	 * Stop with an error when a plugin call returned WP_Error.
 	 *
 	 * @param mixed $value Result of a plugin call, checked for WP_Error.
@@ -267,12 +276,13 @@ class OPEX_CLI_Runner {
 	 * replaced. The final path is never written in place, so no reader sees
 	 * a half-written file.
 	 *
-	 * Where the file system has no hard links, publish() checks that the
-	 * target still does not exist and then renames the finished copy into
-	 * place. That fallback has a short window between the check and the
-	 * rename in which another process could create the target, which the
-	 * rename would then replace. File systems with hard links do not have
-	 * that window. The temporary file is removed on every path.
+	 * Where the file system has no hard links, publish() first claims the
+	 * target name with an exclusive create of an empty file. Only one
+	 * process can win that, so a run that loses it fails as if the file was
+	 * already there. The winner then renames its finished copy over its own
+	 * empty placeholder. When that rename fails, the placeholder is removed,
+	 * but only while it is still the empty file this run made. The temporary
+	 * file is removed on every path.
 	 *
 	 * @param string $source Finished export file.
 	 * @param string $dest   Full --output path.
@@ -287,20 +297,68 @@ class OPEX_CLI_Runner {
 		try {
 			// WP_Filesystem is not used: it may ask for FTP credentials, which a shell run cannot answer.
 			if ( $force ) {
-				return rename( $temp, $dest ) ? true : 'Could not write the --output file.'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
+				return call_user_func( self::$rename, $temp, $dest ) ? true : 'Could not write the --output file.';
 			}
 			if ( @call_user_func( self::$link, $temp, $dest ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a refusal is the expected answer when the file exists.
 				return true;
 			}
-			if ( file_exists( $dest ) || is_link( $dest ) ) {
-				return 'The --output file appeared while the export ran. Add --force to overwrite it.';
+			// No hard link. Claim the name first, so no other run can take it before the rename.
+			$claim = self::claim( $dest );
+			if ( null === $claim ) {
+				return ( file_exists( $dest ) || is_link( $dest ) ) ? 'The --output file appeared while the export ran. Add --force to overwrite it.' : 'Could not write the --output file.';
 			}
-			// No hard links here. The copy is finished and sits in the same folder, so the rename is atomic.
-			return rename( $temp, $dest ) ? true : 'Could not write the --output file.'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- see above.
+			// The copy is finished and sits in the same folder, so the rename is atomic.
+			if ( call_user_func( self::$rename, $temp, $dest ) ) {
+				return true;
+			}
+			self::drop_claim( $dest, $claim );
+			return 'Could not write the --output file.';
 		} finally {
 			if ( file_exists( $temp ) ) {
 				wp_delete_file( $temp );
 			}
+		}
+	}
+
+	/**
+	 * Creates an empty file at a path that must not exist yet. Only one
+	 * process can create it, so this claims the name.
+	 *
+	 * @param string $path Path to claim.
+	 * @return array|null The device and inode of the new empty file, or null when the name was taken or the folder refused it.
+	 */
+	private static function claim( string $path ): ?array {
+		// phpcs:disable WordPress.WP.AlternativeFunctions -- a local file the shell user named, see publish().
+		$handle = @fopen( $path, 'xb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- an existing file is an expected answer.
+		if ( false === $handle ) {
+			return null;
+		}
+		$stat = fstat( $handle );
+		fclose( $handle );
+		// phpcs:enable
+		if ( false === $stat ) {
+			wp_delete_file( $path );
+			return null;
+		}
+		return array(
+			'dev' => (int) $stat['dev'],
+			'ino' => (int) $stat['ino'],
+		);
+	}
+
+	/**
+	 * Removes a placeholder from claim(), but only while it is still the
+	 * same empty file. A file that something else put there stays.
+	 *
+	 * @param string $path  Claimed path.
+	 * @param array  $claim What claim() returned.
+	 * @return void
+	 */
+	private static function drop_claim( string $path, array $claim ): void {
+		clearstatcache( true, $path );
+		$stat = @stat( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a missing file is an expected answer.
+		if ( false !== $stat && 0 === (int) $stat['size'] && (int) $stat['dev'] === $claim['dev'] && (int) $stat['ino'] === $claim['ino'] && ! is_link( $path ) ) {
+			wp_delete_file( $path );
 		}
 	}
 

@@ -308,7 +308,7 @@ abstract class OPEX_Source_Provider {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- the clause holds only provider constants and placeholders.
 			$sql = $wpdb->prepare( $sql, $args );
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above when it has values; one cheap COUNT for the picker.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above when it has values: from() and base_where() give only the provider's fixed tables, columns and placeholders. One cheap COUNT for the picker.
 		return (int) $wpdb->get_var( $sql );
 	}
 }

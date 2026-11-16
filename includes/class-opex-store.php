@@ -204,7 +204,7 @@ class OPEX_Store {
 	 * @return OPEX_User_Error The error, with the code BUSY.
 	 */
 	private static function busy(): OPEX_User_Error {
-		return new OPEX_User_Error( esc_html__( 'Open Export could not save because another request kept changing the same data. Try again in a minute.', 'open-export' ), self::BUSY );
+		return new OPEX_User_Error( esc_html__( 'The site is busy. Try again in a moment.', 'open-export' ), self::BUSY );
 	}
 
 	/**

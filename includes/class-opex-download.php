@@ -45,7 +45,7 @@ class OPEX_Download {
 			header( $line );
 		}
 		if ( function_exists( 'set_time_limit' ) ) {
-			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- some hosts disable the function and warn. A long download must not stop at the time limit.
+			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged -- some hosts disable the function and warn. A large export streamed to the browser must not stop at the time limit, and WordPress has no wrapper for it.
 		}
 		self::send_file( $path, $out );
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions

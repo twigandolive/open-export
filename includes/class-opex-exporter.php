@@ -269,15 +269,18 @@ class OPEX_Exporter {
 
 	/**
 	 * Mark a job done and plan its deliveries. The caller saves it, so the
-	 * status and the plan land in one write.
+	 * status and the plan land in one write. A scheduled job also owes its
+	 * schedule's bookkeeping from that same write, so the debt is never lost
+	 * (see OPEX_Schedule_Owed).
 	 *
 	 * @param array $job Job record.
 	 * @return array The job, marked done, with its deliveries planned.
 	 */
 	private static function completed( array $job ): array {
-		$job['status']     = 'done';
-		$job['finished']   = time();
-		$job['deliveries'] = OPEX_Delivery::plan( (array) ( $job['delivery'] ?? array() ) );
+		$job['status']        = 'done';
+		$job['finished']      = time();
+		$job['deliveries']    = OPEX_Delivery::plan( (array) ( $job['delivery'] ?? array() ) );
+		$job['schedule_owed'] = OPEX_Schedule_Owed::owed_by( $job );
 		return $job;
 	}
 

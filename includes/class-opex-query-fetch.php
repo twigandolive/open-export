@@ -41,7 +41,7 @@ class OPEX_Query_Fetch {
 		}
 
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above when placeholders exist; export counts are one-shot.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above when placeholders exist: build_query_parts() gives only identifiers checked against the catalog and placeholders. Export counts are one-shot.
 		$total = $wpdb->get_var( $sql );
 		OPEX_Query::throw_on_db_error();
 		return (int) $total;
@@ -105,7 +105,7 @@ class OPEX_Query_Fetch {
 		$sql = $wpdb->prepare( $sql, $args_full );
 
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; streaming export batches are inherently uncached.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above: build_query_parts() gives only identifiers checked against the catalog and placeholders, and every value is bound. Streaming export batches are inherently uncached.
 		$rows = $wpdb->get_results( $sql );
 		OPEX_Query::throw_on_db_error();
 		$rows = is_array( $rows ) ? $rows : array();

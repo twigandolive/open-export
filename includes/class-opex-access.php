@@ -134,7 +134,7 @@ class OPEX_Access {
 		global $wpdb;
 		list( $terms, $args ) = self::users_scope();
 		$sql                  = "SELECT COUNT(*) FROM {$wpdb->users} u" . ( $terms ? ' WHERE ' . implode( ' AND ', $terms ) : '' );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the table comes from $wpdb, the one value is bound; a cheap count for the picker.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- the table comes from $wpdb and the scope terms from users_scope() hold only placeholders, so the one value is bound. A cheap count for the picker.
 		return (int) $wpdb->get_var( $args ? $wpdb->prepare( $sql, $args ) : $sql );
 	}
 

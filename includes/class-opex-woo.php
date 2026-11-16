@@ -477,9 +477,8 @@ class OPEX_Woo {
 				return array();
 			}
 
-			$safe = str_replace( '`', '', $table );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a table name cannot be a placeholder; it is checked against SHOW TABLE STATUS, and the sample is cached below.
-			$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM `{$safe}` LIMIT 800" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the table was checked against SHOW TABLE STATUS above, and the sample is cached below.
+			$keys = $wpdb->get_col( $wpdb->prepare( 'SELECT DISTINCT meta_key FROM %i LIMIT 800', $table ) );
 			$keys = array_values( array_filter( array_map( 'strval', (array) $keys ) ) );
 			sort( $keys, SORT_NATURAL | SORT_FLAG_CASE );
 
@@ -520,9 +519,8 @@ class OPEX_Woo {
 
 		if ( self::use_hpos() ) {
 			$table = self::table( 'orders' );
-			$safe  = str_replace( '`', '', $table );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the table name comes from $wpdb->prefix and the status list is a class constant; the type is bound. One cheap COUNT for the picker.
-			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN (" . self::DRAFT_STATUS_SQL . ')', 'shop_order' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the table name comes from $wpdb->prefix and %i quotes it, the status list is a class constant, and the type is bound. One cheap COUNT for the picker.
+			$count = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE type = %s AND status NOT IN (' . self::DRAFT_STATUS_SQL . ')', $table, 'shop_order' ) );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one cheap COUNT for the picker.
 			$count = (int) $wpdb->get_var(

@@ -251,7 +251,7 @@ class OPEX_Query_Rows {
 		);
 
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; streaming export batches are inherently uncached.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above: the table and key column come from the fixed meta map and the IN lists hold only placeholders. Streaming export batches are inherently uncached.
 		$rows = $wpdb->get_results( $sql );
 		OPEX_Query::throw_on_db_error();
 

@@ -238,7 +238,7 @@ class OPEX_Acf {
 		$sql = $wpdb->prepare( "SELECT {$fk} AS oid, meta_key, meta_value FROM {$table} WHERE {$fk} IN ({$holders}) AND ({$keys}) ORDER BY {$row_id}", $args );
 
 		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; export batches are uncached.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- prepared above: the table and columns come from the META constant and the key tests hold only placeholders. Export batches are uncached.
 		$rows = $wpdb->get_results( $sql );
 		OPEX_Query::throw_on_db_error();
 

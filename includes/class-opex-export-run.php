@@ -209,11 +209,13 @@ class OPEX_Export_Run {
 				$guard();
 				$writer->finish();
 				$plain = $saved;
-				$done  = array(
-					'status'     => 'done',
-					'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
-					'finished'   => time(),
-					'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
+				// A scheduled job owes its schedule's bookkeeping from this same write (see OPEX_Schedule_Owed).
+				$done = array(
+					'status'        => 'done',
+					'total'         => max( (int) $saved['total'], (int) $saved['processed'] ),
+					'finished'      => time(),
+					'deliveries'    => OPEX_Delivery::plan( (array) $saved['delivery'] ),
+					'schedule_owed' => OPEX_Schedule_Owed::owed_by( $saved ),
 				);
 				// The zip gets its file name in the same save as the done status. Until
 				// then the plain file stays, so a replay can finish and zip it again.

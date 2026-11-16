@@ -401,9 +401,11 @@ class OPEX_Schedules {
 	 * run that started before a reset or a change of source or date field
 	 * leaves it alone.
 	 *
-	 * When the store is busy the job is marked as owing this bookkeeping
-	 * instead, and OPEX_Schedule_Owed::settle() does it later. The listener
-	 * does not throw then, so the other opex_job_done listeners still run.
+	 * The job was saved as done already marked as owing this bookkeeping.
+	 * The mark is cleared only after the bookkeeping was saved. When the
+	 * store is busy the mark stays, and OPEX_Schedule_Owed::settle() does
+	 * the bookkeeping later. The listener does not throw then, so the other
+	 * opex_job_done listeners still run.
 	 *
 	 * @param array $job Finished job record.
 	 * @return void
@@ -421,8 +423,13 @@ class OPEX_Schedules {
 				throw $e;
 			}
 			OPEX_Exporter::log_exception( $e );
-			OPEX_Schedule_Owed::mark( (string) ( $job['id'] ?? '' ) );
+			// A record saved without the mark (by an older version) gets it now.
+			if ( empty( $job['schedule_owed'] ) ) {
+				OPEX_Schedule_Owed::mark( (string) ( $job['id'] ?? '' ) );
+			}
+			return;
 		}
+		OPEX_Schedule_Owed::clear( (string) ( $job['id'] ?? '' ) );
 	}
 
 	/**

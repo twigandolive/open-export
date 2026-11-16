@@ -279,7 +279,7 @@ class OPEX_Delivery {
 	 * @return WP_Error The error.
 	 */
 	public static function lost_error( string $code ): WP_Error {
-		return new WP_Error( $code, __( 'The upload stopped because another background run took over this delivery. The partial upload was removed.', 'open-export' ) );
+		return new WP_Error( $code, __( 'The upload was stopped because another process took over this delivery. The partial file was removed, and the upload will be tried again.', 'open-export' ) );
 	}
 
 	/**
