@@ -1,0 +1,71 @@
+<?php
+/**
+ * Plain XML writer: one element per row, one child per column.
+ *
+ * @package Open_Export
+ */
+
+// No strict_types here on purpose: this file holds moved code, and strict types would change how arguments are coerced.
+
+defined( 'ABSPATH' ) || exit;
+
+// phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output; WP_Filesystem cannot append to multi-gigabyte files across hundreds of requests.
+
+/**
+ * Plain XML with one element per row.
+ */
+class OPEX_Writer_XML extends OPEX_Writer {
+
+	/**
+	 * Writes the declaration and opens the root element.
+	 */
+	public function start(): void {
+		$handle = $this->open();
+		fwrite( $handle, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<records>\n" );
+		fclose( $handle );
+	}
+
+	/**
+	 * Adds one record element per row, with one child per column.
+	 *
+	 * @param array $rows        Rows keyed by field id.
+	 * @param bool  $first_batch Unused: XML records need no separator.
+	 */
+	public function append( array $rows, bool $first_batch ): void {
+		$handle = $this->open();
+		foreach ( $rows as $row ) {
+			fwrite( $handle, "  <record>\n" );
+			foreach ( $this->headers as $field => $label ) {
+				$el = $this->element_name( $label );
+				fwrite( $handle, "    <{$el}>" . self::xml_escape( (string) ( $row[ $field ] ?? '' ) ) . "</{$el}>\n" );
+			}
+			fwrite( $handle, "  </record>\n" );
+		}
+		fclose( $handle );
+	}
+
+	/**
+	 * Closes the root element.
+	 */
+	public function finish(): void {
+		$handle = $this->open();
+		fwrite( $handle, "</records>\n" );
+		fclose( $handle );
+	}
+
+	/**
+	 * An XML element name made from a column label: anything not allowed in
+	 * a name becomes an underscore, and a name may not start with a digit.
+	 *
+	 * @param string $label Column label.
+	 */
+	private function element_name( string $label ): string {
+		$name = preg_replace( '/[^A-Za-z0-9_\-]/', '_', $label );
+		if ( '' === $name || ! preg_match( '/^[A-Za-z_]/', $name ) ) {
+			$name = '_' . $name;
+		}
+		return $name;
+	}
+}
+
+// phpcs:enable
