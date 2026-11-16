@@ -11,11 +11,11 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
 
 ### Added
 
-- **A new admin screen with five tabs:** Export, History, Schedules, Destinations and Settings. You build an export in one place and set up repeat exports in another, with the same builder in both.
+- **A new admin screen with five tabs:** Export, History, Schedules, Destinations and Settings. You build an export in one place and set up repeat exports in another, with the same export setup in both.
 - **Excel (XLSX) files.** The plugin writes them itself, with no extra library, and needs the PHP zip extension for them. Ids with leading zeros and numbers with more than 15 significant digits stay text, so Excel does not change them. Other numbers are real numbers, so Excel shows 82.50 as 82.5 unless you format the column. Text that looks like a formula stays text. An export with more rows than one Excel sheet holds (1,048,576, header included) stops with a message that says so and suggests CSV or narrower filters.
 - **CSV options:** choose the encoding (UTF-8 with BOM, UTF-8, Windows-1252 or UTF-16 LE) and the line endings (LF or CRLF), so the file opens cleanly in the program that reads it. Open Export converts each cell to the encoding before it quotes the cell, so a character that becomes a comma or a quote in Windows-1252 cannot split a cell. "Quote character" picks a double or a single quote. "Quote every cell" quotes every cell instead of only the cells that hold the delimiter, a quote, a space, a tab or a line break.
 - **HTML table format:** one page to open in a browser or print, titled with the export name. Open Export escapes every cell, and the page has no scripts and loads nothing from the web. When you print it, the header row repeats on each page. The whole export is one page, so a very large one is slow to open.
-- **Zip compression:** "Compress the finished file as a zip" under Format. The download, email attachment, webhook link and server upload get one .zip file that holds the export, named like the download (for example "Orders May.csv" inside "Orders May.csv.zip"). Zip compression needs the PHP zip extension. It is not offered for Excel, which is already compressed.
+- **Zip compression:** "Compress the finished file as a zip" under Format. The download, email attachment, webhook link and destination upload all get one .zip file that holds the export, named like the download (for example "Orders May.csv" inside "Orders May.csv.zip"). Zip compression needs the PHP zip extension. It is not offered for Excel, which is already compressed.
 - **Custom XML templates.** Write a header, a row and a footer with `{field id}` placeholders. Open Export escapes the values for you, and `{field id|cdata}` wraps a value in CDATA. Before it runs, the plugin checks that the result is well-formed XML.
 - **Column transforms.** Up to 8 steps per column: trim, change case, add text before or after, find and replace, format a date, format a number, map values, fill in when empty, remove HTML and shorten. Steps are plain settings, never code. "Format a number" rounds with exact decimal math, never floating point.
 - **Custom columns** that combine fields and text, such as `{woo:billing_first_name} {woo:billing_last_name}`.
@@ -26,20 +26,22 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
   - Money uses exact decimal math, never floating point. You cannot filter on total spent or average order, because the database can only add them up as floating point, which is not exact. Their exported values stay exact.
 - **Feed presets** for Google Merchant Center, Meta catalogs and Pinterest catalogs. On the Export tab, choose one under "Feed preset" and click "Load". The preset fills in a complete product export that you can change before you run it. Each feed carries the GTIN and, for a variation, its parent product as the item group (`g:gtin` and `g:item_group_id` for Google and Pinterest, `gtin` and `item_group_id` for Meta).
 - **A "WooCommerce product CSV (importer columns)" preset:** every product and variation not in the trash, with the column names that WooCommerce's own product importer (Products > Import) reads.
-  - WooCommerce may not match the GTIN column by itself. On its mapping screen, pick "GTIN, UPC, EAN, or ISBN" for that column once.
+  - WooCommerce may not match the GTIN column by itself. On its mapping screen, choose "GTIN, UPC, EAN, or ISBN" for that column once.
   - The preset leaves out attributes, the virtual and downloadable flags, downloads, upsells, cross-sells, grouped products and download limits.
   - The preset writes categories by name, so a subcategory comes back as a top-level category of the same name.
-- **A "GTIN, UPC, EAN or ISBN" column** for WooCommerce products. WooCommerce 9.2 and later store it. Older stores give an empty column.
+- **A "GTIN, UPC, EAN, or ISBN" column** for WooCommerce products. WooCommerce 9.2 and later store it. Older stores give an empty column.
 - **Schedules.** Run an export hourly, every 6 hours, twice a day, daily, weekly, monthly or only when asked, at a time in your site's timezone.
   - Every 6 hours from 03:00 runs at 03:00, 09:00, 15:00 and 21:00, and twice a day at 03:00 runs at 03:00 and 15:00. A time that happens twice when clocks go back runs at its first occurrence.
   - Name the file with the tokens `{label}`, `{source}`, `{date}`, `{time}`, `{datetime}`, `{id}` and `{site}`.
   - Each schedule has "Run now", Duplicate and an On or Off switch. A run that fails shows on its schedule card with its error.
-- **Changes only** on a schedule exports only rows that are new or changed since the last successful run. The schedule remembers when that run started, and that time is its watermark.
+- **Changes only** on a schedule exports only rows that are new or changed since the last successful run. The schedule saves when that run started. The code calls that time the watermark.
   - "Start over" makes the next run export every row again.
-  - A failed run leaves the watermark alone, so the next run tries the same rows.
-  - The "Changes only" field must be one of the source's date fields. Changing the schedule's source or that field clears the watermark, so the next run exports every row, and the save says so.
+  - A failed run leaves that saved time alone, so the next run tries the same rows.
+  - A run can finish while the site is too busy saving to update its schedule. The hourly maintenance run, or the next start of the schedule, whichever comes first, then catches the schedule up, so the next run does not export the same rows again.
+  - The "Changes only" field must be one of the source's date fields. Changing the schedule's source or that field makes Open Export forget that time, so the next run exports every row, and the save says so.
 - **A trigger URL for each schedule**, so a real server cron job can start it. The URL holds a secret key. "Make a new URL" replaces the key at any time. After 10 wrong keys for one schedule, or 30 wrong keys from one IP address, the URL answers 429 with a Retry-After header until 10 minutes after the first wrong key.
 - **Background exports** that keep going after you close the browser tab. They run on WP-Cron. Resume restarts a paused or failed background export at once.
+  - If a WP-Cron task finds the site busy saving, Open Export tries it again a minute later, up to 5 times in a row. After that, a scheduled start shows as failed on its schedule card and runs again at its next regular time. The hourly maintenance run restarts stalled exports and sends waiting deliveries.
 - **Delivery when an export finishes:** email (a download link, or the file attached up to 10 MB), a signed webhook, or upload to a saved FTP, FTPS or SFTP destination. A failed delivery is tried up to 3 times in all, 5 and then 30 minutes apart.
   - A webhook must use https unless it points at your own site or a loopback address (the server itself). Open Export checks this when you save the webhook and again when it sends.
   - On servers that send with cURL, the send goes to the exact address that Open Export checked, so a DNS answer that changes in between cannot redirect it. Other transports cannot pin the address.
@@ -55,16 +57,17 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
 - **The saved templates menu** shows each template's source, as "Template name (Source name)".
 - **Network exports on multisite.** A super admin can turn on "All sites in the network" to run one export across every public site, with Site ID and Site URL columns first. Network exports are not offered for users or raw tables. The preview shows rows from the current site only.
 - **ACF repeater and flexible content fields** on posts, terms and users, with ACF or Secure Custom Fields. Each one exports as one JSON column. To get numbered columns such as "team 1 name" instead, up to 20 rows, choose "Spread into columns". You cannot filter on these fields. When a field has more than 1000 rows in one record, the export gets its first 1000 and a note.
-- **WP-CLI:** `wp opex` lists sources, templates, schedules and jobs, runs a template or schedule, runs a one-off export from a JSON file, prints the capability document and runs the cleanup.
+- **WP-CLI:** `wp opex` lists sources, templates, schedules and exports, runs a template or schedule, runs a one-off export from a JSON file, prints the site schema and runs the cleanup.
   - `wp opex run <template> --network` runs a template across every site.
   - `run` and `export` exit with code 1 when a delivery fails.
   - `run` and `export` write `--output` through a unique temporary file. Without `--force`, they never replace a file, even one that appeared during the run.
+  - In a folder that cannot hold hard links, `run` and `export` first claim the file name with an empty file. Only one run can claim a name, so without `--force` they still never replace another run's file.
 - **Site Health:** an Open Export section under Info. Its "Export folder protection" line names the deny files in place and says nginx needs its own rule. Two status tests tell you when scheduled exports need a real cron job and when a background export has not moved for over an hour.
 - **Suggested privacy policy text** under Settings > Privacy.
 - **Two abilities** for the WordPress Abilities API, `open-export/get-schema` and `open-export/list-sources`, when your WordPress has that API.
 - **Plain-language notes on each export** that say what was dropped and why, for example a field the source does not have.
 - Hooks for developers: the `opex_job_done` and `opex_job_failed` actions, and the `opex_delivery_retry_wait`, `opex_cron_disabled` and `opex_zip_available` filters.
-- The capability document and recipe import now cover the new sources, formats, CSV options, transforms, custom columns, nested filter groups and XML templates. `opex_schema` stays at version 1, so a 1.3.1 recipe still works.
+- The site schema (the capability document in the code) and recipe import now cover the new sources, formats, CSV options, transforms, custom columns, nested filter groups and XML templates. `opex_schema` stays at version 1, so a 1.3.1 recipe still works.
 
 ### Changed
 
@@ -81,26 +84,27 @@ Open Export now runs exports on a schedule, sends the file where you need it, an
 - "This week", "this month", "this quarter" and "this year" now carry the label "so far", because they end today.
 - A batch size that is not a number falls back to 500.
 - **REST errors have fixed codes.**
-  - When two requests change the same saved list at once and one still cannot save after its retries, the route answers 503 with the code `opex_busy`. Try again.
+  - When the site is busy saving, because two requests change the same saved list at once and one still cannot save after its retries, the route answers 503 with the code `opex_busy`. Try again.
+  - When the same export, schedule start or delivery is already running, for example a second start of a schedule that is still running, the route answers 409 with the code `opex_busy`.
   - Another error written for people answers 400 with its message.
   - Any other unexpected error answers a plain 500 with the code `opex_failed`. The detail goes to the debug log only when `WP_DEBUG` and `WP_DEBUG_LOG` are on.
 - A raw table with no whole-number primary key is ordered by its primary key columns. A table with no key at all gets a note that row order is not guaranteed.
 - The field picker lists post type and MIME type for every post type, and the comment GMT date and karma for comments.
-- An hourly cleanup removes old exports. It follows the retention setting and counts from when each export finished. Before, Open Export removed an export 30 days after it started, when you opened the job list.
+- An hourly cleanup removes old exports. It follows the retention setting and counts from when each export finished. Before, Open Export removed an export 30 days after it started, when you opened the export list.
 - **History keeps the latest 200 exports, up from 50.** When the list is full, Open Export removes the oldest finished or failed export and its file, sooner than the retention setting. It never removes running or paused exports to make room. A download link stops working when its file is removed.
 - Deactivating the plugin clears its scheduled events, on every site when you deactivate it for the whole network. Uninstalling also removes schedules, destinations, settings, lock rows and every scheduled event, on every site of a network, unless that site keeps its data (see "When the plugin is deleted" above).
 
 ### Fixed
 
-- A database error in the middle of an export now stops the job with an error you can resume from. Before, the export could finish with rows missing.
+- A database error in the middle of an export now stops the export with an error you can resume from. Before, the export could finish with rows missing.
 - A batch that runs twice, for example after a timeout, no longer writes its rows twice.
 - Two requests can no longer run the same export batch at the same time.
 - Deleting an export while it runs now removes it for good, file included.
 - Open Export never exports the `session_tokens` and `_application_passwords` user meta on any path, including the raw user meta table, and you cannot filter on them.
 - A blank text column now counts as empty for equals, does not equal and is empty.
-- The schema link in the capability document works on sites without pretty permalinks.
+- The `to_see_all_fields` link in the site schema works on sites without pretty permalinks.
 - Open Export reports a recipe with values of the wrong shape instead of failing with an error.
-- Any PHP error during an export now marks the job as failed instead of stopping the request.
+- Any PHP error during an export now marks the export as failed instead of stopping the request.
 - CSV export no longer raises a deprecation notice on newer PHP.
 - The `/schema` route refuses an unknown `scope`.
 - The Open Export link on the Plugins screen opens Tools > Open Export.

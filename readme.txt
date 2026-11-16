@@ -12,7 +12,7 @@ Export posts, users, orders, products or any table to CSV, Excel, JSON, XML or H
 
 == Description ==
 
-Open Export gets your data out of WordPress. Pick a source, choose fields, filter, and export. Then save the setup, put it on a schedule, and have the file sent where you need it.
+Open Export gets your data out of WordPress. Choose a source, choose fields, filter, and export. Then save the setup, put it on a schedule, and have the file sent where you need it.
 
 No Pro version. No add-ons to buy. This is all of it.
 
@@ -130,7 +130,7 @@ Yes. On the Export tab, choose Google Merchant Center, Meta catalog or Pinterest
 
 = Can I export products for WooCommerce's importer? =
 
-Yes. Load the "WooCommerce product CSV (importer columns)" preset. It writes every product and variation not in the trash, with the column names WooCommerce's importer reads. On WooCommerce's mapping screen, pick "GTIN, UPC, EAN, or ISBN" for the GTIN column once. The preset leaves out attributes, downloads, upsells, cross-sells and grouped products.
+Yes. Load the "WooCommerce product CSV (importer columns)" preset. It writes every product and variation not in the trash, with the column names WooCommerce's importer reads. On WooCommerce's mapping screen, choose "GTIN, UPC, EAN, or ISBN" for the GTIN column once. The preset leaves out attributes, downloads, upsells, cross-sells and grouped products.
 
 = Can it export ACF repeater fields? =
 
@@ -150,7 +150,7 @@ Yes, with WP-CLI. For example, `wp opex run "Weekly orders"` runs a saved templa
 
 == Screenshots ==
 
-1. The Export tab: pick a source, choose the columns you want, and put them in order.
+1. The Export tab: choose a source, choose the columns you want, and put them in order.
 2. The History tab: every export with its progress, delivery and download.
 3. The Schedules tab: each schedule with its timetable, next run, last run and delivery.
 4. A destination form for an SFTP server, with its saved fingerprint.

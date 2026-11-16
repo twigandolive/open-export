@@ -23,7 +23,7 @@ Only the latest release gets security fixes. Update before you report.
 - A download link carries a random token that expires. The site stores only a keyed hash of the token.
 - Export files live in `wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. The folder holds an `index.php`, an `.htaccess` file that denies access on Apache (2.2 and 2.4 rules) and LiteSpeed, and a `web.config` file that denies access on IIS. Site Health names the deny files in place and says nginx needs its own rule. Each file name includes 12 random characters.
 - Open Export encrypts destination passwords, private keys and webhook secrets with libsodium, using a key derived from your site's salts. The screen and the REST API never send a saved secret back.
-- SFTP checks the server's host key before it sends any password or key, and refuses a server whose key has changed. Open Export saves a key only for the server it came from.
+- SFTP checks the server's fingerprint before it sends any password or key, and refuses a server whose fingerprint has changed. Open Export saves a fingerprint only for the server it came from.
 - FTP, FTPS and SFTP upload to a temporary name, then rename the file into place. Open Export never deletes a file already on the server when a rename fails.
 - A webhook must use https unless it points at your own site or a loopback address (the server itself). Open Export checks that rule when you save the webhook and again before each send, so it refuses a stored plain http address to another host. When you set a secret, Open Export signs the webhook with HMAC-SHA256 in the `X-Opex-Signature` header. If it cannot store the secret encrypted, it turns the webhook off with a note and never sends it unsigned. The webhook goes through WordPress's safe request function, which refuses local network addresses, and it does not follow redirects.
 - A failed export shows a plain message, never PHP's own error text, which can hold server paths. The detail goes to the PHP error log only when `WP_DEBUG` and `WP_DEBUG_LOG` are on.
@@ -39,7 +39,7 @@ Only the latest release gets security fixes. Update before you report.
 
 - FTP sends your password and the file without encryption.
 - FTPS encrypts the connection, but PHP cannot verify the server's certificate. Use SFTP when the server offers it.
-- SFTP trusts the host key it sees the first time a test or delivery works. Test a new destination on a network you trust.
+- SFTP trusts the fingerprint it sees the first time a test or delivery works. Test a new destination on a network you trust.
 - SFTP private keys with a passphrase do not work.
 - A schedule's trigger URL is a secret. Anyone who has it can start that export. If it leaks, replace the key.
 - The trigger limit counts the address the connection comes from. It ignores forwarding headers, which any caller can set. Behind a proxy or CDN, every caller shares one count, so 30 wrong keys from anyone pause every trigger URL for up to 10 minutes.
