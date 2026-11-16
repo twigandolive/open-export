@@ -145,7 +145,7 @@
 			dest.appendChild( el( 'option', { value: '' }, __( 'Choose a destination', 'open-export' ) ) );
 			( list || [] ).forEach( ( item ) => {
 				const blocked = false === features.ftp && ( 'ftp' === item.type || 'ftps' === item.type );
-				dest.appendChild( el( 'option', { value: item.id, disabled: blocked }, item.name + ' (' + String( item.type || '' ).toUpperCase() + ')' ) );
+				dest.appendChild( el( 'option', { value: item.id, disabled: blocked }, app.paren( item.name, String( item.type || '' ).toUpperCase() ) ) );
 			} );
 			if ( value.destination.id && ! ( list || [] ).some( ( item ) => item.id === value.destination.id ) && list ) {
 				/* translators: %s: destination id. */

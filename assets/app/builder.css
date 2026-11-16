@@ -64,6 +64,7 @@
 .opex-grip{display:inline-flex;color:var(--text-secondary);cursor:grab}
 .opex-wrap .opex-colrow-main input[type="text"]{flex:1 1 130px;min-width:0}
 .opex-wrap code.opex-colfield{flex:0 1 auto;color:var(--text-secondary);background:none;padding:0;overflow-wrap:anywhere}
+.opex-colrow-acf{padding:0 8px 8px 32px}
 .opex-tag{padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);font-size:12px;font-weight:600;line-height:18px}
 .opex-tag-warn{border-color:var(--warning);background:var(--warning-tint)}
 .opex-transform{padding:12px;border-top:1px solid var(--separator);background:var(--well)}
@@ -75,6 +76,9 @@
 .opex-step-body .opex-field-error{flex-basis:100%}
 .opex-step-actions{display:flex;flex:none}
 .opex-mini{display:inline-flex;align-items:center;gap:8px}
+/* Long field names must not push the page sideways on narrow screens. */
+.opex-insert{min-width:0;max-width:100%}
+.opex-wrap .opex-insert select{flex:0 1 auto;min-width:0;max-width:100%}
 .opex-pairs{width:100%;margin:4px 0;border-collapse:collapse}
 .opex-pairs th{padding:0 8px 4px 0;text-align:left;font-weight:600}
 .opex-pairs td{padding:0 8px 4px 0}
@@ -143,6 +147,8 @@
 /* Sticky summary bar */
 .opex-stickybar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px;padding:12px 16px;border:1px solid var(--border);border-radius:4px;background:var(--panel)}
 .opex-wrap .opex-stickybar-text{flex:1;min-width:0;font-weight:600}
+/* While the bar shows, keyboard focus and scrollIntoView stop short of it and of the admin bar. */
+html:has(#opex-panel-export:not([hidden]) .opex-stickybar){scroll-padding:48px 0 96px}
 
 @media (max-width:782px){
   .opex-formats{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -159,6 +165,9 @@
   .opex-report li{grid-template-columns:minmax(0,1fr)}
   .opex-fgroup .opex-fgroup{margin-left:8px}
   .opex-step{flex-wrap:wrap}
+  .opex-colrow-acf{padding-left:8px}
+  .opex-colrow-acf .opex-mini{flex-wrap:wrap}
   .opex-stickybar{flex-direction:column;align-items:stretch}
   .opex-stickybar .opex-btn{width:100%}
+  html:has(#opex-panel-export:not([hidden]) .opex-stickybar){scroll-padding:62px 0 150px}
 }

@@ -23,6 +23,23 @@
 	const el = app.el;
 	const B = app.builder;
 
+	/**
+	 * Takes a column out of config.acf_flatten, and drops the key when the
+	 * list is empty. Used when a column is removed.
+	 *
+	 * @param {Object} config Builder config.
+	 * @param {string} id     Column id.
+	 */
+	B.dropAcf = function ( config, id ) {
+		if ( ! Array.isArray( config.acf_flatten ) ) {
+			return;
+		}
+		config.acf_flatten = config.acf_flatten.filter( ( item ) => item !== id );
+		if ( ! config.acf_flatten.length ) {
+			delete config.acf_flatten;
+		}
+	};
+
 	B.chosen = function ( ctx, o ) {
 		const open = new Set();
 		const panels = new Map();
@@ -38,6 +55,7 @@
 			delete config.column_labels[ id ];
 			delete config.transforms[ id ];
 			config.custom_columns = config.custom_columns.filter( ( col ) => col.id !== id );
+			B.dropAcf( config, id );
 			open.delete( id );
 		}
 
@@ -121,6 +139,46 @@
 			return input;
 		}
 
+		/**
+		 * ACF repeater and flexible content fields (ids starting with acf:)
+		 * can be kept as one JSON column or spread into columns. The choice
+		 * lives in config.acf_flatten, a list of spread ids. The key is only
+		 * written once someone picks "Spread", so a site without ACF fields
+		 * never sends it.
+		 *
+		 * @param {string} id Column id.
+		 * @return {HTMLElement|null} The choice, or null when it does not apply.
+		 */
+		function acfChoice( id ) {
+			if ( 0 !== id.indexOf( 'acf:' ) || ! Object.keys( ctx.fieldIndex ).some( ( key ) => 0 === key.indexOf( 'acf:' ) ) ) {
+				return null;
+			}
+			const spread = () => ( Array.isArray( ctx.config.acf_flatten ) ? ctx.config.acf_flatten : [] );
+			const select = el( 'select', { 'data-col-action': 'acf' }, [
+				el( 'option', { value: 'json' }, __( 'Keep as one JSON column', 'open-export' ) ),
+				el( 'option', { value: 'spread' }, __( 'Spread into columns', 'open-export' ) ),
+			] );
+			select.value = spread().indexOf( id ) > -1 ? 'spread' : 'json';
+			const help = el( 'p', { class: 'opex-help', hidden: 'spread' !== select.value }, __( 'Makes one column per sub-field and row, for at most 20 rows.', 'open-export' ) );
+			select.addEventListener( 'change', () => {
+				const list = spread().filter( ( item ) => item !== id );
+				if ( 'spread' === select.value ) {
+					list.push( id );
+				}
+				if ( list.length ) {
+					ctx.config.acf_flatten = list;
+				} else {
+					delete ctx.config.acf_flatten;
+				}
+				help.hidden = 'spread' !== select.value;
+				o.onChange( 'acf' );
+			} );
+			return el( 'div', { class: 'opex-colrow-acf' }, [
+				el( 'label', { class: 'opex-mini' }, [ __( 'Export as', 'open-export' ), select ] ),
+				help,
+			] );
+		}
+
 		function panelFor( id, custom, button ) {
 			const box = el( 'div', { class: 'opex-colpanel', id: app.uid( 'opex-tf' ) } );
 			const onChange = ( reason ) => {
@@ -167,7 +225,7 @@
 					after( next, 'remove' );
 				} ),
 			] );
-			item.appendChild( main );
+			app.append( item, [ main, custom ? null : acfChoice( id ) ] );
 
 			const setOpen = ( value ) => {
 				if ( value && ! panels.has( id ) ) {

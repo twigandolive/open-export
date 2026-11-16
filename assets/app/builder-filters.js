@@ -258,7 +258,7 @@
 			const n = countRules( ctx.config.filters );
 			/* translators: %s: number of filter rules. */
 			const rules = n ? sprintf( _n( '%s filter', '%s filters', n, 'open-export' ), app.formatNumber( n ) ) : '';
-			return [ dates.summary(), rules ].filter( Boolean ).join( ', ' );
+			return app.list( [ dates.summary(), rules ] );
 		}
 
 		return {

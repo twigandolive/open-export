@@ -12,7 +12,8 @@
  *   update( key, fn )       set( key, fn( get( key ) ) ).
  *   subscribe( key, fn )    Calls fn( value, key ) on each set. Returns an unsubscribe function.
  *
- * Keys in use: options, jobs, schedules, destinations, settings, session.
+ * Keys in use: options, jobs, driving, schedules, destinations, settings,
+ * session, sources, builderLoad (Export tab), historyFocus (History tab).
  */
 ( function () {
 	'use strict';

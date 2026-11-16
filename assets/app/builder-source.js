@@ -185,7 +185,7 @@
 				if ( ! found ) {
 					return ctx.config.source;
 				}
-				return found.item.label + ', ' + app.rows( found.item.count ) + ( ctx.config.network ? ', ' + __( 'all sites', 'open-export' ) : '' );
+				return app.list( [ found.item.label, app.rows( found.item.count ), ctx.config.network ? __( 'all sites', 'open-export' ) : '' ] );
 			},
 			errors() {
 				if ( ctx.config.source ) {

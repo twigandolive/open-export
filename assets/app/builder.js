@@ -12,7 +12,8 @@
  * loses focus or the caret.
  *
  * Exposes opexApp.builder:
- *   mount( container, { config, onChange, mode } )  mode: 'export' or 'schedule'.
+ *   mount( container, { config, onChange, mode, level } )  mode: 'export' or 'schedule'.
+ *       level is the card heading tag (default h2), so the cards fit the page's heading order.
  *       Returns { getConfig(), setConfig( config ), validate(), summary(),
  *       sourceLabel(), previewTotal(), ready }. onChange( config ) fires
  *       after every change with a copy of the config.
@@ -182,7 +183,7 @@
 		}
 
 		B.sections.forEach( ( def, i ) => {
-			const card = B.card( { number: i + 1, title: def.title } );
+			const card = B.card( { number: i + 1, title: def.title, level: o.level } );
 			const view = def.build( ctx ) || {};
 			view.def = def;
 			view.card = card;
@@ -245,7 +246,7 @@
 					parts.push( view.short ? view.short() : view.summary() );
 				}
 			} );
-			return parts.filter( Boolean ).join( ', ' );
+			return app.list( parts );
 		}
 
 		function previewTotal() {

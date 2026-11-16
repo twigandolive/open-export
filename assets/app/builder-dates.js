@@ -92,11 +92,11 @@
 			options( presetSelect, presets(), range().preset || 'all_time' );
 			syncCustom();
 			const zone = ( ctx.fields && ctx.fields.timezone ) || ctx.options.timezone || '';
-			/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
-			const zoneText = sprintf( __( 'Dates use the site time zone, %s.', 'open-export' ), zone );
-			help.textContent = zoneText + ' ' + ( 'schedule' === ctx.mode
-				? __( 'Ranges such as Last 7 days are worked out again on every run.', 'open-export' )
-				: __( 'Ranges such as Last 7 days are worked out when the export starts. Either custom date may be left empty.', 'open-export' ) );
+			help.textContent = 'schedule' === ctx.mode
+				/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
+				? sprintf( __( 'Dates use the site time zone, %s. Ranges such as Last 7 days are worked out again on every run.', 'open-export' ), zone )
+				/* translators: %s: site time zone, for example Europe/Berlin or +02:00. */
+				: sprintf( __( 'Dates use the site time zone, %s. Ranges such as Last 7 days are worked out when the export starts. Either custom date may be left empty.', 'open-export' ), zone );
 		}
 
 		function summary() {

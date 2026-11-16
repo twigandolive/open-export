@@ -13,6 +13,9 @@
  *   formatNumber( n )     A number with the page language's digit grouping.
  *   formatSize( bytes )   A file size such as "212 KB".
  *   rows( n )             "1 row" or "1,240 rows".
+ *   list( items )         Items joined with the translated list separator, empty ones skipped.
+ *   paren( main, note )   "Main (note)", in the order the translation sets.
+ *   labeled( name, text ) "Name: text", in the order the translation sets.
  *   registerTab( id, def ) Adds a tab module. def.mount( panel ) builds the tab.
  *   tabModules            The registered tab modules by id.
  *
@@ -24,7 +27,7 @@
 	'use strict';
 
 	const app = ( window.opexApp = window.opexApp || {} );
-	const { __, _n, sprintf } = window.wp.i18n;
+	const { __, _n, _x, sprintf } = window.wp.i18n;
 
 	app.boot = window.OPEX_BOOT || {};
 
@@ -159,6 +162,28 @@
 	app.tabModules = app.tabModules || {};
 	app.registerTab = function ( id, def ) {
 		app.tabModules[ id ] = def;
+	};
+
+	/**
+	 * Joins items with a separator translators can change, so no list is
+	 * glued with a hard-coded comma.
+	 *
+	 * @param {Array} items Strings. Empty ones are skipped.
+	 * @return {string} List.
+	 */
+	app.list = function ( items ) {
+		/* translators: separator between items of a short list, with its spaces. */
+		return items.filter( Boolean ).join( _x( ', ', 'list separator', 'open-export' ) );
+	};
+
+	app.paren = function ( main, note ) {
+		/* translators: 1: a name, 2: a detail about it, such as an id or a type. */
+		return sprintf( _x( '%1$s (%2$s)', 'name and detail', 'open-export' ), main, note );
+	};
+
+	app.labeled = function ( name, text ) {
+		/* translators: 1: what a message is about, 2: the message. */
+		return sprintf( _x( '%1$s: %2$s', 'subject and message', 'open-export' ), name, text );
 	};
 
 	app.rows = function ( n ) {

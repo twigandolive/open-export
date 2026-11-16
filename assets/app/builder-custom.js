@@ -88,10 +88,10 @@
 			const label = checkLabel( col.label, ctx );
 			const template = checkTemplate( col.template, ctx );
 			if ( label ) {
-				list.push( { id: col.id, what: 'label', message: name + ': ' + label } );
+				list.push( { id: col.id, what: 'label', message: app.labeled( name, label ) } );
 			}
 			if ( template ) {
-				list.push( { id: col.id, what: 'template', message: name + ': ' + template } );
+				list.push( { id: col.id, what: 'template', message: app.labeled( name, template ) } );
 			}
 		} );
 		if ( ctx.config.custom_columns.length > maxColumns( ctx ) ) {

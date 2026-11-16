@@ -5,6 +5,9 @@
  * updated in place when the job list changes, so a running job moves its
  * progress bar without rebuilding the table or taking focus away.
  *
+ * Another tab opens one job by setting the store key "historyFocus" to its
+ * id: the row's details open and its toggle takes focus.
+ *
  * Registers the tab "history". Uses opexApp.jobs for data and polling,
  * opexApp.historyView for the cells and the detail panel, and
  * opexApp.historyActions for the row actions.
@@ -103,6 +106,34 @@
 			}
 			askSchedules( list );
 			sync( list );
+			takeFocus();
+		}
+
+		// Another tab asked to show one job (store key "historyFocus", a job id).
+		// A job missing from the list gets one fresh load before giving up.
+		let focusReloaded = false;
+		function takeFocus() {
+			const id = store.get( 'historyFocus' );
+			if ( ! id || 'ready' !== loadState ) {
+				return;
+			}
+			const row = rows.get( id );
+			if ( ! row && ! focusReloaded ) {
+				focusReloaded = true;
+				jobs.load().catch( () => {} );
+				return;
+			}
+			focusReloaded = false;
+			store.set( 'historyFocus', null );
+			if ( ! row ) {
+				say( 'warning', __( 'That export is no longer in the history. Finished exports are removed after the number of days set in Settings.', 'open-export' ) );
+				return;
+			}
+			if ( row.detail.hidden ) {
+				row.toggle.click();
+			}
+			row.toggle.focus();
+			row.tr.scrollIntoView( { block: 'nearest' } );
 		}
 
 		function showOnly( node ) {
@@ -240,7 +271,7 @@
 			/* translators: %s: export name. */
 			row.toggle.setAttribute( 'aria-label', sprintf( __( 'Show details for %s', 'open-export' ), job.label ) );
 			// source_label arrives with the server's add-only job fields. Older jobs show the format only.
-			setText( row.cells.format, [ job.source_label || '', view.formatLabel( job ) ].filter( Boolean ).join( ', ' ) );
+			setText( row.cells.format, app.list( [ job.source_label || '', view.formatLabel( job ) ] ) );
 			if ( row.statusKey !== job.status ) {
 				row.statusKey = job.status;
 				app.clear( row.cells.status ).appendChild( view.statusBadge( job ) );
@@ -291,6 +322,7 @@
 			rows.forEach( ( row ) => updateRow( row, row.job ) );
 		} );
 		store.subscribe( 'schedules', () => rows.forEach( ( row ) => updateBy( row, row.job ) ) );
+		store.subscribe( 'historyFocus', takeFocus );
 
 		load();
 

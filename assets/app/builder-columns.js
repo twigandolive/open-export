@@ -36,6 +36,7 @@
 			ctx.config.fields = ctx.config.fields.filter( ( f ) => f !== id );
 			delete ctx.config.column_labels[ id ];
 			delete ctx.config.transforms[ id ];
+			B.dropAcf( ctx.config, id );
 		}
 
 		function renderPicker() {
@@ -148,8 +149,13 @@
 				const c = ctx.config.custom_columns.length;
 				/* translators: %s: number of columns. */
 				const text = sprintf( _n( '%s column', '%s columns', n, 'open-export' ), app.formatNumber( n ) );
+				if ( ! c ) {
+					return text;
+				}
 				/* translators: %s: number of custom columns. */
-				return c ? text + ', ' + sprintf( _n( '%s custom', '%s custom', c, 'open-export' ), app.formatNumber( c ) ) : text;
+				const extra = sprintf( _n( '%s custom', '%s custom', c, 'open-export' ), app.formatNumber( c ) );
+				/* translators: 1: "5 columns", 2: "2 custom". */
+				return sprintf( __( '%1$s, %2$s', 'open-export' ), text, extra );
 			},
 			errors() {
 				const list = [];

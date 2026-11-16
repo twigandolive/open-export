@@ -141,6 +141,29 @@ class AdminScreenTest extends TestCase {
 		}
 	}
 
+	public function test_schedules_tab_loads_after_the_builder_sections_and_before_main() {
+		$_GET['opex_ui'] = 'next';
+		OPEX_Admin::enqueue( self::HOOK );
+
+		$scripts = wp_scripts();
+		$scripts->all_deps( $scripts->queue );
+		$order = $this->ours( $scripts->to_do );
+		$at    = function ( $handle ) use ( $order ) {
+			return array_search( $handle, $order, true );
+		};
+
+		$stage3 = array( 'opex-app-schedule-parts', 'opex-app-schedule-card', 'opex-app-schedule-timing', 'opex-app-schedule-trigger', 'opex-app-schedule-form', 'opex-app-schedule-actions', 'opex-app-tab-schedules' );
+		foreach ( $stage3 as $handle ) {
+			$this->assertContains( $handle, $order, $handle );
+			$this->assertLessThan( $at( 'opex-app-main' ), $at( $handle ), $handle . ' loads before main' );
+		}
+		// The form mounts the builder, so every builder section must have registered first.
+		foreach ( array( 'opex-app-builder-source', 'opex-app-builder-columns', 'opex-app-builder-filters', 'opex-app-builder-format', 'opex-app-builder-preview', 'opex-app-delivery' ) as $section ) {
+			$this->assertLessThan( $at( 'opex-app-schedule-form' ), $at( $section ), $section . ' loads before the schedule form' );
+		}
+		$this->assertContains( 'opex-app-tab-schedules', $scripts->registered['opex-app-main']->deps );
+	}
+
 	public function test_new_screen_styles_load_in_order_with_the_switch() {
 		$_GET['opex_ui'] = 'next';
 		OPEX_Admin::enqueue( self::HOOK );

@@ -54,7 +54,17 @@ class OPEX_Admin {
 			'tab-export.js',
 			array( 'opex-app-builder-source', 'opex-app-builder-columns', 'opex-app-builder-filters', 'opex-app-builder-format', 'opex-app-builder-preview', 'opex-app-export-recipe', 'opex-app-export-start', 'opex-app-export-run' ),
 		),
-		'opex-app-main'              => array( 'main.js', array( 'opex-app-tab-export', 'opex-app-tab-history', 'opex-app-tab-destinations', 'opex-app-tab-settings' ) ),
+		'opex-app-schedule-parts'    => array( 'schedule-parts.js', array( 'opex-app-history-view', 'opex-app-jobs' ) ),
+		'opex-app-schedule-card'     => array( 'schedule-card.js', array( 'opex-app-schedule-parts' ) ),
+		'opex-app-schedule-timing'   => array( 'schedule-timing.js', array( 'opex-app-schedule-parts', 'opex-app-ui-widgets', 'opex-app-api' ) ),
+		'opex-app-schedule-trigger'  => array( 'schedule-trigger.js', array( 'opex-app-ui-widgets', 'opex-app-api' ) ),
+		'opex-app-schedule-form'     => array(
+			'schedule-form.js',
+			array( 'opex-app-schedule-timing', 'opex-app-schedule-trigger', 'opex-app-builder-source', 'opex-app-builder-columns', 'opex-app-builder-filters', 'opex-app-builder-format', 'opex-app-builder-preview', 'opex-app-delivery' ),
+		),
+		'opex-app-schedule-actions'  => array( 'schedule-actions.js', array( 'opex-app-schedule-parts', 'opex-app-api' ) ),
+		'opex-app-tab-schedules'     => array( 'tab-schedules.js', array( 'opex-app-schedule-card', 'opex-app-schedule-form', 'opex-app-schedule-actions' ) ),
+		'opex-app-main'              => array( 'main.js', array( 'opex-app-tab-export', 'opex-app-tab-history', 'opex-app-tab-schedules', 'opex-app-tab-destinations', 'opex-app-tab-settings' ) ),
 	);
 
 	/**

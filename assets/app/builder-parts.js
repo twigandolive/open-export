@@ -92,6 +92,13 @@
 			label: str( col.label ),
 			template: str( col.template ),
 		} ) );
+		// ACF spread choices: kept only when present, so the key is never sent by a site without ACF fields.
+		if ( Object.prototype.hasOwnProperty.call( out, 'acf_flatten' ) ) {
+			out.acf_flatten = ( Array.isArray( out.acf_flatten ) ? out.acf_flatten : [] ).map( str ).filter( ( id ) => 0 === id.indexOf( 'acf:' ) );
+			if ( ! out.acf_flatten.length ) {
+				delete out.acf_flatten;
+			}
+		}
 		out.batch_size = Number( out.batch_size ) || 400;
 		out.network = true === out.network;
 		return out;
@@ -101,7 +108,7 @@
 	 * The numbered card shell shared by the builder and the Export tab's Run
 	 * card. Collapsed cards show a one-line summary. Locked cards cannot open.
 	 *
-	 * @param {Object} o number, title, locked (text shown while locked).
+	 * @param {Object} o number, title, locked (text shown while locked), level (heading tag, default h2).
 	 * @return {Object} { root, head, body, setOpen, isOpen, setLocked, setDone, setSummary }.
 	 */
 	B.card = function ( o ) {
@@ -120,7 +127,7 @@
 			app.icon( 'chevron', { cls: 'opex-card-chev' } ),
 		] );
 		const body = el( 'div', { class: 'opex-card-body', id: bodyId } );
-		const root = el( 'section', { class: 'opex-card opex-bcard' }, [ el( 'h2', { class: 'opex-card-h' }, head ), body ] );
+		const root = el( 'section', { class: 'opex-card opex-bcard' }, [ el( o.level || 'h2', { class: 'opex-card-h' }, head ), body ] );
 		let open = true;
 		let isLocked = false;
 		function sync() {
@@ -198,7 +205,7 @@
 			const keep = select.value;
 			app.clear( select );
 			select.appendChild( el( 'option', { value: '' }, __( 'Insert field', 'open-export' ) ) );
-			o.items().forEach( ( item ) => select.appendChild( el( 'option', { value: item.id }, item.label === item.id ? item.id : item.label + ' (' + item.id + ')' ) ) );
+			o.items().forEach( ( item ) => select.appendChild( el( 'option', { value: item.id }, item.label === item.id ? item.id : app.paren( item.label, item.id ) ) ) );
 			select.value = keep;
 			if ( select.value !== keep ) {
 				select.value = '';

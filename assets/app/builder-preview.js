@@ -120,7 +120,11 @@
 				}
 				/* translators: %s: "1,240 rows". */
 				const text = sprintf( __( '%s match', 'open-export' ), app.rows( ctx.preview.total ) );
-				return ctx.preview.key === JSON.stringify( ctx.config ) ? text : text + ' ' + __( '(out of date)', 'open-export' );
+				return ctx.preview.key === JSON.stringify( ctx.config ) ? text : sprintf(
+					/* translators: %s: preview summary. */
+					__( '%s (out of date)', 'open-export' ),
+					text
+				);
 			},
 		};
 	}

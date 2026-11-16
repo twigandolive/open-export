@@ -36,18 +36,18 @@
 	function fieldText( row ) {
 		let text = String( row.id || '' );
 		if ( row.label && row.label !== row.id ) {
-			text += ' (' + row.label + ')';
+			text = app.paren( text, row.label );
 		}
 		if ( row.used_instead ) {
-			/* translators: %s: field id used instead. */
-			text += ', ' + sprintf( __( 'used %s instead', 'open-export' ), row.used_instead );
+			/* translators: 1: field, 2: field id used instead. */
+			text = sprintf( __( '%1$s, used %2$s instead', 'open-export' ), text, row.used_instead );
 		}
 		if ( row.reason ) {
-			text += ': ' + row.reason;
+			text = app.labeled( text, row.reason );
 		}
 		if ( row.suggestion ) {
-			/* translators: %s: suggested field id. */
-			text += ' ' + sprintf( __( 'Did you mean %s?', 'open-export' ), row.suggestion );
+			/* translators: 1: field and why it was dropped, 2: suggested field id. */
+			text = sprintf( __( '%1$s Did you mean %2$s?', 'open-export' ), text, row.suggestion );
 		}
 		return text;
 	}
@@ -74,7 +74,10 @@
 			/* translators: %d: number of filter rules. */
 			add( 'check', 'opex-c-success', __( 'Filters', 'open-export' ), [ sprintf( _n( '%d rule kept', '%d rules kept', kept, 'open-export' ), kept ) ] );
 		}
-		add( 'warning', 'opex-c-warning', __( 'Filters dropped', 'open-export' ), rules.filter( ( r ) => 'dropped' === r.status ).map( ( r ) => [ r.field, r.op ].filter( Boolean ).join( ' ' ) + ( r.reason ? ': ' + r.reason : '' ) ) );
+		add( 'warning', 'opex-c-warning', __( 'Filters dropped', 'open-export' ), rules.filter( ( r ) => 'dropped' === r.status ).map( ( r ) => {
+			const rule = [ r.field, r.op ].filter( Boolean ).join( ' ' );
+			return r.reason ? app.labeled( rule, r.reason ) : rule;
+		} ) );
 		const range = report.date_range;
 		if ( range && range.status && 'matched' !== range.status ) {
 			add( 'info', 'opex-c-info', __( 'Date range', 'open-export' ), [ fieldText( Object.assign( { id: range.field }, range ) ) ] );

@@ -8,9 +8,7 @@
  * Exposes opexApp.showTab( id, focus ) for parts that send people to
  * another tab, for example an empty state's button.
  *
- * Tabs without a registered module (Schedules in this stage) show a short
- * placeholder. A later stage only has to load a file that calls
- * opexApp.registerTab( 'schedules', { mount } ).
+ * Each tab is a file that calls opexApp.registerTab( id, { mount } ).
  */
 ( function () {
 	'use strict';
@@ -35,15 +33,6 @@
 		return ids.indexOf( id ) > -1 ? id : null;
 	}
 
-	function placeholder() {
-		const url = app.boot.adminUrl;
-		return el( 'div', { class: 'opex-empty' }, [
-			el( 'strong', {}, __( 'This tab arrives in the next stage.', 'open-export' ) ),
-			el( 'p', {}, __( 'Until then, use the current screen for this task.', 'open-export' ) ),
-			url ? el( 'a', { class: 'opex-btn', href: url }, __( 'Open the current screen', 'open-export' ) ) : null,
-		] );
-	}
-
 	/**
 	 * "Open Export by Twig & Olive", with the maker's name as a link. The
 	 * sentence is translated whole and split at the placeholder, so no HTML
@@ -54,7 +43,10 @@
 	function footer() {
 		/* translators: %s: the maker's name, Twig & Olive, shown as a link. */
 		const parts = __( 'Open Export by %s', 'open-export' ).split( '%s' );
-		const link = el( 'a', { href: 'https://twigandolive.com', target: '_blank', rel: 'noopener noreferrer' }, 'Twig & Olive' );
+		const link = el( 'a', { href: 'https://twigandolive.com', target: '_blank', rel: 'noopener noreferrer' }, [
+			'Twig & Olive',
+			el( 'span', { class: 'opex-sr' }, ' ' + __( '(opens in a new tab)', 'open-export' ) ),
+		] );
 		return el( 'p', { class: 'opex-footer' }, [ parts[ 0 ] || '', link, parts.slice( 1 ).join( '' ) ] );
 	}
 
@@ -86,12 +78,7 @@
 			if ( ! mounted[ id ] ) {
 				const module = app.tabModules[ id ];
 				const panel = tabs.panels[ id ];
-				if ( module && module.mount ) {
-					mounted[ id ] = module.mount( panel ) || {};
-				} else {
-					panel.appendChild( placeholder() );
-					mounted[ id ] = {};
-				}
+				mounted[ id ] = module && module.mount ? module.mount( panel ) || {} : {};
 			}
 			if ( mounted[ id ].show ) {
 				mounted[ id ].show();

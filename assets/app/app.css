@@ -32,6 +32,8 @@
 
 /* Focus */
 .opex-wrap :is(a,button,input,select,textarea,summary):focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;box-shadow:none}
+/* Date and time boxes focus an inner part, so :focus-visible is not set on the box itself. */
+.opex-wrap input:is([type="time"],[type="date"]):is(:focus,:focus-within){outline:2px solid var(--focus-ring);outline-offset:2px;box-shadow:none}
 
 /* Icons */
 .opex-i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -218,6 +220,30 @@
 .opex-status-list li.is-warning{background:var(--warning-tint)}
 .opex-card > .opex-pad > .opex-status-list{margin:-16px}
 
+/* Schedules */
+.opex-sched{padding:16px}
+.opex-sched-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.opex-wrap .opex-sched-name{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.opex-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px}
+.opex-meta dt{color:var(--text-secondary)}
+.opex-wrap .opex-meta dd{margin:2px 0 0;overflow-wrap:anywhere}
+.opex-meta-icons{display:flex;flex-wrap:wrap;gap:4px 12px}
+.opex-meta-icons span{display:inline-flex;align-items:center;gap:4px}
+.opex-sched-run{margin-top:12px}
+.opex-sched-runhead{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-bottom:4px}
+.opex-sched-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--separator)}
+.opex-sched-actions .opex-link-danger{margin-left:auto}
+.opex-summarybox{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border:1px solid var(--separator);border-radius:3px;background:var(--well)}
+.opex-summarytext{min-width:0;overflow-wrap:anywhere}
+.opex-sched-builder{margin:4px 0 12px;padding:12px;border:1px solid var(--separator);border-radius:3px;background:var(--well)}
+.opex-wrap .opex-sched-builder > .opex-help{margin:0 0 12px}
+.opex-chips{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.opex-chip{min-height:24px;padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);color:var(--text-primary);font-family:Consolas,Monaco,"Liberation Mono",Menlo,monospace;font-size:13px;cursor:pointer}
+.opex-chip:hover{background:var(--accent-tint);border-color:var(--accent)}
+.opex-wrap input.opex-trigger{flex:1 1 320px;min-width:0}
+.opex-formactions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 16px;border:1px solid var(--border);border-radius:4px;background:var(--panel)}
+.opex-formactions .opex-link-danger{margin-left:auto}
+
 /* Dialog */
 .opex-dialog{width:calc(100% - 32px);max-width:480px;padding:20px;border:1px solid var(--border);border-radius:4px;background:var(--panel);color:var(--text-primary)}
 .opex-dialog::backdrop{background:var(--text-primary);opacity:.45}
@@ -232,6 +258,8 @@
   .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select){min-height:40px}
   .opex-seg label{min-height:40px}
   .opex-nameline strong{padding-top:9px}
+  .opex-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .opex-chip{min-height:36px;padding:0 8px}
 }
 @media (max-width:600px){
   .opex-detail-grid{grid-template-columns:minmax(0,1fr)}
@@ -255,4 +283,8 @@
   .opex-stack-sm td.opex-progress-cell > *{justify-self:stretch}
   .opex-stack-sm .opex-progress-cell{min-width:0}
   .opex-wrap .opex-w-md{width:100%}
+  .opex-meta{grid-template-columns:minmax(0,1fr)}
+  .opex-formactions{flex-direction:column;align-items:stretch}
+  .opex-sched-actions .opex-link-danger,.opex-formactions .opex-link-danger{margin-left:0}
+  .opex-sched-builder{padding:8px}
 }

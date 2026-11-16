@@ -278,7 +278,7 @@
 				const speed = speedList.find( ( s ) => s.batch === c.batch_size );
 				/* translators: %s: number of rows. */
 				parts.push( speed ? speed.name : sprintf( __( '%s rows per batch', 'open-export' ), app.formatNumber( c.batch_size ) ) );
-				return parts.join( ', ' );
+				return app.list( parts );
 			},
 			errors() {
 				const list = [];
@@ -290,7 +290,7 @@
 					PARTS.forEach( ( part ) => {
 						const text = checkPart( part );
 						if ( text ) {
-							list.push( { message: partLabels[ part ] + ': ' + text, focus: () => areas[ part ].focus() } );
+							list.push( { message: app.labeled( partLabels[ part ], text ), focus: () => areas[ part ].focus() } );
 						}
 					} );
 					if ( ! ctx.config.xml_template.row.trim() ) {
