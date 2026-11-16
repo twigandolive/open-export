@@ -50,7 +50,14 @@ class OPEX_Query_Filters {
 		$provider = OPEX_Sources::for_src( $src );
 		if ( $provider ) {
 			$value = $provider->prepare_filter_value( $field, $op, $value );
-			$flag  = $provider->flag_sql( $field );
+
+			// A rule the provider writes whole, such as term membership on a parent row.
+			$own = $provider->filter_clause( $field, $op, $value, $args );
+			if ( null !== $own ) {
+				return $own;
+			}
+
+			$flag = $provider->flag_sql( $field );
 			if ( null !== $flag ) {
 				$clause = self::flag_clause( $flag, $op, $value );
 				if ( null !== $clause ) {
@@ -365,14 +372,30 @@ class OPEX_Query_Filters {
 		return $negate ? "NOT {$sql}" : $sql;
 	}
 
+	/**
+	 * Term membership for a provider field whose terms sit on another row, such
+	 * as a variation that takes its parent product's categories.
+	 *
+	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param string $tax    Taxonomy, from a provider constant.
+	 * @param string $op     Operator.
+	 * @param string $value  Rule value.
+	 * @param array  $args   Receives prepare() values.
+	 * @param string $object SQL for the object id the terms belong to, from a provider constant.
+	 */
+	public static function term_clause( string $tax, string $op, string $value, array &$args, string $object ): string {
+		return self::tax_clause( $tax, $op, $value, $args, $object );
+	}
+
 	/** Taxonomy membership tests match term slug or name. */
-	private static function tax_clause( string $tax, string $op, string $value, array &$args ): string {
+	private static function tax_clause( string $tax, string $op, string $value, array &$args, string $object = 'p.ID' ): string {
 		global $wpdb;
 
 		$exists_open = "EXISTS (SELECT 1 FROM {$wpdb->term_relationships} tr" .
 			" INNER JOIN {$wpdb->term_taxonomy} xt ON xt.term_taxonomy_id = tr.term_taxonomy_id" .
 			" INNER JOIN {$wpdb->terms} xtm ON xtm.term_id = xt.term_id" .
-			' WHERE tr.object_id = p.ID AND xt.taxonomy = %s';
+			" WHERE tr.object_id = {$object} AND xt.taxonomy = %s";
 
 		if ( 'empty' === $op ) {
 			$args[] = $tax;

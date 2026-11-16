@@ -129,6 +129,44 @@ abstract class OPEX_Source_Provider {
 		return null;
 	}
 
+	/**
+	 * A value the provider builds in PHP from the row, for a field no column holds.
+	 * Null when the field is not one of those.
+	 *
+	 * @param object $row   Fetched row.
+	 * @param string $field Field id.
+	 * @param int    $id    Row id.
+	 */
+	public function compute_value( object $row, string $field, int $id ): ?string {
+		return null;
+	}
+
+	/**
+	 * A whole rule the provider writes itself, such as term membership on a
+	 * parent row. Null leaves the rule to the shared paths.
+	 *
+	 * @param string $field Field id of the rule.
+	 * @param string $op    Operator.
+	 * @param string $value Rule value.
+	 * @param array  $args  Receives values for the placeholders in the clause.
+	 */
+	public function filter_clause( string $field, string $op, string $value, array &$args ): ?string {
+		return null;
+	}
+
+	/** Whether a rule may filter on this field. Values built in PHP cannot be filtered. */
+	public function is_filterable( string $field ): bool {
+		return true;
+	}
+
+	/**
+	 * Warms caches for a batch before its values are read.
+	 *
+	 * @param int[] $ids Row ids of the batch.
+	 */
+	public function prime( array $ids ): void {
+	}
+
 	/** Turns the stored text of a field into the value the field means (a customer id into a guest flag). */
 	public function derive_value( string $field, string $value ): string {
 		return $value;
@@ -142,5 +180,18 @@ abstract class OPEX_Source_Provider {
 	/** Legal values of a field, for the capability document. Empty when the provider has no list. */
 	public function field_values( string $field ): array {
 		return array();
+	}
+
+	/** Rows the source holds now, counted with its own FROM and base conditions, for the picker. */
+	protected function count_rows(): int {
+		global $wpdb;
+		list( $where, $args ) = $this->base_where();
+		$sql = 'SELECT COUNT(*) FROM ' . $this->from() . ( $where ? ' WHERE ' . implode( ' AND ', $where ) : '' );
+		if ( $args ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- the clause holds only provider constants and placeholders.
+			$sql = $wpdb->prepare( $sql, $args );
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above when it has values; one cheap COUNT for the picker.
+		return (int) $wpdb->get_var( $sql );
 	}
 }

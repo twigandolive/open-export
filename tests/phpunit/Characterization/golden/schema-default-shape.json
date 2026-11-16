@@ -151,6 +151,10 @@
     ],
     "all_source_ids": [
         "woo:orders",
+        "woo:order_items",
+        "woo:customers",
+        "woo:products",
+        "woo:coupons",
         "posts:post",
         "posts:page",
         "posts:attachment",
@@ -224,6 +228,10 @@
     ],
     "source_ids": [
         "woo:orders",
+        "woo:order_items",
+        "woo:customers",
+        "woo:products",
+        "woo:coupons",
         "posts:post",
         "posts:page",
         "posts:attachment",

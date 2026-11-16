@@ -14,26 +14,6 @@ class OPEX_Query {
 		'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'empty', 'not_empty',
 	);
 
-	private const POST_COLS = array(
-		'ID', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_name',
-		'post_date', 'post_date_gmt', 'post_modified', 'post_modified_gmt', 'post_author',
-		'post_parent', 'menu_order', 'comment_status', 'ping_status', 'comment_count',
-		'guid', 'post_mime_type', 'post_type',
-	);
-
-	private const USER_COLS = array(
-		'ID', 'user_login', 'user_email', 'user_nicename', 'user_url', 'user_registered', 'display_name',
-	);
-
-	private const COMMENT_COLS = array(
-		'comment_ID', 'comment_post_ID', 'comment_author', 'comment_author_email',
-		'comment_author_url', 'comment_author_IP', 'comment_date', 'comment_date_gmt',
-		'comment_content', 'comment_approved', 'comment_type', 'comment_parent', 'user_id',
-		'comment_agent', 'comment_karma',
-	);
-
-	private const TERM_COLS = array( 'term_id', 'name', 'slug', 'description', 'parent', 'count' );
-
 	/** Columns that must never leave the database, no matter what is asked for. */
 	public const FORBIDDEN = array( 'user_pass', 'user_activation_key' );
 
@@ -188,6 +168,10 @@ class OPEX_Query {
 	 */
 	public static function is_filterable_field( array $src, string $field ): bool {
 		if ( ! self::is_valid_field( $src, $field ) ) {
+			return false;
+		}
+		$provider = OPEX_Sources::for_src( $src );
+		if ( $provider && ! $provider->is_filterable( $field ) ) {
 			return false;
 		}
 		$resolved = self::resolve_field( $src, $field );
@@ -430,17 +414,7 @@ class OPEX_Query {
 		if ( self::is_forbidden_column( $col ) ) {
 			return false;
 		}
-		switch ( $type ) {
-			case 'posts':
-				return in_array( $col, self::POST_COLS, true );
-			case 'users':
-				return in_array( $col, self::USER_COLS, true );
-			case 'comments':
-				return in_array( $col, self::COMMENT_COLS, true );
-			case 'terms':
-				return in_array( $col, self::TERM_COLS, true );
-		}
-		return false;
+		return in_array( $col, OPEX_Core_Columns::for_type( $type ), true );
 	}
 
 	/**

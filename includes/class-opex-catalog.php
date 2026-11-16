@@ -301,14 +301,7 @@ class OPEX_Catalog {
 	}
 
 	private static function post_fields( string $post_type ): array {
-		$core = array(
-			'ID', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_name',
-			'post_date', 'post_date_gmt', 'post_modified', 'post_modified_gmt', 'post_author', 'post_parent',
-			'menu_order', 'comment_status', 'ping_status', 'comment_count', 'guid',
-		);
-		if ( 'attachment' === $post_type ) {
-			$core[] = 'post_mime_type';
-		}
+		$core = OPEX_Core_Columns::for_type( 'posts' );
 
 		$groups   = array();
 		$groups[] = array(
@@ -348,7 +341,7 @@ class OPEX_Catalog {
 	}
 
 	private static function user_fields(): array {
-		$core = array( 'ID', 'user_login', 'user_email', 'user_nicename', 'user_url', 'user_registered', 'display_name' );
+		$core = OPEX_Core_Columns::for_type( 'users' );
 
 		$groups   = array();
 		$groups[] = array(
@@ -364,11 +357,7 @@ class OPEX_Catalog {
 	}
 
 	private static function comment_fields(): array {
-		$core = array(
-			'comment_ID', 'comment_post_ID', 'comment_author', 'comment_author_email',
-			'comment_author_url', 'comment_author_IP', 'comment_date', 'comment_content',
-			'comment_approved', 'comment_type', 'comment_parent', 'user_id', 'comment_agent',
-		);
+		$core = OPEX_Core_Columns::for_type( 'comments' );
 
 		$groups   = array();
 		$groups[] = array(
@@ -380,7 +369,7 @@ class OPEX_Catalog {
 	}
 
 	private static function term_fields( string $taxonomy ): array {
-		$core = array( 'term_id', 'name', 'slug', 'description', 'parent', 'count' );
+		$core = OPEX_Core_Columns::for_type( 'terms' );
 
 		$groups   = array();
 		$groups[] = array(

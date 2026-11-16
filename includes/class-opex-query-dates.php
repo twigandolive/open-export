@@ -289,4 +289,59 @@ class OPEX_Query_Dates {
 
 		return null;
 	}
+
+	/**
+	 * Comparison against a meta value that holds a UNIX timestamp, for the
+	 * providers that opt in (a product's sale dates, a coupon's expiry).
+	 * A bare Y-m-d names the whole site-time day, as in date_condition().
+	 *
+	 * Returns null when the operator or value is not a date comparison, so the
+	 * caller can fall back to the ordinary meta rule.
+	 *
+	 * Internal to the query compartment: other code calls OPEX_Query.
+	 *
+	 * @param array  $def   A meta_epoch date definition (key, table, fk, outer).
+	 * @param string $op    Operator.
+	 * @param string $value Rule value, relative tokens already resolved.
+	 * @param array  $args  Receives prepare() values.
+	 */
+	public static function epoch_condition( array $def, string $op, string $value, array &$args ): ?string {
+		if ( 'meta_epoch' !== ( $def['kind'] ?? '' ) || ! in_array( $op, array( 'eq', 'neq', 'gt', 'gte', 'lt', 'lte' ), true ) ) {
+			return null;
+		}
+		$parsed = OPEX_Dates::parse_value( $value, OPEX_Dates::TZ_UTC );
+		if ( null === $parsed ) {
+			return null;
+		}
+		list( $stamp, $whole_day ) = $parsed;
+		if ( $whole_day ) {
+			$start = OPEX_Dates::epoch( $stamp, 0 );
+			$next  = OPEX_Dates::epoch( $stamp, 1 );
+		} else {
+			$utc   = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $stamp, new DateTimeZone( 'UTC' ) );
+			$start = $utc ? $utc->getTimestamp() : null;
+			$next  = null === $start ? null : $start + 1;
+		}
+		if ( null === $start || null === $next ) {
+			return null;
+		}
+
+		$col   = 'CAST(m.meta_value AS UNSIGNED)';
+		$tests = array(
+			'eq'  => array( "{$col} >= %d AND {$col} < %d", array( $start, $next ) ),
+			'neq' => array( "({$col} < %d OR {$col} >= %d)", array( $start, $next ) ),
+			'gt'  => array( "{$col} >= %d", array( $next ) ),
+			'gte' => array( "{$col} >= %d", array( $start ) ),
+			'lt'  => array( "{$col} < %d", array( $start ) ),
+			'lte' => array( "{$col} < %d", array( $next ) ),
+		);
+		list( $test, $values ) = $tests[ $op ];
+
+		// A row with no timestamp has no date to compare, so it never matches.
+		$args[] = $def['key'];
+		foreach ( $values as $v ) {
+			$args[] = $v;
+		}
+		return "EXISTS (SELECT 1 FROM {$def['table']} m WHERE m.{$def['fk']} = {$def['outer']} AND m.meta_key = %s AND m.meta_value <> '' AND {$test})";
+	}
 }

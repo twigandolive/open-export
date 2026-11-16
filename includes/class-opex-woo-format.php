@@ -42,7 +42,7 @@ class OPEX_Woo_Format {
 			return OPEX_Money::format( $value, self::price_decimals() );
 		}
 		if ( in_array( $field, self::DATES, true ) ) {
-			return self::date( $value, $hpos );
+			return self::site_date( $value, $hpos );
 		}
 		if ( in_array( $field, self::FLAGS, true ) ) {
 			return self::flag( $value );
@@ -67,12 +67,13 @@ class OPEX_Woo_Format {
 	}
 
 	/**
-	 * Turns a stored date into site-time text.
+	 * Turns a stored date into site-time text. The other WooCommerce sources
+	 * share it, so every Woo date prints the same way.
 	 *
 	 * @param string $value  Stored text or UNIX timestamp.
 	 * @param bool   $is_utc True when a datetime string is in UTC.
 	 */
-	private static function date( string $value, bool $is_utc ): string {
+	public static function site_date( string $value, bool $is_utc ): string {
 		$value = trim( $value );
 		if ( '' === $value || '0' === $value || 0 === strpos( $value, '0000-00-00' ) ) {
 			return '';

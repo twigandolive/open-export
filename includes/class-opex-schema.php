@@ -127,7 +127,7 @@ class OPEX_Schema {
 				'This document describes what a WordPress site can export through the Open Export plugin.',
 				'To request an export, reply with a JSON object matching "recipe_format" below.',
 				'Use only field ids that appear in this document under sources[].fields[].id — a field id that is not listed will be dropped and reported.',
-				'Field ids are prefixed by where the value comes from: "core:" is a column on the main table, "meta:" is a custom field, "tax:" is a taxonomy, "computed:" is derived, "col:" is a raw table column, and "woo:" is a WooCommerce order field.',
+				'Field ids are prefixed by where the value comes from: "core:" is a column on the main table, "meta:" is a custom field, "tax:" is a taxonomy, "computed:" is derived, "col:" is a raw table column, and "woo:" is a WooCommerce field (orders, order items, customers, products or coupons).',
 				'Filters are a flat list of rules joined by a single relation, either AND or OR; there is no nesting.',
 				'The date range is separate from the filter rules and is always combined with AND, so it narrows the export even when the rules use OR.',
 				'Dates are whole calendar days in the site timezone given under site.timezone, written as YYYY-MM-DD, and the "to" date is included in full.',

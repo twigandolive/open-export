@@ -31,6 +31,10 @@ class OPEX_Query_Rows {
 			}
 		}
 
+		if ( $provider && $ids ) {
+			$provider->prime( $ids );
+		}
+
 		$meta_keys = array();
 		$tax_names = array();
 		foreach ( $fields as $field ) {
@@ -81,6 +85,14 @@ class OPEX_Query_Rows {
 		$alias = $provider ? $provider->row_alias( $field ) : null;
 		if ( null !== $alias ) {
 			return $provider->derive_value( $field, self::flatten( $row->{$alias} ?? '' ) );
+		}
+
+		// A value the provider builds in PHP.
+		if ( $provider ) {
+			$built = $provider->compute_value( $row, $field, $id );
+			if ( null !== $built ) {
+				return $provider->derive_value( $field, $built );
+			}
 		}
 
 		// A friendly id reads from the post column or meta key that actually
