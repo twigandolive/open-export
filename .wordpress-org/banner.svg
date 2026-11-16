@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 772 250" width="772" height="250">
+  <rect width="772" height="250" fill="#f4f5ec"/>
+  <!-- quiet motif: the icon's table, large and faint, its last cell leaving off the edge -->
+  <g fill="#e6e9d7">
+    <rect x="560" y="178" width="58" height="34" rx="8"/>
+    <rect x="628" y="178" width="58" height="34" rx="8"/>
+    <rect x="696" y="178" width="58" height="34" rx="8"/>
+    <rect x="560" y="222" width="58" height="34" rx="8"/>
+    <rect x="628" y="222" width="58" height="34" rx="8"/>
+    <rect x="696" y="222" width="58" height="34" rx="8"/>
+  </g>
+  <g fill="none" stroke="#d3d9b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M708 166 L742 132"/>
+    <path d="M716 128 H746 V158"/>
+  </g>
+  <!-- icon -->
+  <g transform="translate(56 54) scale(0.375)">
+    <rect width="256" height="256" rx="48" fill="#5a6b2a"/>
+    <g fill="#ffffff">
+      <rect x="48" y="104" width="46" height="30" rx="7"/>
+      <rect x="105" y="104" width="46" height="30" rx="7"/>
+      <rect x="162" y="104" width="46" height="30" rx="7"/>
+      <rect x="48" y="145" width="46" height="30" rx="7"/>
+      <rect x="105" y="145" width="46" height="30" rx="7"/>
+      <rect x="162" y="145" width="46" height="30" rx="7"/>
+      <rect x="48" y="186" width="46" height="30" rx="7"/>
+      <rect x="105" y="186" width="46" height="30" rx="7"/>
+      <rect x="162" y="186" width="46" height="30" rx="7"/>
+      <rect x="48" y="63" width="46" height="30" rx="7"/>
+      <rect x="105" y="63" width="46" height="30" rx="7"/>
+    </g>
+    <g fill="none" stroke="#e3ec9e" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M170 90 L206 54"/>
+      <path d="M176 50 H210 V84"/>
+    </g>
+  </g>
+  <g font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <text x="172" y="104" font-size="54" font-weight="700" fill="#1d2327" letter-spacing="-0.5">Open Export</text>
+    <text x="174" y="140" font-size="19" font-weight="400" fill="#3c434a">Export anything from WordPress. Every feature included.</text>
+  </g>
+</svg>
