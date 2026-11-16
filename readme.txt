@@ -50,7 +50,7 @@ No Pro version. No add-ons to buy. This is all of it.
 * "Changes only" schedules export only rows that are new or changed since the last run.
 * A trigger URL lets a real server cron job start a schedule.
 * Background exports keep going after you close the tab.
-* When an export finishes, send it by email (a link, or the file attached), to a webhook, or to an FTP, FTPS or SFTP server. Save and test checks a server first. On the History tab, an export's details show each delivery attempt, and Send again now retries a failed one.
+* When an export finishes, send it by email (a link, or the file attached), to a webhook, or to an FTP, FTPS or SFTP server. Save and test checks a server first. History shows each delivery attempt, and Send again now retries a failed one.
 * Exports run in small batches for shared hosting, and an interrupted export resumes where it stopped.
 
 = Work with an AI assistant =
@@ -63,6 +63,7 @@ On the Export tab, open "Use an AI recipe" and press Copy site schema: a JSON de
 * Up to 50 schedules, 20 destinations and 100 templates.
 * An email delivery goes to up to 10 addresses. A failed delivery is tried up to 3 times in all.
 * Excel and zip compression need the PHP zip extension.
+* Customer total spent and average order cannot be filtered.
 
 WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Excel, Google Merchant Center, Meta, Facebook, Instagram, Pinterest and other names are trademarks of their owners. They are used here only to describe compatibility. Open Export is an independent project and is not affiliated with or endorsed by any of them.
 
@@ -72,7 +73,7 @@ WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Exce
 2. Activate the plugin on the Plugins screen.
 3. Go to Tools, Open Export.
 
-You can export right away and download the file from the History tab. On nginx, block the export folder first: see "Where do export files go?" below.
+On nginx, block the export folder first: see "Where do export files go?" below.
 
 == Frequently Asked Questions ==
 
@@ -90,7 +91,7 @@ Yes. Money uses your store's price decimals (82.50, not 82.50000000), flags read
 
 = How do scheduled exports run? =
 
-WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Add a real cron job that loads `wp-cron.php` every few minutes, or call the schedule's trigger URL from your server's cron. Site Health warns you when a schedule is on and WP-Cron is switched off, and when a background export has not moved for an hour. A scheduled or background export that fails stops and shows as Failed on the History tab. It is not tried again by itself: only deliveries are.
+WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Add a real cron job that loads `wp-cron.php` every few minutes, or call the schedule's trigger URL from your server's cron. Site Health warns you when a schedule is on and WP-Cron is off, and when a background export has not moved for an hour. A scheduled or background export that fails stops and shows as Failed on the History tab. It is not tried again by itself: only deliveries are.
 
 = Is the trigger URL safe to share? =
 
@@ -98,11 +99,11 @@ No. Treat it like a password: anyone who has it can start that export. If it lea
 
 = Which delivery method should I use for private data? =
 
-SFTP. FTP sends your password and the file without encryption. FTPS encrypts the connection, but PHP cannot check the server's certificate. SFTP remembers the server's fingerprint after the first test or delivery that works, and refuses to send if it changes. SFTP private keys with a passphrase are not supported.
+SFTP. FTP sends your password and the file without encryption. FTPS encrypts the connection, but PHP cannot check the server's certificate. SFTP remembers the server's fingerprint after the first test or delivery that works, and refuses to send if it changes. SFTP private keys with a passphrase are not supported. A file already on the server is kept if a new upload cannot replace it.
 
 = How large can an export be? =
 
-CSV, JSON, XML and HTML have no fixed row limit. One Excel sheet holds 1,048,576 rows, header included. A bigger export stops with a message that says so. Use CSV for those. An HTML export is one page, so a very large one is slow to open. Email attaches files up to 10 MB and sends a download link for larger ones.
+CSV, JSON, XML and HTML have no fixed row limit. One Excel sheet holds 1,048,576 rows, header included. A bigger export stops and says so: use CSV. An HTML export is one page, so a very large one is slow to open. Email attaches files up to 10 MB and sends a download link for larger ones.
 
 = How long are finished exports kept? =
 
@@ -127,7 +128,7 @@ Yes. Load the "WooCommerce product CSV (importer columns)" preset. It writes eve
 
 = Can it export ACF repeater fields? =
 
-Yes, with ACF or Secure Custom Fields, on posts, terms and users. Each repeater or flexible content field is one JSON column, or choose "Spread into columns" under "Export as" in the Chosen columns list for numbered columns, up to 20 rows. You cannot filter on these fields.
+Yes, with ACF or Secure Custom Fields, on posts, terms and users. Each repeater or flexible content field is one JSON column, or choose "Spread into columns" under "Export as" in the Chosen columns list for numbered columns, up to 20 rows. You cannot filter on these fields. A field over 1000 rows exports its first 1000, with a note.
 
 = Does it work on multisite? =
 
@@ -157,7 +158,7 @@ Open Export contacts no outside service by itself. It has no tracking, no teleme
 * Webhook: a JSON message to the URL you enter. It holds the export's id, name, format, row count, file size and finish time, a download link, and your site's address.
 * FTP, FTPS or SFTP: the export file, sent to the server you enter with the login you saved. A test uploads a small file and deletes it.
 
-A background export also asks your own site to run WP-Cron. That request goes to your own site, not to anyone else.
+A background export also asks your own site to run WP-Cron.
 
 SFTP uses the bundled phpseclib library (MIT license).
 

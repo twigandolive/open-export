@@ -15,24 +15,24 @@ Open Export is a free WordPress plugin. Pick a source, choose fields, filter, an
 ### Sources
 
 - Any post type, users, comments, and terms from any taxonomy.
-- Any database table (Advanced). Raw tables offer only their own columns.
-- WooCommerce: orders, order items (one row per item, with shipping, fee, coupon and tax lines showing their own amounts), customers (order count, total spent, average order, guests included), products and variations, and coupons. Products have a "GTIN, UPC, EAN or ISBN" column, which WooCommerce 9.2 and later fill in (older stores give an empty column).
-- Custom fields grouped by the plugin that owns them (WooCommerce, ACF, Yoast SEO, Rank Math, Elementor and more). Serialized values become JSON.
-- ACF repeater and flexible content fields on posts, terms and users, with ACF or Secure Custom Fields. Each is one JSON column, or "Spread into columns" for numbered columns such as `team 1 name` (up to 20 rows, fixed when the export starts). They cannot be filtered.
-- Network exports on multisite: a super admin turns on "All sites in the network" to run one export across every public site, with Site ID and Site URL columns first. A site without that source, or with no content of that type, adds no rows and gets a note. Not offered for users or raw tables. The preview reads the current site only.
+- Any database table (Advanced). Raw tables offer only their own columns and export every row, including rows whose key is zero, negative or very large. A DATE column filters by whole days.
+- WooCommerce: orders, order items (one row per item, with shipping, fee, coupon and tax lines showing their own amounts), customers (order count, total spent, average order, guests included), products and variations, and coupons. Products have a "GTIN, UPC, EAN or ISBN" column, which WooCommerce 9.2 and later fill in (older stores give an empty column). Customer total spent and average order cannot be used in a filter, because the database can only add them up as floating point. Their exported values stay exact.
+- Custom fields grouped by the plugin that owns them (WooCommerce, ACF, Yoast SEO, Rank Math, Elementor and more). Serialized values become JSON. They are read with PHP classes turned off: a value that holds an object of a class exports as its stored text.
+- ACF repeater and flexible content fields on posts, terms and users, with ACF or Secure Custom Fields. Each is one JSON column, or "Spread into columns" for numbered columns such as `team 1 name` (up to 20 rows, fixed when the export starts). They cannot be filtered. A field with more than 1000 rows in one record exports its first 1000, and the export gets a note.
+- Network exports on multisite: a super admin turns on "All sites in the network" to run one export across every public site, with Site ID and Site URL columns first. A site without that source, or with no content of that type, adds no rows and gets a note. A site that cannot be read stops the export with an error. Not offered for users or raw tables. The preview reads the current site only.
 - On multisite, a site administrator who is not a super admin reaches only that site's members, its own tables, and user meta that belongs to no other site.
 
 ### Filters and columns
 
-- Rules with 14 operators, in nested AND and OR groups up to 3 levels deep and 50 rules in total.
+- Rules with 14 operators, in nested AND and OR groups up to 3 levels deep and 50 rules in total. A role rule with "is empty" finds users with no role, and "is not empty" finds users with any role. Term rules work on description, parent and count too.
 - Date ranges from presets or your own dates, as whole days in the site's timezone. Relative presets stay relative in templates and schedules.
 - Preview of the first 5 rows and the match count.
 - Column order, custom headers, up to 8 transform steps per column, and up to 50 custom columns built from `{field id}` placeholders.
 
 ### Formats
 
-- CSV: comma, semicolon or tab, four encodings (UTF-8 with BOM by default), LF or CRLF. "Quote character" is a double or a single quote. "Quote every cell" quotes every cell. Without it, only cells that hold the delimiter, a quote, a space, a tab or a line break are quoted. Cells that start like a formula get a leading apostrophe.
-- Excel (XLSX), from the plugin's own streaming writer. Needs the PHP zip extension. Numbers with up to 15 digits before the decimal point become real number cells, so Excel shows 82.50 as 82.5 unless the column is formatted. Leading-zero ids, longer numbers and text that looks like a formula stay text. One sheet holds 1,048,576 rows, header included. A bigger export stops with a message that says so and suggests CSV or narrower filters.
+- CSV: comma, semicolon or tab, four encodings (UTF-8 with BOM by default), LF or CRLF. Each cell is converted to the encoding before it is quoted. "Quote character" is a double or a single quote. "Quote every cell" quotes every cell. Without it, only cells that hold the delimiter, a quote, a space, a tab or a line break are quoted. Cells that start like a formula get a leading apostrophe.
+- Excel (XLSX), from the plugin's own streaming writer. Needs the PHP zip extension. Numbers with up to 15 significant digits become real number cells, so Excel shows 82.50 as 82.5 unless the column is formatted. Leading-zero ids, numbers with more digits and text that looks like a formula stay text. One sheet holds 1,048,576 rows, header included. A bigger export stops with a message that says so and suggests CSV or narrower filters.
 - JSON.
 - XML, in the default layout or a template with `{field id}` and `{field id|cdata}` placeholders.
 - HTML table: one page to open in a browser or print, titled with the export name. Every cell is escaped, and the page has no scripts and loads nothing from the web. When printed, the header row repeats on each page. The whole export is one page, so a very large one is slow to open.
@@ -42,13 +42,14 @@ Open Export is a free WordPress plugin. Pick a source, choose fields, filter, an
 
 ### Schedules and delivery
 
-- Schedules: manual, hourly, every 6 hours, twice a day, daily, weekly or monthly, at a time in the site's timezone. Every 6 hours from 03:00 runs at 03:00, 09:00, 15:00 and 21:00. Twice a day at 03:00 runs at 03:00 and 15:00. On a daylight-saving day, a run in the skipped hour moves to the end of the gap, and the repeated hour runs once. Up to 50 schedules.
+- Schedules: manual, hourly, every 6 hours, twice a day, daily, weekly or monthly, at a time in the site's timezone. Every 6 hours from 03:00 runs at 03:00, 09:00, 15:00 and 21:00. Twice a day at 03:00 runs at 03:00 and 15:00. On a daylight-saving day, a run in the skipped hour moves to the end of the gap, and the repeated hour runs once, at its first occurrence. Up to 50 schedules.
 - File name pattern for a schedule's file, with the tokens `{label}` (the export name), `{source}` (the source id, with a hyphen for the colon, such as `posts-post`), `{date}`, `{time}`, `{datetime}` (site time), `{id}` and `{site}` (the site's host name). Unknown tokens are dropped, and the extension is added for you.
-- "Changes only" schedules export only rows whose chosen date is after the start of the last successful run. "Start over" clears that watermark, so the next run exports every row.
+- "Changes only" schedules export only rows whose chosen date is after the start of the last successful run. "Start over" clears that watermark, so the next run exports every row. The chosen field must be one of the source's date fields. Changing the schedule's source or that field also clears the watermark, and the save says so.
 - A trigger URL per schedule for a real server cron job. It starts a schedule at most once every 30 seconds. After 10 wrong keys for one schedule, or 30 wrong keys from one IP address, the URL answers 429 with a `Retry-After` header until 10 minutes after the first wrong key, even to the right key. The key can be replaced.
 - Background exports driven by WP-Cron, so the browser can close. Resume restarts a paused or failed background export at once.
 - Delivery by email (link or attachment up to 10 MB, to up to 10 addresses), signed webhook, or FTP, FTPS and SFTP destinations (up to 20). Up to 3 attempts, 5 and then 30 minutes apart. "Send again now" in History uses the next attempt at once.
-- A webhook must use https unless it points at this site or a loopback address. The rule is checked on save and again on send. On the cURL transport the send is pinned to the address that was checked.
+- A webhook must use https unless it points at this site or a loopback address. The rule is checked on save and again on send. On the cURL transport the send is pinned to the address that was checked. A webhook whose secret cannot be stored encrypted is turned off with a note, never sent unsigned.
+- FTP, FTPS and SFTP upload to a temporary name, then rename it into place. When a server refuses to rename onto an existing file, the old file is first renamed to a backup name, the upload takes its place, and only then is the backup deleted. If the upload cannot take the name, the backup is renamed back. A file already on the server is never deleted when a rename fails. A remote folder of `/` is used as given.
 - Download links in emails and webhooks expire after 1 to 30 days (7 by default), and stop working sooner if the file is removed.
 - A scheduled or background export that fails stops and shows as Failed in History. It is not retried by itself: only deliveries are. Resume continues it. A failed scheduled run also shows on its schedule card with its error, and a "Changes only" schedule keeps its watermark, so the next run tries the same rows.
 
@@ -58,7 +59,7 @@ The capability document (`GET /schema`, or `wp opex schema`) describes every sou
 
 ### Built in
 
-- Batched, resumable exports for shared hosting.
+- Batched, resumable exports for shared hosting. Every write is checked, so a full disk stops an export, or its zip compression, with a plain message.
 - Retention: finished exports are removed 1 to 365 days (30 by default) after they finish, by an hourly cleanup. History keeps the latest 200 exports. When it is full, the oldest finished or failed export and its file are removed sooner than the retention setting. Running and paused exports are never removed to make room.
 - Export files live in `wp-content/uploads/open-export/` (`uploads/sites/<id>/open-export/` on a multisite sub-site). The folder holds an `index.php`, an `.htaccess` file that blocks direct access on Apache (2.2 and 2.4 rules) and LiteSpeed, and a `web.config` file that blocks it on IIS. A folder made by 1.3.1 gets the new `.htaccess`, unless someone edited it by hand. nginx reads neither file, so add a deny rule for the folder (readme.txt has an example). In Site Health, "Export folder protection" names the deny files in place and says nginx needs its own rule. Each file name carries 12 random characters.
 - Up to 100 saved templates. The templates menu shows each one as "Template name (Source name)".
@@ -98,12 +99,14 @@ Every command runs as `wp opex <command>`. List commands take `--format=<table|j
 | `templates` | Lists saved templates. |
 | `schedules` | Lists schedules with next run (site time) and last run status. |
 | `jobs [--status=<status>]` | Lists exports, newest first. Status is `running`, `paused`, `done` or `error`. |
-| `run <name-or-id> [--format=<csv\|json\|xml\|xlsx\|html>] [--output=<file>] [--force] [--since=<datetime>] [--network] [--porcelain]` | Runs a template or schedule to the end in this process. Matches the id first, then the exact name. `--format`, `--since` and `--network` work with templates only. `--since` takes `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` in site time. `--network` exports from every public site of a multisite network into one file. Exits 1 on any failure. |
-| `export --config=<file\|-> [--output=<file>] [--force] [--porcelain]` | Runs a one-off export from a JSON config or recipe file, or from STDIN with `-`. |
+| `run <name-or-id> [--format=<csv\|json\|xml\|xlsx\|html>] [--output=<file>] [--force] [--since=<datetime>] [--network] [--porcelain]` | Runs a template or schedule to the end in this process. Matches the id first, then the exact name. `--format`, `--since` and `--network` work with templates only. `--since` takes `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` in site time. `--network` exports from every public site of a multisite network into one file. Exits 1 on any failure, a failed delivery included. |
+| `export --config=<file\|-> [--output=<file>] [--force] [--porcelain]` | Runs a one-off export from a JSON config or recipe file, or from STDIN with `-`. Exits 1 on any failure, a failed delivery included. |
 | `schema [--source=<id>] [--all]` | Prints the capability document as JSON. |
-| `clean` | Runs the maintenance sweep: removes expired exports, restarts stalled background jobs, re-arms schedules and sends pending deliveries. |
+| `clean` | Runs the maintenance sweep: removes expired exports, restarts stalled background jobs, re-arms schedules and sends pending deliveries. Exits 1 when a step could not save, after the other steps ran. |
 
-`--output` copies the finished file to a path in an existing, writable folder outside the plugin folder. `--force` overwrites it. `--porcelain` prints only the file path.
+`--output` copies the finished file to a path in an existing, writable folder outside the plugin folder. The copy goes to a unique temporary file in that folder first, then takes the final name. Without `--force` an existing file is never replaced, even one that appeared while the export ran. `--force` overwrites it. `--porcelain` prints only the file path. Warnings and errors, such as a failed delivery, still go to STDERR.
+
+When a delivery fails, `run` and `export` still write the file. They print each delivery error as a warning, then the file path, then exit 1. The failed delivery is tried again later, as for any export.
 
 There is no compression flag. A template, schedule or config file with zip compression (`"compress": "zip"`) makes a `.zip`, and that is the file `--output` copies. `--format=xlsx` turns zip compression off and prints a warning, because an Excel file is already compressed.
 
@@ -134,6 +137,15 @@ Routes added for the 2.0.0 screen:
 - `GET /presets` lists the feed presets, each with a ready config. It returns an empty list without WooCommerce.
 
 On a network, a config with `network: true` is refused with `opex_bad_network` unless the caller is a super admin (or WP-CLI), and for users or raw tables.
+
+### Errors
+
+An error comes back as a standard WordPress REST error with a `code`, a `message` and `data.status`.
+
+- **503, `opex_busy`:** two requests changed the same saved list at once, and this one still could not save after its retries. Try the request again.
+- **400, `opex_invalid`:** the request could not be carried out, and `message` says why in words for people. Other refusals keep their own code and status, such as 404 for an unknown id.
+- **500, `opex_failed`:** an unexpected error. The message is plain ("Open Export could not finish this request. Try again in a moment."). The detail goes to the debug log only when `WP_DEBUG` and `WP_DEBUG_LOG` are on.
+- **409, `opex_busy`:** the same export, schedule start or delivery is already running. Wait for it to finish.
 
 ## Hooks
 
