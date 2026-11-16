@@ -60,16 +60,16 @@
         "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
     },
     "in": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 10,
+        "first": "2",
+        "last": "23",
+        "sha1": "0cae43185b42162904051b72fa4e908a01b1f567"
     },
     "not_in": {
-        "count": 26,
+        "count": 16,
         "first": "1",
         "last": "26",
-        "sha1": "ebb84530763fcb60a6ca23f6386b95199c78921d"
+        "sha1": "dc63cc37738e40279f1361ed9efd0ac599bcc537"
     },
     "empty": {
         "count": 0,

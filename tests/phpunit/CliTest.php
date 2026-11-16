@@ -194,8 +194,14 @@ class CliTest extends TestCase {
 	}
 
 	public function test_ambiguous_name_lists_ids() {
-		$a   = $this->template( 'Twin' );
-		$b   = $this->template( 'Twin' );
+		$a = $this->template( 'Twin' );
+		// Saving the same name now updates, so an older duplicate is added to the option directly.
+		$b          = $a;
+		$b['id']    = 't' . substr( md5( 'twin' ), 0, 12 );
+		$templates  = OPEX_Templates::all();
+		$templates[ $b['id'] ] = $b;
+		update_option( 'opex_templates', $templates, false );
+		$this->template_ids[] = $b['id'];
 		$res = $this->wp( array( 'opex', 'run', 'Twin' ) );
 		$this->assertSame( 1, $res['code'] );
 		$this->assertStringContainsString( $a['id'], $res['err'] );

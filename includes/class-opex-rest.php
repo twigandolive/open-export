@@ -49,6 +49,7 @@ class OPEX_Rest {
 					'type'              => 'string',
 					'default'           => 'source',
 					'enum'              => array( 'source', 'all' ),
+					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'sanitize_key',
 				),
 			),
@@ -165,7 +166,7 @@ class OPEX_Rest {
 			'groups'      => OPEX_Catalog::fields( $source ),
 			'date_fields' => $date_fields,
 			'presets'     => $presets,
-			'timezone'    => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
+			'timezone'    => wp_timezone_string(),
 		) );
 	}
 
@@ -212,6 +213,7 @@ class OPEX_Rest {
 	}
 
 	public static function jobs(): WP_REST_Response {
+		// Kept for now: the runner's cron hooks are not registered yet, so the sweep still needs this call.
 		OPEX_Jobs::sweep();
 		$jobs = array_map( array( 'OPEX_Jobs', 'expose' ), array_values( OPEX_Jobs::all() ) );
 		usort( $jobs, static function ( $a, $b ) {
@@ -235,7 +237,9 @@ class OPEX_Rest {
 	}
 
 	public static function run_job( WP_REST_Request $request ) {
-		$result = OPEX_Exporter::run( (string) $request['id'] );
+		// Only the Resume button sends resume, so a late run call cannot undo a pause.
+		$resume = rest_sanitize_boolean( $request->get_param( 'resume' ) );
+		$result = OPEX_Exporter::run( (string) $request['id'], $resume );
 		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 

@@ -17,9 +17,11 @@ class OPEX_Query_Filters {
 	 * Internal to the query compartment: other code calls OPEX_Query.
 	 */
 	public static function rule_clause( array $src, array $rule, array &$args ): string {
+		global $wpdb;
+
 		$field = (string) ( $rule['field'] ?? '' );
 		$op    = (string) ( $rule['op'] ?? 'eq' );
-		$value = self::resolve_filter_value( (string) ( $rule['value'] ?? '' ) );
+		$value = trim( (string) ( $rule['value'] ?? '' ) );
 
 		if ( ! in_array( $op, OPEX_Query::OPS, true ) ) {
 			return '';
@@ -27,10 +29,13 @@ class OPEX_Query_Filters {
 
 		// A rule on a real date column gets calendar semantics: "on or before
 		// 2026-03-31" means through the end of that day, and a value like
-		// 20260301 is a date, not a number to cast the column down to.
+		// 20260301 is a date, not a number to cast the column down to. Only a
+		// date column reads relative tokens such as "today": in a text field
+		// the word is just text.
 		$date_defs = OPEX_Query_Dates::date_fields( $src );
 		$is_date   = isset( $date_defs[ $field ] );
 		if ( $is_date ) {
+			$value  = self::resolve_filter_value( $value );
 			$clause = OPEX_Query_Dates::date_condition( $date_defs[ $field ], $op, $value, $args );
 			if ( null !== $clause ) {
 				return $clause;
@@ -39,6 +44,17 @@ class OPEX_Query_Filters {
 			// column is never cast down to a bare year.
 			if ( isset( $date_defs[ $field ]['sql'] ) ) {
 				return self::value_condition( $date_defs[ $field ]['sql'], $op, $value, $args, true );
+			}
+		}
+
+		$is_order_source = 'woo_orders' === $src['type'] || ( 'posts' === $src['type'] && ! empty( $src['woo'] ) );
+		if ( $is_order_source && 'woo:status' === $field ) {
+			$value = self::normalize_status( $op, $value );
+		}
+		if ( $is_order_source && 'woo:is_guest' === $field ) {
+			$guest = self::guest_clause( $src, $op, $value );
+			if ( null !== $guest ) {
+				return $guest;
 			}
 		}
 
@@ -55,7 +71,7 @@ class OPEX_Query_Filters {
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			if ( ! OPEX_Query::valid_core_col( $src['type'], $col ) ) {
-				return '';
+				return self::MATCH_NOTHING;
 			}
 			return self::value_condition( OPEX_Query::alias( $src['type'] ) . '.' . $col, $op, $value, $args );
 		}
@@ -64,32 +80,132 @@ class OPEX_Query_Filters {
 		if ( 0 === strpos( $field, 'col:' ) && 'table' === $src['type'] ) {
 			$col = substr( $field, 4 );
 			if ( ! OPEX_Query::valid_table_col( $src['table'], $col ) ) {
-				return '';
+				return self::MATCH_NOTHING;
 			}
-			return self::value_condition( '`' . str_replace( '`', '', $col ) . '`', $op, $value, $args );
+			$lhs = '`' . str_replace( '`', '', $col ) . '`';
+			if ( $wpdb->usermeta === $src['table'] && 'meta_value' === $col ) {
+				// Never let a filter probe the value of a credential row.
+				$holders = implode( ',', array_fill( 0, count( OPEX_Query::CREDENTIAL_META_KEYS ), '%s' ) );
+				foreach ( OPEX_Query::CREDENTIAL_META_KEYS as $key ) {
+					$args[] = $key;
+				}
+				$inner = self::value_condition( $lhs, $op, $value, $args );
+				return "(`meta_key` NOT IN ({$holders}) AND {$inner})";
+			}
+			return self::value_condition( $lhs, $op, $value, $args );
 		}
 
 		// Meta rule, e.g. meta:_sku; EXISTS / NOT EXISTS subquery.
 		if ( 0 === strpos( $field, 'meta:' ) && 'table' !== $src['type'] ) {
-			return self::meta_clause( $src, substr( $field, 5 ), $op, $value, $args );
+			$key = substr( $field, 5 );
+			if ( OPEX_Query::is_credential_meta( $key ) ) {
+				return self::MATCH_NOTHING;
+			}
+			return self::meta_clause( $src, $key, $op, $value, $args );
 		}
 
 		// Taxonomy rule, e.g. tax:product_cat (posts only).
 		if ( 0 === strpos( $field, 'tax:' ) && 'posts' === $src['type'] ) {
 			$tax = substr( $field, 4 );
-			return taxonomy_exists( $tax ) ? self::tax_clause( $tax, $op, $value, $args ) : '';
+			return taxonomy_exists( $tax ) ? self::tax_clause( $tax, $op, $value, $args ) : self::MATCH_NOTHING;
 		}
 
 		// Role rule for users: matches the serialized capabilities meta.
 		if ( 'computed:roles' === $field && 'users' === $src['type'] ) {
-			global $wpdb;
-			$args[] = $wpdb->get_blog_prefix() . 'capabilities';
-			$args[] = '%"' . $wpdb->esc_like( sanitize_key( $value ) ) . '"%';
-			$sql    = "EXISTS (SELECT 1 FROM {$wpdb->usermeta} um WHERE um.user_id = u.ID AND um.meta_key = %s AND um.meta_value LIKE %s)";
-			return in_array( $op, array( 'neq', 'not_contains', 'not_in' ), true ) ? "NOT {$sql}" : $sql;
+			return self::roles_clause( $op, $value, $args );
 		}
 
-		return '';
+		// A field this source does not have. Matching nothing is safer than
+		// dropping the rule, which would export more than was asked for.
+		return self::MATCH_NOTHING;
+	}
+
+	/** SQL that is true for no row. */
+	private const MATCH_NOTHING = '1=0';
+
+	/** SQL that is true for every row. */
+	private const MATCH_ALL = '1=1';
+
+	/**
+	 * Role rule for users. The list operators take several roles.
+	 */
+	private static function roles_clause( string $op, string $value, array &$args ): string {
+		global $wpdb;
+
+		$is_list = in_array( $op, array( 'in', 'not_in' ), true );
+		$roles   = $is_list
+			? array_values( array_filter( array_map( 'sanitize_key', array_map( 'trim', explode( ',', $value ) ) ), 'strlen' ) )
+			: array( sanitize_key( $value ) );
+		if ( ! $roles ) {
+			return 'in' === $op ? self::MATCH_NOTHING : self::MATCH_ALL;
+		}
+
+		$args[] = $wpdb->get_blog_prefix() . 'capabilities';
+		$likes  = array();
+		foreach ( $roles as $role ) {
+			$args[]  = '%"' . $wpdb->esc_like( $role ) . '"%';
+			$likes[] = 'um.meta_value LIKE %s';
+		}
+		$sql = "EXISTS (SELECT 1 FROM {$wpdb->usermeta} um WHERE um.user_id = u.ID AND um.meta_key = %s AND (" . implode( ' OR ', $likes ) . '))';
+		return in_array( $op, array( 'neq', 'not_contains', 'not_in' ), true ) ? "NOT {$sql}" : $sql;
+	}
+
+	/**
+	 * Lets an order status filter name a status with or without the "wc-" prefix.
+	 * Only the exact-match operators change: "contains" still searches the stored text.
+	 */
+	private static function normalize_status( string $op, string $value ): string {
+		if ( ! in_array( $op, array( 'eq', 'neq', 'in', 'not_in' ), true ) ) {
+			return $value;
+		}
+		$plain = array( 'trash', 'auto-draft', 'draft', 'publish', 'private', 'checkout-draft' );
+		$items = in_array( $op, array( 'in', 'not_in' ), true ) ? explode( ',', $value ) : array( $value );
+		$out   = array();
+		foreach ( $items as $item ) {
+			$item  = trim( $item );
+			$out[] = ( '' === $item || 0 === strpos( $item, 'wc-' ) || in_array( $item, $plain, true ) ) ? $item : 'wc-' . $item;
+		}
+		return implode( ',', $out );
+	}
+
+	/**
+	 * The guest flag takes yes or no. Returns null when the value is not one of
+	 * those, so the rule compares the stored customer id as before.
+	 */
+	private static function guest_clause( array $src, string $op, string $value ): ?string {
+		if ( ! in_array( $op, array( 'eq', 'neq', 'in', 'not_in' ), true ) ) {
+			return null;
+		}
+		$items = in_array( $op, array( 'in', 'not_in' ), true )
+			? array_values( array_filter( array_map( 'trim', explode( ',', $value ) ), 'strlen' ) )
+			: array( $value );
+		$flags = array();
+		foreach ( $items as $item ) {
+			$item = strtolower( $item );
+			if ( in_array( $item, array( 'yes', 'true' ), true ) ) {
+				$flags['yes'] = true;
+			} elseif ( in_array( $item, array( 'no', 'false' ), true ) ) {
+				$flags['no'] = true;
+			} else {
+				return null;
+			}
+		}
+		$positive = in_array( $op, array( 'eq', 'in' ), true );
+		if ( ! $flags ) {
+			return $positive ? self::MATCH_NOTHING : self::MATCH_ALL;
+		}
+		if ( 2 === count( $flags ) ) {
+			return $positive ? self::MATCH_ALL : self::MATCH_NOTHING;
+		}
+
+		if ( 'woo_orders' === $src['type'] ) {
+			$guest = '(o.customer_id = 0 OR o.customer_id IS NULL)';
+		} else {
+			global $wpdb;
+			$guest = "NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} gm WHERE gm.post_id = p.ID AND gm.meta_key = '_customer_user' AND gm.meta_value NOT IN ('', '0'))";
+		}
+		// "eq yes" and "neq no" both mean guest.
+		return isset( $flags['yes'] ) === $positive ? $guest : "NOT ({$guest})";
 	}
 
 	/**
@@ -164,11 +280,18 @@ class OPEX_Query_Filters {
 
 		switch ( $op ) {
 			case 'eq':
+				// A NULL text column counts as empty.
+				if ( '' === $value ) {
+					return "({$lhs} = '' OR {$lhs} IS NULL)";
+				}
 				$args[] = $value;
 				return "{$lhs} = %s";
 			case 'neq':
+				if ( '' === $value ) {
+					return "({$lhs} <> '' AND {$lhs} IS NOT NULL)";
+				}
 				$args[] = $value;
-				return "{$lhs} <> %s";
+				return "({$lhs} <> %s OR {$lhs} IS NULL)";
 			case 'contains':
 				$args[] = '%' . $wpdb->esc_like( $value ) . '%';
 				return "{$lhs} LIKE %s";
@@ -196,7 +319,8 @@ class OPEX_Query_Filters {
 			case 'not_in':
 				$list = array_filter( array_map( 'trim', explode( ',', $value ) ), 'strlen' );
 				if ( ! $list ) {
-					return '';
+					// Nothing is in an empty list, and everything is outside it.
+					return 'in' === $op ? self::MATCH_NOTHING : self::MATCH_ALL;
 				}
 				$holders = implode( ',', array_fill( 0, count( $list ), '%s' ) );
 				foreach ( $list as $item ) {
@@ -229,6 +353,13 @@ class OPEX_Query_Filters {
 			return '';
 		}
 		list( $table, $fk, $outer ) = $map[ $src['type'] ];
+
+		// A missing key and an empty value both read as empty, like a NULL column.
+		if ( '' === $value && 'eq' === $op ) {
+			$op = 'empty';
+		} elseif ( '' === $value && 'neq' === $op ) {
+			$op = 'not_empty';
+		}
 
 		$negatives = array( 'neq' => 'eq', 'not_contains' => 'contains', 'not_in' => 'in' );
 		$negate    = isset( $negatives[ $op ] );
@@ -276,7 +407,7 @@ class OPEX_Query_Filters {
 			? array_filter( array_map( 'trim', explode( ',', $value ) ), 'strlen' )
 			: array( $value );
 		if ( ! $list ) {
-			return '';
+			return 'in' === $op ? self::MATCH_NOTHING : self::MATCH_ALL;
 		}
 
 		$args[] = $tax;
@@ -285,6 +416,26 @@ class OPEX_Query_Filters {
 			$args[] = '%' . $wpdb->esc_like( $value ) . '%';
 			$sql    = $exists_open . ' AND xtm.name LIKE %s)';
 			return 'not_contains' === $op ? "NOT {$sql}" : $sql;
+		}
+
+		// These operators compare the term name, like "contains" does.
+		$name_tests = array(
+			'starts_with' => 'xtm.name LIKE %s',
+			'ends_with'   => 'xtm.name LIKE %s',
+			'gt'          => 'xtm.name > %s',
+			'gte'         => 'xtm.name >= %s',
+			'lt'          => 'xtm.name < %s',
+			'lte'         => 'xtm.name <= %s',
+		);
+		if ( isset( $name_tests[ $op ] ) ) {
+			if ( 'starts_with' === $op ) {
+				$args[] = $wpdb->esc_like( $value ) . '%';
+			} elseif ( 'ends_with' === $op ) {
+				$args[] = '%' . $wpdb->esc_like( $value );
+			} else {
+				$args[] = $value;
+			}
+			return $exists_open . ' AND ' . $name_tests[ $op ] . ')';
 		}
 
 		$holders = implode( ',', array_fill( 0, count( $list ), '%s' ) );

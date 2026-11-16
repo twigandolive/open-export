@@ -62,14 +62,14 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertSame( array_keys( $tpl ), array_keys( OPEX_Templates::expose( $stored ) ) );
 		$this->assertArrayHasKey( $tpl['id'], OPEX_Templates::all() );
 
-		// Saving the same name again adds a second record.
+		// S-24: saving the same name again updates the template instead of adding one.
 		$again = OPEX_Templates::save( 'My template', $raw );
-		$this->assertNotSame( $tpl['id'], $again['id'] );
-		$this->assertCount( 2, OPEX_Templates::all() );
+		$this->assertSame( $tpl['id'], $again['id'] );
+		$this->assertSame( $tpl['created'], $again['created'] );
+		$this->assertCount( 1, OPEX_Templates::all() );
 
 		OPEX_Templates::delete( $tpl['id'] );
 		$this->assertNull( OPEX_Templates::get( $tpl['id'] ) );
-		$this->assertNotNull( OPEX_Templates::get( $again['id'] ) );
 		OPEX_Templates::delete( 'tnotthere00000' );
 		$this->assertFalse( autoload_of( 'opex_templates' ) );
 	}
@@ -112,9 +112,10 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertMatchesRegularExpression( '/^lifecycle-\d{8}-\d{6}-[A-Za-z0-9]{12}\.csv$/', $job['filename'] );
 
 		$record = OPEX_Jobs::get( $job['id'] );
-		$keys   = array_keys( $record );
-		sort( $keys );
-		$this->assertSame( array( 'config', 'created', 'cursor', 'error', 'filename', 'filesize', 'headers', 'id', 'label', 'processed', 'status', 'total' ), $keys, 'the 12 shipped job keys' );
+		$shipped = array( 'config', 'created', 'cursor', 'error', 'filename', 'filesize', 'headers', 'id', 'label', 'processed', 'status', 'total' );
+		$this->assertSame( array(), array_diff( $shipped, array_keys( $record ) ), 'the 12 shipped job keys are still there' );
+		$stored = ( (array) get_option( 'opex_jobs' ) )[ $job['id'] ];
+		$this->assertSame( array(), array_diff( $shipped, array_keys( $stored ) ), 'and are still saved' );
 		$path = OPEX_Jobs::file_path( $record );
 		$this->assertFileExists( $path );
 		$this->assertSame( "\xEF\xBB\xBFID\n", file_get_contents( $path ), 'start() writes the BOM and header' );
@@ -128,8 +129,12 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$this->assertSame( 20, $paused['processed'] );
 		$this->assertSame( 'paused', OPEX_Exporter::pause( $job['id'] )['status'] );
 
-		$r2 = OPEX_Exporter::run( $job['id'] );
-		$this->assertSame( 'running', $r2['status'], 'run resumes a paused job' );
+		// S-7: a plain run call leaves a paused job paused. Only an explicit resume continues it.
+		$late = OPEX_Exporter::run( $job['id'] );
+		$this->assertSame( 'paused', $late['status'] );
+		$this->assertSame( 20, $late['processed'] );
+		$r2 = OPEX_Exporter::run( $job['id'], true );
+		$this->assertSame( 'running', $r2['status'], 'run with resume continues a paused job' );
 		$this->assertSame( 40, $r2['processed'] );
 		$this->assertGreaterThan( 0, (int) OPEX_Jobs::get( $job['id'] )['cursor'] );
 

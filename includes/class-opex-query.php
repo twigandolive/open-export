@@ -37,6 +37,18 @@ class OPEX_Query {
 	/** Columns that must never leave the database, no matter what is asked for. */
 	public const FORBIDDEN = array( 'user_pass', 'user_activation_key' );
 
+	/**
+	 * Meta keys that hold login credentials. Their values never leave the
+	 * database, on any path: the meta prefetch, filters, and the raw usermeta table.
+	 */
+	public const CREDENTIAL_META_KEYS = array( 'session_tokens', '_application_passwords' );
+
+	/** Pattern a field id must match: a known prefix, then at least one character. */
+	public const FIELD_ID_PATTERN = '/^(core|meta|tax|computed|col|woo):[\S]/';
+
+	/** Pattern that strips the prefix from a field id. */
+	private const FIELD_PREFIX_PATTERN = '/^(core|meta|tax|computed|col|woo):/';
+
 	/** The filter operators this plugin understands. */
 	public static function ops(): array {
 		return self::OPS;
@@ -44,6 +56,63 @@ class OPEX_Query {
 
 	public static function is_valid_op( string $op ): bool {
 		return in_array( $op, self::OPS, true );
+	}
+
+	/** Whether text looks like a field id (a known prefix and a name). */
+	public static function is_field_id( string $field ): bool {
+		return 1 === preg_match( self::FIELD_ID_PATTERN, $field );
+	}
+
+	/** A field id without its prefix: "meta:_sku" becomes "_sku". */
+	public static function field_name( string $field ): string {
+		return (string) preg_replace( self::FIELD_PREFIX_PATTERN, '', $field );
+	}
+
+	/** Reduce any relation value to "OR" or "AND". */
+	public static function normalize_relation( $relation ): string {
+		return 'OR' === strtoupper( (string) $relation ) ? 'OR' : 'AND';
+	}
+
+	/** Whether a meta key holds credentials that must never be exported or filtered on. */
+	public static function is_credential_meta( string $key ): bool {
+		return in_array( $key, self::CREDENTIAL_META_KEYS, true );
+	}
+
+	/**
+	 * The date column to use for a range: the one asked for when the source
+	 * has it, else the source's first date column, else ''.
+	 *
+	 * @param array  $src   Parsed source.
+	 * @param string $field Field id asked for.
+	 */
+	public static function date_field_or_default( array $src, string $field ): string {
+		$defs = self::date_fields( $src );
+		if ( isset( $defs[ $field ] ) ) {
+			return $field;
+		}
+		$keys = array_keys( $defs );
+		return (string) reset( $keys );
+	}
+
+	/**
+	 * Fail closed when the last query ran into a database error. The detail
+	 * goes to the debug log only; the exception text stays generic.
+	 *
+	 * @throws RuntimeException When the database reported an error.
+	 */
+	public static function throw_on_db_error(): void {
+		global $wpdb;
+
+		$detail = (string) $wpdb->last_error;
+		if ( '' === $detail ) {
+			return;
+		}
+		$wpdb->last_error = '';
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional server-side logging when debug is on.
+			error_log( 'Open Export: database error: ' . $detail );
+		}
+		throw new RuntimeException( 'The database could not read the export data.' );
 	}
 
 	/**
@@ -80,7 +149,7 @@ class OPEX_Query {
 		$field = self::resolve_field( $src, $field );
 
 		if ( 0 === strpos( $field, 'meta:' ) ) {
-			return 'table' !== $src['type'] && '' !== substr( $field, 5 );
+			return 'table' !== $src['type'] && '' !== substr( $field, 5 ) && ! self::is_credential_meta( substr( $field, 5 ) );
 		}
 
 		if ( 0 === strpos( $field, 'core:' ) ) {
@@ -109,6 +178,18 @@ class OPEX_Query {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether a rule may filter on this field. Computed values (a permalink,
+	 * an author name) are not stored anywhere, so only the role list qualifies.
+	 */
+	public static function is_filterable_field( array $src, string $field ): bool {
+		if ( ! self::is_valid_field( $src, $field ) ) {
+			return false;
+		}
+		$resolved = self::resolve_field( $src, $field );
+		return 0 !== strpos( $resolved, 'computed:' ) || 'computed:roles' === $resolved;
 	}
 
 	/** Whether a column name is blocked from every export path (core, col, filters). */
@@ -170,8 +251,11 @@ class OPEX_Query {
 			$sql = $wpdb->prepare( $sql, $args );
 		}
 
+		$wpdb->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above when placeholders exist; export counts are one-shot.
-		return (int) $wpdb->get_var( $sql );
+		$total = $wpdb->get_var( $sql );
+		self::throw_on_db_error();
+		return (int) $total;
 	}
 
 	/**
@@ -179,8 +263,12 @@ class OPEX_Query {
 	 *   items:  list of assoc arrays keyed by field id, in $config['fields'] order
 	 *   cursor: opaque int to pass back for the next batch
 	 *   done:   true when the source is exhausted
+	 *
+	 * @param callable|null $tick Called now and then while rows are assembled, so a
+	 *                            long batch can refresh its lock.
+	 * @throws RuntimeException When the database reports an error.
 	 */
-	public static function batch( array $config, int $cursor, int $limit ): array {
+	public static function batch( array $config, int $cursor, int $limit, $tick = null ): array {
 		global $wpdb;
 
 		$src = self::parse_source( $config['source'] );
@@ -200,22 +288,31 @@ class OPEX_Query {
 			$sql        = "SELECT {$select} FROM {$from} WHERE {$where_full} ORDER BY {$pk} ASC LIMIT %d";
 			$args_full[] = $limit;
 		} else {
-			// No usable single-column primary key: fall back to offset paging.
-			$sql       = "SELECT {$select} FROM {$from}" . ( $where ? " WHERE {$where}" : '' ) . ' LIMIT %d OFFSET %d';
+			// No usable single-column integer key: offset paging, ordered by the
+			// primary key columns when the table has any so pages never overlap.
+			$order     = 'table' === $src['type'] ? self::table_order( $src['table'] ) : '';
+			$sql       = "SELECT {$select} FROM {$from}" . ( $where ? " WHERE {$where}" : '' ) . ( $order ? " ORDER BY {$order}" : '' ) . ' LIMIT %d OFFSET %d';
 			$args_full = array_merge( $args, array( $limit, $cursor ) );
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql contains only validated identifiers and %-placeholders; all values travel through $args_full.
 		$sql = $wpdb->prepare( $sql, $args_full );
 
+		$wpdb->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; streaming export batches are inherently uncached.
 		$rows = $wpdb->get_results( $sql );
+		self::throw_on_db_error();
 		$rows = is_array( $rows ) ? $rows : array();
 
-		// Strip credential columns even if SELECT * included them.
+		// Strip credential columns even if SELECT * included them, and blank
+		// the value of credential rows in the raw usermeta table.
+		$usermeta = 'table' === $src['type'] && $wpdb->usermeta === $src['table'];
 		foreach ( $rows as $row ) {
 			foreach ( self::FORBIDDEN as $col ) {
 				unset( $row->$col );
+			}
+			if ( $usermeta && isset( $row->meta_key ) && self::is_credential_meta( (string) $row->meta_key ) ) {
+				$row->meta_value = '';
 			}
 		}
 
@@ -230,7 +327,7 @@ class OPEX_Query {
 			$new_cursor = $cursor + count( $rows );
 		}
 
-		$items = OPEX_Query_Rows::assemble( $src, $rows, $config['fields'] );
+		$items = OPEX_Query_Rows::assemble( $src, $rows, $config['fields'], $tick );
 
 		return array( 'items' => $items, 'cursor' => $new_cursor, 'done' => $done );
 	}
@@ -249,13 +346,17 @@ class OPEX_Query {
 				$from = OPEX_Woo::from_clause();
 				// Refunds share the orders table; excluding them keeps one row
 				// per order and stops refund rows corrupting reported totals.
-				$base = array( "o.type = 'shop_order'" );
+				// Auto-drafts and checkout drafts are carts, not orders.
+				$base = array( "o.type = 'shop_order'", "o.status NOT IN ('auto-draft', 'checkout-draft')" );
 				$args = array();
 				$pk   = 'o.id';
 				break;
 			case 'posts':
 				$from  = "{$wpdb->posts} p";
 				$base  = array( 'p.post_type = %s', "p.post_status <> 'auto-draft'" );
+				if ( ! empty( $src['woo'] ) ) {
+					$base[] = "p.post_status <> 'checkout-draft'";
+				}
 				$args  = array( $src['post_type'] );
 				$pk    = 'p.ID';
 				break;
@@ -287,7 +388,7 @@ class OPEX_Query {
 				break;
 		}
 
-		$relation = ( isset( $filters['relation'] ) && 'OR' === strtoupper( (string) $filters['relation'] ) ) ? 'OR' : 'AND';
+		$relation = self::normalize_relation( $filters['relation'] ?? 'AND' );
 		$clauses  = array();
 
 		foreach ( (array) ( $filters['rules'] ?? array() ) as $rule ) {
@@ -385,6 +486,43 @@ class OPEX_Query {
 		return '`' . str_replace( '`', '', $pks[0] ) . '`';
 	}
 
+	/**
+	 * Primary key columns of a raw table, backtick-quoted and comma separated,
+	 * for ORDER BY when keyset paging is not possible. '' when it has none.
+	 */
+	private static function table_order( string $table ): string {
+		$cols = array();
+		foreach ( OPEX_Catalog::table_columns( $table ) as $col ) {
+			if ( $col['pk'] ) {
+				$cols[] = '`' . str_replace( '`', '', $col['name'] ) . '`';
+			}
+		}
+		return implode( ', ', $cols );
+	}
+
+	/**
+	 * Plain notes to store on a new job about how this export behaves.
+	 *
+	 * @param array $config Sanitized config.
+	 * @return string[]
+	 */
+	public static function export_notes( array $config ): array {
+		global $wpdb;
+
+		$src = self::parse_source( (string) ( $config['source'] ?? '' ) );
+		if ( ! $src || 'table' !== $src['type'] ) {
+			return array();
+		}
+		$notes = array();
+		if ( '' === self::table_pk( $src['table'] ) && '' === self::table_order( $src['table'] ) ) {
+			$notes[] = __( 'This table has no primary key, so the order of its rows is not guaranteed. If the table changes while the export runs, a row can be missed or repeated.', 'open-export' );
+		}
+		if ( $wpdb->usermeta === $src['table'] && in_array( 'col:meta_value', (array) $config['fields'], true ) ) {
+			$notes[] = __( 'Login credentials (session tokens and application passwords) are never exported. Their values are left empty.', 'open-export' );
+		}
+		return $notes;
+	}
+
 	private static function unqualified( string $col ): string {
 		$col = str_replace( '`', '', $col );
 		$dot = strrpos( $col, '.' );
@@ -416,6 +554,11 @@ class OPEX_Query {
 		}
 		if ( ! $cols ) {
 			return '*';
+		}
+		// The usermeta table needs its key column to blank credential values.
+		global $wpdb;
+		if ( $wpdb->usermeta === $src['table'] && isset( $cols['meta_value'] ) ) {
+			$cols['meta_key'] = true;
 		}
 
 		$parts = array();

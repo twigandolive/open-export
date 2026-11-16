@@ -162,7 +162,7 @@ class RestTest extends CharacterizationCase {
 		$schema = $this->call( 'GET', '/open-export/v1/schema?source=users', null );
 		$this->assertSame( 200, $schema->get_status() );
 		$this->assertSame( 1, $schema->get_data()['opex_schema'] );
-		$this->assertSame( 200, $this->call( 'GET', '/open-export/v1/schema?scope=bogus', null )->get_status(), 'the scope enum is not enforced' );
+		$this->assertSame( 400, $this->call( 'GET', '/open-export/v1/schema?scope=bogus', null )->get_status(), 'the scope enum is enforced' );
 
 		$jobs = $this->call( 'GET', '/open-export/v1/jobs', null );
 		$this->assertSame( 200, $jobs->get_status() );

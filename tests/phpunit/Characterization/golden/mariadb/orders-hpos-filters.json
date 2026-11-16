@@ -1,12 +1,12 @@
 {
     "woo:status": {
         "eq": {
-            "count": 0,
-            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            "count": 10,
+            "sha1": "85322bd78169994ee302c6f94b57d95f865cfa4f"
         },
         "neq": {
-            "count": 40,
-            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+            "count": 30,
+            "sha1": "f0f69543942e51b4bdc808a47b5d60c220dbb9c9"
         },
         "contains": {
             "count": 5,
@@ -41,12 +41,12 @@
             "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         },
         "in": {
-            "count": 0,
-            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            "count": 15,
+            "sha1": "f6ea6c7fbcc0657b1b7d3b6a7ed6e05d1df7ad81"
         },
         "not_in": {
-            "count": 40,
-            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+            "count": 25,
+            "sha1": "0b2035aa0ff1ed4a7378ac97cc0ef5e9754b24c1"
         },
         "empty": {
             "count": 0,
@@ -233,8 +233,8 @@
     },
     "woo:billing_company": {
         "eq": {
-            "count": 0,
-            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            "count": 40,
+            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
         },
         "neq": {
             "count": 0,
@@ -273,8 +273,8 @@
             "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         },
         "in": {
-            "count": 40,
-            "sha1": "2f5d06fd153b8deac3d7aaf30060f2096942b49b"
+            "count": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         },
         "not_in": {
             "count": 40,

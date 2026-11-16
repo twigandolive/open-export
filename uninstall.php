@@ -22,11 +22,15 @@ function opex_uninstall_site( string $dir = '' ): void {
 		delete_option( $option );
 	}
 
-	// Every transient with our prefix (opex_table_status, opex_keys_*, opex_lock_*, and so on).
+	// Every transient with our prefix (opex_table_status, opex_keys_*, and so on).
 	$like = $wpdb->esc_like( '_transient_opex_' ) . '%';
 	$like_timeout = $wpdb->esc_like( '_transient_timeout_opex_' ) . '%';
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup of our own prefixed transients.
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $like, $like_timeout ) );
+
+	// Lock rows. They are plain options, written straight to the table so that taking one is atomic.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup of our own prefixed lock rows.
+	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'opex_lock_' ) . '%' ) );
 
 	// Every cron event whose hook starts with opex_, whatever its arguments.
 	foreach ( (array) _get_cron_array() as $timestamp => $hooks ) {

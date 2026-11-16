@@ -55,6 +55,8 @@ class UninstallTest extends TestCase {
 		delete_option( 'opex_unrelated_option' );
 		delete_option( 'other_plugin_opex_jobs' );
 		delete_transient( 'other_transient' );
+		delete_option( 'other_lock_j2' );
+		OPEX_Lock::release( 'j2' );
 		foreach ( array( 'opex_run_schedule' => array( 's1' ), 'opex_run_job' => array( 'j1' ), 'opex_deliver' => array( 'j1' ), 'opex_maintenance' => array(), 'other_plugin_hook' => array() ) as $hook => $args ) {
 			wp_clear_scheduled_hook( $hook, $args );
 		}
@@ -71,6 +73,8 @@ class UninstallTest extends TestCase {
 		set_transient( 'opex_keys_abc', array( 1 ), 300 );
 		set_transient( 'opex_lock_j1', time(), 300 );
 		set_transient( 'other_transient', 'keep', 300 );
+		OPEX_Lock::acquire( 'j2', 300 );
+		add_option( 'other_lock_j2', 'keep', '', false );
 
 		$in_future = time() + 3600;
 		wp_schedule_single_event( $in_future, 'opex_run_schedule', array( 's1' ) );
@@ -108,6 +112,9 @@ class UninstallTest extends TestCase {
 		$this->assertSame( 'keep me', get_option( 'opex_unrelated_option' ) );
 		$this->assertSame( 'keep me too', get_option( 'other_plugin_opex_jobs' ) );
 		$this->assertSame( 'keep', get_transient( 'other_transient' ) );
+		$this->assertFalse( OPEX_Lock::is_held( 'j2' ) );
+		$this->assertSame( '0', (string) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE 'opex\\_lock\\_%'" ) );
+		$this->assertSame( 'keep', get_option( 'other_lock_j2' ) );
 		$this->assertNotFalse( wp_next_scheduled( 'other_plugin_hook' ) );
 	}
 

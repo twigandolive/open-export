@@ -6,7 +6,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-29 12:00:00</date_created>
     <total>82.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>3</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First2</billing_first_name>
@@ -20,7 +20,7 @@
     <status>wc-processing</status>
     <date_created>2026-06-28 12:00:00</date_created>
     <total>17.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>4</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First3</billing_first_name>
@@ -34,7 +34,7 @@
     <status>wc-on-hold</status>
     <date_created>2026-06-27 12:00:00</date_created>
     <total>115.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>5</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First4</billing_first_name>
@@ -48,7 +48,7 @@
     <status>wc-pending</status>
     <date_created>2026-06-26 12:00:00</date_created>
     <total>78.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>6</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First5</billing_first_name>
@@ -62,7 +62,7 @@
     <status>wc-cancelled</status>
     <date_created>2026-06-25 12:00:00</date_created>
     <total>215.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>7</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First6</billing_first_name>
@@ -76,7 +76,7 @@
     <status>wc-refunded</status>
     <date_created>2026-06-24 12:00:00</date_created>
     <total>14.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>8</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First7</billing_first_name>
@@ -90,7 +90,7 @@
     <status>wc-failed</status>
     <date_created>2026-06-23 12:00:00</date_created>
     <total>123.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>9</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First8</billing_first_name>
@@ -104,7 +104,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-22 12:00:00</date_created>
     <total>53.10</total>
-    <discount_total>5.9</discount_total>
+    <discount_total>5.90</discount_total>
     <customer_id>10</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First9</billing_first_name>
@@ -118,7 +118,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-21 12:00:00</date_created>
     <total>115.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>11</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First10</billing_first_name>
@@ -132,7 +132,7 @@
     <status>wc-processing</status>
     <date_created>2026-06-20 12:00:00</date_created>
     <total>217.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>2</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First1</billing_first_name>
@@ -146,7 +146,7 @@
     <status>wc-on-hold</status>
     <date_created>2026-06-19 12:00:00</date_created>
     <total>62.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>3</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First2</billing_first_name>
@@ -160,7 +160,7 @@
     <status>wc-pending</status>
     <date_created>2026-06-18 12:00:00</date_created>
     <total>208.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>4</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First3</billing_first_name>
@@ -174,7 +174,7 @@
     <status>wc-cancelled</status>
     <date_created>2026-06-17 12:00:00</date_created>
     <total>85.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>5</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First4</billing_first_name>
@@ -188,7 +188,7 @@
     <status>wc-refunded</status>
     <date_created>2026-06-16 12:00:00</date_created>
     <total>78.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>6</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First5</billing_first_name>
@@ -202,7 +202,7 @@
     <status>wc-failed</status>
     <date_created>2026-06-15 12:00:00</date_created>
     <total>11.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>7</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First6</billing_first_name>
@@ -216,7 +216,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-14 12:00:00</date_created>
     <total>83.70</total>
-    <discount_total>9.3</discount_total>
+    <discount_total>9.30</discount_total>
     <customer_id>8</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First7</billing_first_name>
@@ -230,7 +230,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-13 12:00:00</date_created>
     <total>143.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>9</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First8</billing_first_name>
@@ -244,7 +244,7 @@
     <status>wc-processing</status>
     <date_created>2026-06-12 12:00:00</date_created>
     <total>41.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>10</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First9</billing_first_name>
@@ -258,7 +258,7 @@
     <status>wc-on-hold</status>
     <date_created>2026-06-11 12:00:00</date_created>
     <total>25.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>11</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First10</billing_first_name>
@@ -272,7 +272,7 @@
     <status>wc-pending</status>
     <date_created>2026-06-10 12:00:00</date_created>
     <total>84.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>2</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First1</billing_first_name>
@@ -286,7 +286,7 @@
     <status>wc-cancelled</status>
     <date_created>2026-06-09 12:00:00</date_created>
     <total>205.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>3</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First2</billing_first_name>
@@ -300,7 +300,7 @@
     <status>wc-refunded</status>
     <date_created>2026-06-08 12:00:00</date_created>
     <total>87.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>4</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First3</billing_first_name>
@@ -314,7 +314,7 @@
     <status>wc-failed</status>
     <date_created>2026-06-07 12:00:00</date_created>
     <total>93.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>5</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First4</billing_first_name>
@@ -328,7 +328,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-06 12:00:00</date_created>
     <total>151.20</total>
-    <discount_total>16.8</discount_total>
+    <discount_total>16.80</discount_total>
     <customer_id>6</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First5</billing_first_name>
@@ -342,7 +342,7 @@
     <status>wc-completed</status>
     <date_created>2026-06-05 12:00:00</date_created>
     <total>211.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>7</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First6</billing_first_name>
@@ -356,7 +356,7 @@
     <status>wc-processing</status>
     <date_created>2026-06-04 12:00:00</date_created>
     <total>23.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>8</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First7</billing_first_name>
@@ -370,7 +370,7 @@
     <status>wc-on-hold</status>
     <date_created>2026-06-03 12:00:00</date_created>
     <total>67.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>9</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First8</billing_first_name>
@@ -384,7 +384,7 @@
     <status>wc-pending</status>
     <date_created>2026-06-02 12:00:00</date_created>
     <total>157.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>10</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First9</billing_first_name>
@@ -398,7 +398,7 @@
     <status>wc-cancelled</status>
     <date_created>2026-06-01 12:00:00</date_created>
     <total>17.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>11</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First10</billing_first_name>
@@ -412,7 +412,7 @@
     <status>wc-refunded</status>
     <date_created>2026-05-31 12:00:00</date_created>
     <total>105.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>2</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First1</billing_first_name>
@@ -426,7 +426,7 @@
     <status>wc-failed</status>
     <date_created>2026-05-30 12:00:00</date_created>
     <total>140.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>3</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First2</billing_first_name>
@@ -454,7 +454,7 @@
     <status>wc-completed</status>
     <date_created>2026-05-28 12:00:00</date_created>
     <total>27.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>5</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First4</billing_first_name>
@@ -468,7 +468,7 @@
     <status>wc-processing</status>
     <date_created>2026-05-27 12:00:00</date_created>
     <total>144.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>6</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First5</billing_first_name>
@@ -482,7 +482,7 @@
     <status>wc-on-hold</status>
     <date_created>2026-05-26 12:00:00</date_created>
     <total>146.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>7</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First6</billing_first_name>
@@ -496,7 +496,7 @@
     <status>wc-pending</status>
     <date_created>2026-05-25 12:00:00</date_created>
     <total>20.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>8</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First7</billing_first_name>
@@ -510,7 +510,7 @@
     <status>wc-cancelled</status>
     <date_created>2026-05-24 12:00:00</date_created>
     <total>121.00</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>9</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First8</billing_first_name>
@@ -524,7 +524,7 @@
     <status>wc-refunded</status>
     <date_created>2026-05-23 12:00:00</date_created>
     <total>166.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>10</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First9</billing_first_name>
@@ -538,7 +538,7 @@
     <status>wc-failed</status>
     <date_created>2026-05-22 12:00:00</date_created>
     <total>63.50</total>
-    <discount_total>0</discount_total>
+    <discount_total>0.00</discount_total>
     <customer_id>11</customer_id>
     <is_guest>no</is_guest>
     <billing_first_name>First10</billing_first_name>

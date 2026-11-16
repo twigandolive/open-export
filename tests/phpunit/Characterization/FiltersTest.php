@@ -155,7 +155,8 @@ class FiltersTest extends CharacterizationCase {
 		$r = $this->all_ops( 'users', 'computed:roles', array( 'eq' => 'editor', 'neq' => 'editor', 'contains' => 'edit', 'not_contains' => 'edit', 'starts_with' => 'ed', 'ends_with' => 'or', 'gt' => 'a', 'gte' => 'a', 'lt' => 'z', 'lte' => 'z', 'in' => 'editor,author', 'not_in' => 'editor,author' ) );
 		$this->assertSame( 5, $r['eq']['count'] );
 		$this->assertSame( 21, $r['neq']['count'] );
-		$this->assertSame( 0, $r['in']['count'], 'pinned quirk: the list is run through sanitize_key, so editor,author becomes editorauthor' );
+		$this->assertSame( 10, $r['in']['count'], 'in takes a list of roles: editor or author' );
+		$this->assertSame( 16, $r['not_in']['count'], 'not_in excludes every listed role' );
 		$this->assert_golden_json( 'filters-computed-roles', $r );
 	}
 
@@ -189,17 +190,25 @@ class FiltersTest extends CharacterizationCase {
 	}
 
 	/**
-	 * Rules the engine ignores: unknown fields, bad ops and empty in-lists.
+	 * Bad operators are dropped with a note. A rule on a field the source does
+	 * not have is refused (S-3), and an empty in-list matches nothing.
 	 */
 	public function test_ignored_rules(): void {
 		$all     = $this->describe( 'posts:post', array() );
-		$unknown = $this->describe( 'posts:post', array( array( 'field' => 'core:nope', 'op' => 'eq', 'value' => 'x' ) ) );
 		$badop   = $this->describe( 'posts:post', array( array( 'field' => 'core:ID', 'op' => 'regex', 'value' => 'x' ) ) );
 		$emptyin = $this->describe( 'posts:post', array( array( 'field' => 'core:ID', 'op' => 'in', 'value' => ' , ' ) ) );
+		$emptyout = $this->describe( 'posts:post', array( array( 'field' => 'core:ID', 'op' => 'not_in', 'value' => ' , ' ) ) );
 		$this->assertSame( 60, $all['count'] );
-		$this->assertSame( $all, $unknown, 'a rule on an unknown field is silently skipped' );
 		$this->assertSame( $all, $badop, 'a rule with a bad operator is dropped' );
-		$this->assertSame( $all, $emptyin, 'an empty in-list is skipped' );
+		$this->assertSame( 0, $emptyin['count'], 'an empty in-list matches nothing' );
+		$this->assertSame( $all, $emptyout, 'an empty not_in list matches everything' );
+
+		$unknown = OPEX_Exporter::sanitize_config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'filters' => array( 'rules' => array( array( 'field' => 'core:nope', 'op' => 'eq', 'value' => 'x' ) ) ) ) );
+		$this->assertWPError( $unknown );
+		$this->assertSame( 'opex_bad_filter', $unknown->get_error_code() );
+		$this->assertSame( 400, $unknown->get_error_data()['status'] );
+		$this->assertStringContainsString( 'core:nope', $unknown->get_error_message() );
+
 		$config = $this->config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'filters' => array( 'relation' => 'XOR', 'rules' => array( array( 'field' => 'core:ID', 'op' => 'eq', 'value' => '10' ) ) ) ) );
 		$this->assertSame( 'AND', $config['filters']['relation'] );
 	}
@@ -217,12 +226,14 @@ class FiltersTest extends CharacterizationCase {
 	}
 
 	/**
-	 * A text value that looks like a date token is rewritten for every field.
+	 * S-5: a text value that looks like a date token stays text. Only a date column reads tokens.
 	 */
-	public function test_date_token_in_text_field_quirk(): void {
+	public function test_date_token_in_text_field_stays_text(): void {
 		$this->temp_post( 'today', 1, array( 'post_excerpt' => 'opextok' ) );
 		$r = $this->describe( 'posts:post', array( array( 'field' => 'core:post_title', 'op' => 'eq', 'value' => 'today' ) ) );
-		$this->assertSame( 0, $r['count'], 'a title of "today" cannot be matched: the value becomes a datetime' );
+		$this->assertSame( 1, $r['count'], 'a title of "today" is matched as text' );
+		$meta = $this->describe( 'posts:post', array( array( 'field' => 'core:post_excerpt', 'op' => 'eq', 'value' => 'opextok' ), array( 'field' => 'core:post_date', 'op' => 'gte', 'value' => 'today' ) ) );
+		$this->assertLessThanOrEqual( 1, $meta['count'], 'a date column still reads the token' );
 	}
 
 	/**

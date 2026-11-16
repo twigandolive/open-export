@@ -139,7 +139,7 @@ class SchedulesTest extends TestCase {
 		$rec = OPEX_Schedules::save( $this->raw() );
 		$job = OPEX_Schedules::start( $rec['id'], 'manual' );
 		$this->assertIsArray( $job );
-		$stored = OPEX_Jobs::get( $job['id'] );
+		$stored = ( (array) get_option( 'opex_jobs', array() ) )[ $job['id'] ] ?? null; // As stored: OPEX_Jobs::get adds defaults.
 		$this->assertNotNull( $stored );
 		$after = OPEX_Schedules::get( $rec['id'] );
 		$this->assertSame( $job['id'], $after['last_run']['job_id'] );

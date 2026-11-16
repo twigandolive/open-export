@@ -172,7 +172,7 @@ class RestSchedulesTest extends TestCase {
 		$this->assertMatchesRegularExpression( '/^j[0-9a-f]{12}$/', $job['id'] );
 		$this->assertContains( $job['status'], array( 'running', 'done' ) );
 		$this->assertSame( $job['id'], OPEX_Schedules::get( $s['id'] )['last_run']['job_id'] );
-		$stored = OPEX_Jobs::get( $job['id'] );
+		$stored = ( (array) get_option( 'opex_jobs', array() ) )[ $job['id'] ] ?? null; // As stored: OPEX_Jobs::get adds defaults.
 		if ( ! isset( $stored['origin'] ) ) {
 			$this->markTestIncomplete( 'The engine does not store origin on jobs yet.' );
 		}

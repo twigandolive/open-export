@@ -2,10 +2,10 @@
     "format": "xml",
     "count": 40,
     "processed": 40,
-    "filesize": 20057,
+    "filesize": 20239,
     "batches": 5,
-    "sha256": "e933a7bff1827b8f719552c2b7af328f10a3be1431e082cc79640287f45f3321",
+    "sha256": "0260dc8da0ec88fc80b5626ea5797dab6f898bd95778c027762b9978cce4128e",
     "rows": 40,
-    "first": "<record>\n    <order_id>106</order_id>\n    <order_number>106</order_number>\n    <status>wc-completed</status>\n    <date_created>2026-06-29 12:00:00</date_created>\n    <total>82.5</total>\n    <discount_total>0</discount_total>\n    <customer_id>3</customer_id>\n    <is_guest>no</is_guest>\n    <billing_first_name>First2</billing_first_name>\n    <billing_last_name>Buyer1</billing_last_name>\n    <billing_email>buyer1@example.test</billing_email>\n    <billing_country>US</billing_country>\n  </record>",
+    "first": "<record>\n    <order_id>106</order_id>\n    <order_number>106</order_number>\n    <status>wc-completed</status>\n    <date_created>2026-06-29 12:00:00</date_created>\n    <total>82.50</total>\n    <discount_total>0.00</discount_total>\n    <customer_id>3</customer_id>\n    <is_guest>no</is_guest>\n    <billing_first_name>First2</billing_first_name>\n    <billing_last_name>Buyer1</billing_last_name>\n    <billing_email>buyer1@example.test</billing_email>\n    <billing_country>US</billing_country>\n  </record>",
     "last": "<record>\n    <order_id>150</order_id>\n    <order_number>150</order_number>\n    <status>wc-completed</status>\n    <date_created>2026-05-21 12:00:00</date_created>\n    <total>212.85</total>\n    <discount_total>23.65</discount_total>\n    <customer_id>2</customer_id>\n    <is_guest>no</is_guest>\n    <billing_first_name>First1</billing_first_name>\n    <billing_last_name>Buyer40</billing_last_name>\n    <billing_email>buyer40@example.test</billing_email>\n    <billing_country>US</billing_country>\n  </record>"
 }

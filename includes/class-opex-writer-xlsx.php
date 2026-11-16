@@ -52,12 +52,43 @@ class OPEX_Writer_XLSX extends OPEX_Writer {
 	}
 
 	/**
+	 * Sizes of the output file and the sidecar, plus the next row number.
+	 * The output file stays empty until finish() builds the zip.
+	 */
+	public function checkpoint(): array {
+		$counter = $this->counter_path();
+		return array(
+			'size'      => self::file_size( $this->path ),
+			'rows_size' => self::file_size( $this->rows_path() ),
+			'next'      => is_file( $counter ) ? (int) file_get_contents( $counter ) : 0,
+		);
+	}
+
+	/**
+	 * Cuts the sidecar back to the checkpoint and resets the row counter.
+	 * When the sidecar is gone the workbook was already built, so there is
+	 * nothing left to undo.
+	 *
+	 * @param array $checkpoint A value returned by checkpoint().
+	 */
+	public function restore( array $checkpoint ): void {
+		if ( ! isset( $checkpoint['rows_size'], $checkpoint['next'] ) || ! is_file( $this->rows_path() ) ) {
+			return;
+		}
+		self::truncate_to( $this->rows_path(), (int) $checkpoint['rows_size'] );
+		$this->write_file( $this->counter_path(), (string) max( 1, (int) $checkpoint['next'] ) );
+	}
+
+	/**
 	 * Adds one batch of rows after the ones already stored.
 	 *
 	 * @param array $rows        Rows keyed by field id.
 	 * @param bool  $first_batch Unused.
 	 */
 	public function append( array $rows, bool $first_batch ): void {
+		if ( ! $rows ) {
+			return;
+		}
 		$lines = array();
 		foreach ( $rows as $row ) {
 			$line = array();

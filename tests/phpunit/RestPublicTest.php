@@ -238,8 +238,9 @@ class RestPublicTest extends TestCase {
 	 *
 	 * @return array|null
 	 */
+	/** The newest job as stored, without the defaults OPEX_Jobs::get adds (these tests ask whether the engine wrote a key). */
 	private function new_job(): ?array {
-		foreach ( OPEX_Jobs::all() as $id => $job ) {
+		foreach ( (array) get_option( 'opex_jobs', array() ) as $id => $job ) {
 			if ( ! in_array( $id, $this->jobs_before, true ) ) {
 				return $job;
 			}

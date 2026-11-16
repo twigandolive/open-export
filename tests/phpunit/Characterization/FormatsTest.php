@@ -83,18 +83,18 @@ class FormatsTest extends CharacterizationCase {
 	}
 
 	/**
-	 * Batch size is clamped to 10..5000 (a non-numeric value becomes 10, the default 500 applies only when absent).
+	 * Batch size is clamped to 10..5000. A value that is not a number falls back to the default 500.
 	 */
 	public function test_batch_size_clamp(): void {
 		$sizes = array();
 		foreach ( array( 1, 10, 499, 5000, 99999, 'abc' ) as $raw ) {
 			$sizes[] = $this->config( array( 'source' => 'users', 'fields' => array( 'core:ID' ), 'batch_size' => $raw ) )['batch_size'];
 		}
-		$this->assertSame( array( 10, 10, 499, 5000, 5000, 10 ), $sizes );
+		$this->assertSame( array( 10, 10, 499, 5000, 5000, 500 ), $sizes );
 	}
 
 	/**
-	 * Values that start with a formula character are quoted in CSV only.
+	 * Values that start with a formula character are quoted in CSV only. A plain number such as -5 is not a formula (S-11).
 	 */
 	public function test_formula_guard_csv(): void {
 		$titles = array( '=SUM(1+1)', '+49 170 1234', '-5', '@mention', 'plain', 'a, "quoted" value', "line1\nline2", 'Ünïcödé' );
@@ -116,7 +116,7 @@ class FormatsTest extends CharacterizationCase {
 		$got  = array_slice( array_column( array_slice( $rows, 1 ), 0 ), 0, 10 );
 		$got  = array_values( array_diff( $got, array( 'ctl', 'ctr' ) ) );
 		sort( $got );
-		$want = array( "'=SUM(1+1)", "'+49 170 1234", "'-5", "'@mention", 'plain', 'a, "quoted" value', "line1\nline2", 'Ünïcödé' );
+		$want = array( "'=SUM(1+1)", "'+49 170 1234", '-5', "'@mention", 'plain', 'a, "quoted" value', "line1\nline2", 'Ünïcödé' );
 		sort( $want );
 		$this->assertSame( $want, $got );
 

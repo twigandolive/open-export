@@ -33,14 +33,24 @@ class OPEX_Templates {
 		}
 
 		$templates = self::all();
-		$id        = 't' . substr( md5( $name . wp_json_encode( $config ) . microtime( true ) ), 0, 12 );
 		$now       = time();
 
+		// Saving under a name that already exists updates that template. If
+		// older duplicates exist, the most recently updated one wins.
+		$existing = null;
+		foreach ( $templates as $candidate ) {
+			if ( is_array( $candidate ) && (string) ( $candidate['name'] ?? '' ) === $name
+				&& ( null === $existing || (int) ( $candidate['updated'] ?? 0 ) > (int) ( $existing['updated'] ?? 0 ) ) ) {
+				$existing = $candidate;
+			}
+		}
+
+		$id       = $existing ? (string) $existing['id'] : 't' . substr( md5( $name . wp_json_encode( $config ) . microtime( true ) ), 0, 12 );
 		$template = array(
 			'id'      => $id,
 			'name'    => $name,
 			'config'  => $config,
-			'created' => $now,
+			'created' => $existing ? (int) ( $existing['created'] ?? $now ) : $now,
 			'updated' => $now,
 		);
 

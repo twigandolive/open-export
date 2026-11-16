@@ -921,18 +921,8 @@
 			.catch(fail);
 	}
 
-	/**
-	 * The /fields endpoint used to return a bare array of groups and now returns
-	 * an object carrying the date metadata too. Accept both so a cached script
-	 * from a previous version does not break the screen mid-upgrade.
-	 */
+	/** Read the /fields response: groups plus the date metadata. */
 	function applyFieldsPayload(payload) {
-		if (Array.isArray(payload)) {
-			state.fieldGroups = payload;
-			state.dateFields = [];
-			state.presets = [];
-			return;
-		}
 		state.fieldGroups = payload.groups || [];
 		state.dateFields = payload.date_fields || [];
 		state.presets = payload.presets || [];
@@ -1017,7 +1007,7 @@
 		state.stopRequested = false;
 		state.running.status = 'running';
 		render();
-		pump(state.running.id);
+		pump(state.running.id, true);
 	}
 
 	function pauseExport() {
@@ -1032,9 +1022,12 @@
 			.catch(fail);
 	}
 
-	function pump(id) {
+	// Only the Resume button passes resume, so a late request cannot undo a pause.
+	function pump(id, resume) {
 		if (state.stopRequested) return;
-		apiFetch({ path: '/' + BOOT.restBase + '/jobs/' + id + '/run', method: 'POST' })
+		var request = { path: '/' + BOOT.restBase + '/jobs/' + id + '/run', method: 'POST' };
+		if (resume) request.data = { resume: true };
+		apiFetch(request)
 			.then(function (job) {
 				state.running = job;
 				render();

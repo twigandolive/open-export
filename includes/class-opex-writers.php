@@ -95,6 +95,80 @@ abstract class OPEX_Writer {
 		return htmlspecialchars( (string) $value, $flags, 'UTF-8' );
 	}
 
+	/**
+	 * Sizes of the files this writer owns, so a batch can be replayed. The
+	 * exporter saves this with the cursor and passes it back to restore().
+	 *
+	 * @return array Keys depend on the writer; `size` is the output file's byte size.
+	 */
+	public function checkpoint(): array {
+		return array( 'size' => self::file_size( $this->path ) );
+	}
+
+	/**
+	 * Cuts the files back to a checkpoint, dropping anything a failed batch wrote.
+	 *
+	 * @param array $checkpoint A value returned by checkpoint().
+	 * @throws RuntimeException When a file is shorter than the checkpoint says.
+	 */
+	public function restore( array $checkpoint ): void {
+		if ( isset( $checkpoint['size'] ) ) {
+			self::truncate_to( $this->path, (int) $checkpoint['size'] );
+		}
+	}
+
+	/**
+	 * Byte size of a file, 0 when it is missing.
+	 *
+	 * @param string $file Path.
+	 */
+	protected static function file_size( string $file ): int {
+		clearstatcache( true, $file );
+		return is_file( $file ) ? (int) filesize( $file ) : 0;
+	}
+
+	/**
+	 * Truncates a file to an exact size.
+	 *
+	 * @param string $file Path.
+	 * @param int    $size Bytes to keep.
+	 * @throws RuntimeException When the file is already shorter or cannot be opened.
+	 */
+	protected static function truncate_to( string $file, int $size ): void {
+		$have = self::file_size( $file );
+		if ( $have === $size ) {
+			return;
+		}
+		if ( $have < $size ) {
+			throw new RuntimeException( 'The export file is shorter than expected, so the export cannot continue safely. Start a new export.' );
+		}
+		$handle = fopen( $file, 'r+b' );
+		if ( false === $handle || ! ftruncate( $handle, $size ) ) {
+			if ( $handle ) {
+				fclose( $handle );
+			}
+			throw new RuntimeException( 'Could not reset the export file.' );
+		}
+		fclose( $handle );
+	}
+
+	/**
+	 * Spreadsheet programs run a cell that starts with = + - @ or a tab as a
+	 * formula. A leading apostrophe makes it plain text. Plain numbers, such as
+	 * a negative refund total, are left alone so they stay numbers.
+	 *
+	 * @param string $value Cell text.
+	 */
+	protected static function guard_cell( string $value ): string {
+		if ( '' === $value || false === strpos( "=+-@\t\r", $value[0] ) ) {
+			return $value;
+		}
+		if ( 1 === preg_match( '/^-?[0-9]+([.,][0-9]+)?$/', $value ) ) {
+			return $value;
+		}
+		return "'" . $value;
+	}
+
 	abstract public function start(): void;
 
 	/** @param array $rows list of assoc arrays keyed by field id. */
@@ -132,7 +206,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 			// UTF-8 BOM so Excel opens accented characters correctly.
 			fwrite( $handle, "\xEF\xBB\xBF" );
 		}
-		$this->put( $handle, array_values( $this->headers ) );
+		$this->put( $handle, array_map( array( __CLASS__, 'guard_cell' ), array_map( 'strval', array_values( $this->headers ) ) ) );
 		fclose( $handle );
 	}
 
@@ -141,7 +215,7 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		foreach ( $rows as $row ) {
 			$line = array();
 			foreach ( array_keys( $this->headers ) as $field ) {
-				$line[] = $this->guard( (string) ( $row[ $field ] ?? '' ) );
+				$line[] = self::guard_cell( (string) ( $row[ $field ] ?? '' ) );
 			}
 			$this->put( $handle, $line );
 		}
@@ -159,14 +233,14 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 */
 	private function put( $handle, array $fields ): void {
 		if ( in_array( $this->encoding, array( 'utf8_bom', 'utf8' ), true ) && 'lf' === $this->eol ) {
-			fputcsv( $handle, $fields, $this->delimiter );
+			fputcsv( $handle, $fields, $this->delimiter, '"', '\\' );
 			return;
 		}
 		$temp = fopen( 'php://temp', 'w+b' );
 		if ( false === $temp ) {
 			throw new RuntimeException( 'Could not open export file for writing.' );
 		}
-		fputcsv( $temp, $fields, $this->delimiter );
+		fputcsv( $temp, $fields, $this->delimiter, '"', '\\' );
 		rewind( $temp );
 		$line = (string) stream_get_contents( $temp );
 		fclose( $temp );
@@ -248,17 +322,6 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 		}
 		$cache[ $char ] = $result;
 		return $result;
-	}
-
-	/**
-	 * Neutralize spreadsheet formula injection: a cell starting with
-	 * = + - @ or a tab would execute when opened in Excel/Sheets.
-	 */
-	private function guard( string $value ): string {
-		if ( '' !== $value && false !== strpos( "=+-@\t\r", $value[0] ) ) {
-			return "'" . $value;
-		}
-		return $value;
 	}
 }
 

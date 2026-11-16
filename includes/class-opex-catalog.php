@@ -52,7 +52,7 @@ class OPEX_Catalog {
 
 	private const CORE_KEYS = array(
 		'_thumbnail_id', '_pingme', '_encloseme', '_customize_changeset_uuid',
-		'wp_capabilities', 'wp_user_level', 'session_tokens', 'nickname', 'first_name',
+		'wp_capabilities', 'wp_user_level', 'nickname', 'first_name',
 		'last_name', 'description', 'rich_editing', 'syntax_highlighting', 'comment_shortcuts',
 		'admin_color', 'use_ssl', 'show_admin_bar_front', 'locale', 'dismissed_wp_pointers',
 		'show_welcome_panel', 'last_update', 'community-events-location',
@@ -211,20 +211,37 @@ class OPEX_Catalog {
 		return $tables;
 	}
 
-	/** True when the named table actually exists in this database. */
-	public static function table_exists( string $table ): bool {
-		foreach ( self::table_status() as $row ) {
-			if ( $row['name'] === $table ) {
-				return true;
-			}
-		}
-		return false;
+	/** Per-request memo of table names (name => true). Null until first use. */
+	private static $table_names = null;
+
+	/** Per-request memo of column definitions, by table name. */
+	private static $column_memo = array();
+
+	/** Forget the table list and every column list, in memory and in the transient. */
+	public static function reset_cache(): void {
+		self::$table_names = null;
+		self::$column_memo = array();
+		delete_transient( 'opex_table_status' );
 	}
 
-	/** Column definitions for a validated table name. */
+	/** True when the named table actually exists in this database. */
+	public static function table_exists( string $table ): bool {
+		if ( null === self::$table_names ) {
+			self::$table_names = array();
+			foreach ( self::table_status() as $row ) {
+				self::$table_names[ $row['name'] ] = true;
+			}
+		}
+		return isset( self::$table_names[ $table ] );
+	}
+
+	/** Column definitions for a validated table name. Read once per request. */
 	public static function table_columns( string $table ): array {
 		global $wpdb;
 
+		if ( isset( self::$column_memo[ $table ] ) ) {
+			return self::$column_memo[ $table ];
+		}
 		if ( ! self::table_exists( $table ) ) {
 			return array();
 		}
@@ -241,6 +258,7 @@ class OPEX_Catalog {
 				'pk'   => 'PRI' === $col->Key,
 			);
 		}
+		self::$column_memo[ $table ] = $out;
 		return $out;
 	}
 
@@ -259,8 +277,6 @@ class OPEX_Catalog {
 		}
 
 		switch ( $src['type'] ) {
-			case 'woo_orders':
-				return OPEX_Woo::fields();
 			case 'posts':
 				return self::post_fields( $src['post_type'] );
 			case 'users':
@@ -412,7 +428,6 @@ class OPEX_Catalog {
 				break;
 			case 'users':
 				$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->usermeta} LIMIT 800" );
-				$keys = array_diff( $keys, array( 'session_tokens' ) );
 				break;
 			case 'comments':
 				$keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->commentmeta} LIMIT 400" );
@@ -428,7 +443,8 @@ class OPEX_Catalog {
 		}
 		// phpcs:enable
 
-		$keys = array_values( array_filter( array_map( 'strval', (array) $keys ) ) );
+		// Credential keys are never offered, whatever they are attached to.
+		$keys = array_values( array_diff( array_filter( array_map( 'strval', (array) $keys ) ), OPEX_Query::CREDENTIAL_META_KEYS ) );
 		sort( $keys, SORT_NATURAL | SORT_FLAG_CASE );
 
 		set_transient( $cache_key, $keys, 5 * MINUTE_IN_SECONDS );

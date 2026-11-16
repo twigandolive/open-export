@@ -451,11 +451,11 @@ class OPEX_Woo {
 			$table = self::table( 'orders' );
 			$safe  = str_replace( '`', '', $table );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- identifier validated above; one cheap COUNT for the picker.
-			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s", 'shop_order' ) );
+			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN ('auto-draft', 'checkout-draft')", 'shop_order' ) );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one cheap COUNT for the picker.
 			$count = (int) $wpdb->get_var( $wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status <> 'auto-draft'",
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN ('auto-draft', 'checkout-draft')",
 				self::LEGACY_POST_TYPE
 			) );
 		}

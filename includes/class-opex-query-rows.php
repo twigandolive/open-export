@@ -17,7 +17,7 @@ class OPEX_Query_Rows {
 	 *
 	 * Internal to the query compartment: other code calls OPEX_Query.
 	 */
-	public static function assemble( array $src, array $rows, array $fields ): array {
+	public static function assemble( array $src, array $rows, array $fields, $tick = null ): array {
 		if ( ! $rows ) {
 			return array();
 		}
@@ -48,7 +48,12 @@ class OPEX_Query_Rows {
 		}
 
 		$items = array();
+		$n     = 0;
 		foreach ( $rows as $row ) {
+			// Let a long batch keep its lock alive.
+			if ( is_callable( $tick ) && 0 === ( $n++ % 100 ) ) {
+				call_user_func( $tick );
+			}
 			$id   = $id_prop ? (int) $row->{$id_prop} : 0;
 			$item = array();
 			foreach ( $fields as $field ) {
@@ -59,7 +64,18 @@ class OPEX_Query_Rows {
 		return $items;
 	}
 
+	/**
+	 * One cell. Order money, dates and flags get the same text on both storage engines.
+	 */
 	private static function field_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
+		$value = self::raw_value( $src, $row, $field, $id, $meta, $tax );
+		if ( 0 === strpos( $field, 'woo:' ) && ( 'woo_orders' === $src['type'] || ! empty( $src['woo'] ) ) ) {
+			return OPEX_Woo_Format::value( $field, $value, 'woo_orders' === $src['type'] );
+		}
+		return $value;
+	}
+
+	private static function raw_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
 		$is_guest_field = 'woo:is_guest' === $field;
 
 		if ( 'woo_orders' === $src['type'] && OPEX_Woo::is_woo_field( $field ) ) {
@@ -79,7 +95,7 @@ class OPEX_Query_Rows {
 		}
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
-			return in_array( $col, OPEX_Query::FORBIDDEN, true ) ? '' : self::flatten( $row->{$col} ?? '' );
+			return OPEX_Query::is_forbidden_column( $col ) ? '' : self::flatten( $row->{$col} ?? '' );
 		}
 		if ( 0 === strpos( $field, 'col:' ) ) {
 			$col = substr( $field, 4 );
@@ -144,7 +160,7 @@ class OPEX_Query_Rows {
 		}
 		list( $table, $fk ) = $map[ $type ];
 
-		$keys = array_values( array_diff( array_unique( $keys ), OPEX_Query::FORBIDDEN, array( 'session_tokens' ) ) );
+		$keys = array_values( array_diff( array_unique( $keys ), OPEX_Query::FORBIDDEN, OPEX_Query::CREDENTIAL_META_KEYS ) );
 		if ( ! $keys ) {
 			return array();
 		}
@@ -159,8 +175,10 @@ class OPEX_Query_Rows {
 			array_merge( $ids, $keys )
 		);
 
+		$wpdb->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared above; streaming export batches are inherently uncached.
 		$rows = $wpdb->get_results( $sql );
+		OPEX_Query::throw_on_db_error();
 
 		$out = array();
 		foreach ( (array) $rows as $row ) {

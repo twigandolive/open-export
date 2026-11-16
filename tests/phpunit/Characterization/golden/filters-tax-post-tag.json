@@ -24,40 +24,40 @@
         "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
     },
     "starts_with": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 24,
+        "first": "12",
+        "last": "69",
+        "sha1": "484deaaf12e9fd0eeacb4cf67b5ebae6e3b22fac"
     },
     "ends_with": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
     },
     "gt": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
     },
     "gte": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
     },
     "lt": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
     },
     "lte": {
-        "count": 0,
-        "first": null,
-        "last": null,
-        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        "count": 60,
+        "first": "10",
+        "last": "69",
+        "sha1": "0124d17e444fa4098149a8338deef543ae9f6ba1"
     },
     "in": {
         "count": 48,

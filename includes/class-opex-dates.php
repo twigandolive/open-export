@@ -29,36 +29,9 @@ class OPEX_Dates {
 		'this_quarter', 'last_quarter', 'this_year', 'last_year', 'custom',
 	);
 
-	/**
-	 * The site's timezone as configured in Settings → General, DST-aware.
-	 * wp_timezone() has existed since WP 5.3; the fallback covers a raw
-	 * gmt_offset with no timezone_string (a legacy WordPress setting).
-	 */
+	/** The site's timezone as configured in Settings, General, DST-aware. */
 	public static function site_timezone(): DateTimeZone {
-		if ( function_exists( 'wp_timezone' ) ) {
-			return wp_timezone();
-		}
-
-		$tz_string = (string) get_option( 'timezone_string' );
-		if ( '' !== $tz_string ) {
-			try {
-				return new DateTimeZone( $tz_string );
-			} catch ( Exception $e ) {
-				// Fall through to the offset form below.
-				unset( $e );
-			}
-		}
-
-		$offset  = (float) get_option( 'gmt_offset', 0 );
-		$hours   = (int) $offset;
-		$minutes = (int) round( ( abs( $offset ) - abs( $hours ) ) * 60 );
-
-		try {
-			return new DateTimeZone( sprintf( '%+03d:%02d', $hours, $minutes ) );
-		} catch ( Exception $e ) {
-			unset( $e );
-			return new DateTimeZone( 'UTC' );
-		}
+		return wp_timezone();
 	}
 
 	/**
@@ -93,21 +66,9 @@ class OPEX_Dates {
 			return '';
 		}
 
-		try {
-			// Midnight in the site's timezone. DateTimeImmutable resolves DST
-			// for us, including days where 00:00 does not exist locally.
-			$moment = new DateTimeImmutable( $date . ' 00:00:00', self::site_timezone() );
-		} catch ( Exception $e ) {
-			unset( $e );
+		$moment = self::midnight( $date, $day_offset );
+		if ( ! $moment ) {
 			return '';
-		}
-
-		if ( 0 !== $day_offset ) {
-			// Add days, not 86400-second blocks, so DST transitions stay whole.
-			$moment = $moment->modify( sprintf( '%+d days', $day_offset ) );
-			if ( ! $moment instanceof DateTimeImmutable ) {
-				return '';
-			}
 		}
 
 		if ( self::TZ_UTC === $tz_mode ) {
@@ -153,21 +114,29 @@ class OPEX_Dates {
 			return null;
 		}
 
+		$moment = self::midnight( $date, $day_offset );
+		return $moment ? $moment->getTimestamp() : null;
+	}
+
+	/**
+	 * Midnight of a calendar date in the site's timezone, moved by whole days.
+	 * DateTimeImmutable resolves DST for us, including days where 00:00 does not
+	 * exist locally, and days are added as days, not as 86400-second blocks.
+	 *
+	 * @param string $date       A date that passed normalize_date().
+	 * @param int    $day_offset Days to add (may be negative).
+	 */
+	private static function midnight( string $date, int $day_offset ): ?DateTimeImmutable {
 		try {
 			$moment = new DateTimeImmutable( $date . ' 00:00:00', self::site_timezone() );
+			if ( 0 !== $day_offset ) {
+				$moment = $moment->modify( sprintf( '%+d days', $day_offset ) );
+			}
 		} catch ( Exception $e ) {
 			unset( $e );
 			return null;
 		}
-
-		if ( 0 !== $day_offset ) {
-			$moment = $moment->modify( sprintf( '%+d days', $day_offset ) );
-			if ( ! $moment instanceof DateTimeImmutable ) {
-				return null;
-			}
-		}
-
-		return $moment->getTimestamp();
+		return $moment instanceof DateTimeImmutable ? $moment : null;
 	}
 
 	/**
@@ -314,13 +283,13 @@ class OPEX_Dates {
 			'last_7_days'  => __( 'Last 7 days', 'open-export' ),
 			'last_30_days' => __( 'Last 30 days', 'open-export' ),
 			'last_90_days' => __( 'Last 90 days', 'open-export' ),
-			'this_week'    => __( 'This week', 'open-export' ),
+			'this_week'    => __( 'This week so far', 'open-export' ),
 			'last_week'    => __( 'Last week', 'open-export' ),
-			'this_month'   => __( 'This month', 'open-export' ),
+			'this_month'   => __( 'This month so far', 'open-export' ),
 			'last_month'   => __( 'Last month', 'open-export' ),
-			'this_quarter' => __( 'This quarter', 'open-export' ),
+			'this_quarter' => __( 'This quarter so far', 'open-export' ),
 			'last_quarter' => __( 'Last quarter', 'open-export' ),
-			'this_year'    => __( 'This year', 'open-export' ),
+			'this_year'    => __( 'This year so far', 'open-export' ),
 			'last_year'    => __( 'Last year', 'open-export' ),
 			'custom'       => __( 'Custom range…', 'open-export' ),
 		);

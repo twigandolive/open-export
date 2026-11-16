@@ -23,6 +23,8 @@ define( 'OPEX_BASENAME', plugin_basename( __FILE__ ) );
 
 require_once OPEX_DIR . 'includes/class-opex-dates.php';
 require_once OPEX_DIR . 'includes/class-opex-woo.php';
+require_once OPEX_DIR . 'includes/class-opex-money.php';
+require_once OPEX_DIR . 'includes/class-opex-woo-format.php';
 require_once OPEX_DIR . 'includes/class-opex-catalog.php';
 require_once OPEX_DIR . 'includes/class-opex-query.php';
 require_once OPEX_DIR . 'includes/class-opex-query-filters.php';
@@ -33,6 +35,7 @@ require_once OPEX_DIR . 'includes/class-opex-writer-xlsx.php';
 require_once OPEX_DIR . 'includes/class-opex-writer-xml-template.php';
 require_once OPEX_DIR . 'includes/class-opex-custom-columns.php';
 require_once OPEX_DIR . 'includes/class-opex-transforms.php';
+require_once OPEX_DIR . 'includes/class-opex-lock.php';
 require_once OPEX_DIR . 'includes/class-opex-jobs.php';
 require_once OPEX_DIR . 'includes/class-opex-templates.php';
 require_once OPEX_DIR . 'includes/class-opex-secrets.php';
@@ -111,7 +114,7 @@ function opex_deactivate(): void {
 function opex_plugin_action_links( array $links ): array {
 	$export_link = sprintf(
 		'<a href="%s">%s</a>',
-		esc_url( admin_url( 'admin.php?page=open-export' ) ),
+		esc_url( admin_url( 'tools.php?page=open-export' ) ),
 		esc_html__( 'Open Export', 'open-export' )
 	);
 
