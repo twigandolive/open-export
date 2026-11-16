@@ -120,20 +120,26 @@ class OPEX_Export_Run {
 			if ( $batch['done'] && empty( $batch['next_site'] ) ) {
 				$guard();
 				$writer->finish();
-				$guard();
-				$saved = self::save_progress(
-					$id,
-					$saved,
-					array(
-						'status'     => 'done',
-						'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
-						'filesize'   => OPEX_Exporter::output_size( $saved ),
-						'finished'   => time(),
-						'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
-					)
+				$plain = $saved;
+				$done  = array(
+					'status'     => 'done',
+					'total'      => max( (int) $saved['total'], (int) $saved['processed'] ),
+					'finished'   => time(),
+					'deliveries' => OPEX_Delivery::plan( (array) $saved['delivery'] ),
 				);
+				// The zip gets its file name in the same save as the done status. Until
+				// then the plain file stays, so a replay can finish and zip it again.
+				if ( OPEX_Compress::wanted( $config ) ) {
+					$done['filename'] = OPEX_Compress::apply( $saved );
+				}
+				$done['filesize'] = OPEX_Exporter::output_size( array_merge( $saved, $done ) );
+				$guard();
+				$saved = self::save_progress( $id, $saved, $done );
 				if ( ! $saved ) {
 					return self::missing();
+				}
+				if ( $plain['filename'] !== $saved['filename'] ) {
+					OPEX_Compress::discard_plain( $plain );
 				}
 				do_action( 'opex_job_done', $saved );
 			}

@@ -143,7 +143,7 @@ class RestDeliveryTest extends TestCase {
 		$this->assertArrayHasKey( 'retention_days', $def );
 		$res = $this->call( 'POST', '/settings', array( 'retention_days' => 60, 'link_days' => 3, 'background' => true ) );
 		$this->assertSame( 200, $res->get_status() );
-		$this->assertSame( array( 'retention_days' => 60, 'link_days' => 3, 'background' => true ), $res->get_data() );
+		$this->assertSame( array( 'retention_days' => 60, 'link_days' => 3, 'background' => true, 'keep_data_on_uninstall' => false ), $res->get_data() );
 		$this->assertSame( 60, OPEX_Settings::get( 'retention_days' ) );
 		$part = $this->call( 'POST', '/settings', array( 'link_days' => 5 ) )->get_data();
 		$this->assertSame( 60, $part['retention_days'] );
@@ -163,13 +163,13 @@ class RestDeliveryTest extends TestCase {
 		$this->assertArrayHasKey( 'xlsx', $o['formats'] );
 		$this->assertCount( 7, $o['weekdays'] );
 		$this->assertSame( wp_timezone_string(), $o['timezone'] );
-		$this->assertSame( array( 'multisite', 'woocommerce', 'ftp', 'sodium', 'zip', 'cron_disabled', 'background' ), array_keys( $o['features'] ) );
+		$this->assertSame( array( 'multisite', 'woocommerce', 'ftp', 'sodium', 'zip', 'cron_disabled', 'background', 'compress' ), array_keys( $o['features'] ) );
 		foreach ( $o['features'] as $flag ) {
 			$this->assertIsBool( $flag );
 		}
 		$ids = wp_list_pluck( $o['csv_encodings'], 'id' );
 		$this->assertSame( array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' ), $ids );
-		$this->assertSame( array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' ), wp_list_pluck( $o['frequencies'], 'id' ) );
+		$this->assertSame( array( 'manual', 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' ), wp_list_pluck( $o['frequencies'], 'id' ) );
 	}
 
 	public function test_secrets_never_appear_in_responses() {

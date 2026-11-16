@@ -151,16 +151,28 @@ class OPEX_Rest_Screen {
 	}
 
 	/**
-	 * Adds the operators, the text limits, the super admin flag and each
+	 * Adds the operators, the text and history limits, the super admin flag,
+	 * whether zip compression works, the CSV quote characters and each
 	 * destination type's security note to the GET /options payload.
 	 *
 	 * @param array $options Options payload.
 	 * @return array
 	 */
 	public static function extend_options( array $options ): array {
-		$options['operators']      = self::operators();
-		$options['limits']         = array_merge( (array) ( $options['limits'] ?? array() ), self::string_limits() );
-		$options['is_super_admin'] = is_multisite() && is_super_admin();
+		$options['operators']            = self::operators();
+		$options['limits']               = array_merge( (array) ( $options['limits'] ?? array() ), self::string_limits(), array( 'history' => OPEX_Jobs::MAX_HISTORY ) );
+		$options['features']['compress'] = OPEX_Compress::available();
+		$options['csv_enclosures']       = array(
+			array(
+				'id'    => 'double',
+				'label' => __( 'Double quote (")', 'open-export' ),
+			),
+			array(
+				'id'    => 'single',
+				'label' => __( 'Single quote (\')', 'open-export' ),
+			),
+		);
+		$options['is_super_admin']       = is_multisite() && is_super_admin();
 		foreach ( (array) ( $options['destination_types'] ?? array() ) as $i => $type ) {
 			$options['destination_types'][ $i ]['security_note'] = OPEX_Destinations::security_note( (string) ( $type['id'] ?? '' ) );
 		}

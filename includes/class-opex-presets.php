@@ -1,7 +1,8 @@
 <?php
 /**
  * Product feed presets: complete export configs for Google Merchant Center,
- * Meta catalogs and Pinterest catalogs, all on the woo:products source.
+ * Meta catalogs and Pinterest catalogs, all on the woo:products source, plus
+ * the product CSV that WooCommerce's own importer reads (OPEX_Preset_Product_Csv).
  *
  * Data only. Each preset is already in the shape sanitize_config returns, so
  * applying one and saving it changes nothing. The few values that come from
@@ -45,7 +46,7 @@ class OPEX_Presets {
 			array(
 				'id'          => 'google-merchant',
 				'label'       => __( 'Google Merchant Center', 'open-export' ),
-				'description' => __( 'An RSS 2.0 product feed in the Google format: id, title, description, link, image link, availability and price, for published simple, external and variation products.', 'open-export' ) . ' ' . $gaps,
+				'description' => __( 'An RSS 2.0 product feed in the Google format: id, title, description, link, image link, availability, price, GTIN and item group id (the parent product of a variation), for published simple, external and variation products.', 'open-export' ) . ' ' . $gaps,
 				'config'      => self::xml_feed(
 					array(
 						'instock'     => 'in_stock',
@@ -60,13 +61,13 @@ class OPEX_Presets {
 			array(
 				'id'          => 'meta-catalog',
 				'label'       => __( 'Meta catalog (Facebook and Instagram)', 'open-export' ),
-				'description' => __( 'A CSV data feed with the Meta column names: id, title, description, availability, price, link and image_link, for published simple, external and variation products.', 'open-export' ) . ' ' . $gaps,
+				'description' => __( 'A CSV data feed with the Meta column names: id, title, description, availability, price, link, image_link, gtin and item_group_id (the parent product of a variation), for published simple, external and variation products.', 'open-export' ) . ' ' . $gaps,
 				'config'      => self::meta_feed( $brand ),
 			),
 			array(
 				'id'          => 'pinterest-catalog',
 				'label'       => __( 'Pinterest catalog', 'open-export' ),
-				'description' => __( 'An RSS 2.0 feed in the Google shape, which Pinterest reads: id, title, description, link, image link, availability and price. Pinterest has no backorder value, so backordered products are listed as preorder.', 'open-export' ) . ' ' . $gaps,
+				'description' => __( 'An RSS 2.0 feed in the Google shape, which Pinterest reads: id, title, description, link, image link, availability, price, GTIN and item group id. Pinterest has no backorder value, so backordered products are listed as preorder.', 'open-export' ) . ' ' . $gaps,
 				'config'      => self::xml_feed(
 					array(
 						'instock'     => 'in stock',
@@ -78,6 +79,7 @@ class OPEX_Presets {
 					$brand
 				),
 			),
+			OPEX_Preset_Product_Csv::preset(),
 		);
 	}
 
@@ -88,7 +90,7 @@ class OPEX_Presets {
 	 * @return string[]
 	 */
 	private static function fields( bool $brand ): array {
-		$fields = array( 'woo:id', 'woo:name', 'woo:description', 'woo:permalink', 'woo:image_url', 'woo:stock_status', 'woo:price' );
+		$fields = array( 'woo:id', 'woo:name', 'woo:description', 'woo:permalink', 'woo:image_url', 'woo:stock_status', 'woo:price', 'woo:global_unique_id', 'woo:parent_id' );
 		if ( $brand ) {
 			$fields[] = 'tax:product_brand';
 		}
@@ -159,6 +161,13 @@ class OPEX_Presets {
 				),
 			),
 		);
+		// A simple product has parent 0. Its item_group_id stays empty, because it is in no group.
+		$out['woo:parent_id'] = array(
+			array(
+				'type'  => 'map',
+				'pairs' => array( '0' => '' ),
+			),
+		);
 		if ( '' !== $currency ) {
 			$out['woo:price'] = array(
 				array(
@@ -178,13 +187,15 @@ class OPEX_Presets {
 	 */
 	private static function labels( bool $brand ): array {
 		$labels = array(
-			'woo:id'           => 'id',
-			'woo:name'         => 'title',
-			'woo:description'  => 'description',
-			'woo:permalink'    => 'link',
-			'woo:image_url'    => 'image_link',
-			'woo:stock_status' => 'availability',
-			'woo:price'        => 'price',
+			'woo:id'               => 'id',
+			'woo:name'             => 'title',
+			'woo:description'      => 'description',
+			'woo:permalink'        => 'link',
+			'woo:image_url'        => 'image_link',
+			'woo:stock_status'     => 'availability',
+			'woo:price'            => 'price',
+			'woo:global_unique_id' => 'gtin',
+			'woo:parent_id'        => 'item_group_id',
 		);
 		if ( $brand ) {
 			$labels['tax:product_brand'] = 'brand';
@@ -210,6 +221,8 @@ class OPEX_Presets {
 			. "<g:image_link>{woo:image_url}</g:image_link>\n"
 			. "<g:availability>{woo:stock_status}</g:availability>\n"
 			. "<g:price>{woo:price}</g:price>\n"
+			. "<g:gtin>{woo:global_unique_id}</g:gtin>\n"
+			. "<g:item_group_id>{woo:parent_id}</g:item_group_id>\n"
 			. ( $brand ? "<g:brand>{tax:product_brand}</g:brand>\n" : '' )
 			. '</item>';
 		$config                 = self::base( 'xml', $brand );

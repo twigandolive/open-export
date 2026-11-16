@@ -210,6 +210,13 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 				'type'  => 'text',
 				'read'  => 'meta:_sku',
 			),
+			// WooCommerce 9.2 and later store it. On older stores the column is empty.
+			'woo:global_unique_id'   => array(
+				'group' => $product,
+				'type'  => 'text',
+				'read'  => 'meta:_global_unique_id',
+				'label' => __( 'GTIN, UPC, EAN or ISBN', 'open-export' ),
+			),
 			'woo:featured'           => array(
 				'group' => $product,
 				'type'  => 'boolean',

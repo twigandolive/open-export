@@ -29,7 +29,7 @@ class SettingsTest extends TestCase {
 
 	public function test_save_clamps() {
 		$out = OPEX_Settings::save( array( 'retention_days' => 9999, 'link_days' => 0, 'background' => '1', 'junk' => 1 ) );
-		$this->assertSame( array( 'retention_days' => 365, 'link_days' => 1, 'background' => true ), $out );
+		$this->assertSame( array( 'retention_days' => 365, 'link_days' => 1, 'background' => true, 'keep_data_on_uninstall' => false ), $out );
 		$this->assertSame( 365, OPEX_Settings::get( 'retention_days' ) );
 		$out = OPEX_Settings::save( array( 'retention_days' => -5, 'link_days' => 99, 'background' => 'false' ) );
 		$this->assertSame( 1, $out['retention_days'] );

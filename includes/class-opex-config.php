@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Config {
 
-	private const FORMATS       = array( 'csv', 'json', 'xml' );
+	private const FORMATS       = array( 'csv', 'json', 'xml', 'html' );
 	private const CSV_ENCODINGS = array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' );
 	private const CSV_EOLS      = array( 'lf', 'crlf' );
 	public const XML_PART_MAX   = 20000;
@@ -152,6 +152,11 @@ class OPEX_Config {
 			}
 		}
 
+		$output = OPEX_Config_Output::sanitize( $raw, $format, $notes );
+		if ( is_wp_error( $output ) ) {
+			return $output;
+		}
+
 		$transforms = OPEX_Transforms::sanitize( $raw['transforms'] ?? array(), $fields, $notes );
 		$flatten    = OPEX_Acf_Spread::sanitize( $raw['acf_flatten'] ?? array(), $fields );
 
@@ -188,7 +193,7 @@ class OPEX_Config {
 			'custom_columns' => $custom,
 			'network'        => $network,
 			'acf_flatten'    => $flatten,
-		);
+		) + $output;
 		foreach ( $optional as $key => $value ) {
 			if ( OPEX_Jobs::CONFIG_DEFAULTS[ $key ] !== $value ) {
 				$config[ $key ] = $value;
@@ -393,6 +398,6 @@ class OPEX_Config {
 			'csv_encoding'  => (string) ( $config['csv_encoding'] ?? 'utf8_bom' ),
 			'csv_eol'       => (string) ( $config['csv_eol'] ?? 'lf' ),
 			'xml_template'  => (array) ( $config['xml_template'] ?? array() ),
-		);
+		) + OPEX_Config_Output::writer_options( $config );
 	}
 }

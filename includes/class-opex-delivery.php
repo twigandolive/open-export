@@ -216,15 +216,17 @@ class OPEX_Delivery {
 	 */
 	public static function remote_name( array $job ): string {
 		$disk = (string) ( $job['filename'] ?? 'export' );
+		// A compressed file keeps the export's own extension before ".zip", as in orders.csv.zip.
+		$zip  = OPEX_Compress::is_compressed( $job );
+		$disk = $zip ? substr( $disk, 0, -strlen( OPEX_Compress::SUFFIX ) ) : $disk;
 		$ext  = strtolower( (string) pathinfo( $disk, PATHINFO_EXTENSION ) );
 		$name = sanitize_file_name( (string) ( $job['delivery_name'] ?? '' ) );
 		if ( '' === $name ) {
-			return sanitize_file_name( $disk );
-		}
-		if ( '' !== $ext && '.' . $ext !== strtolower( substr( $name, -strlen( $ext ) - 1 ) ) ) {
+			$name = sanitize_file_name( $disk );
+		} elseif ( '' !== $ext && '.' . $ext !== strtolower( substr( $name, -strlen( $ext ) - 1 ) ) ) {
 			$name .= '.' . $ext;
 		}
-		return $name;
+		return $zip ? $name . OPEX_Compress::SUFFIX : $name;
 	}
 
 	/**

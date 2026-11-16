@@ -14,7 +14,7 @@ class OPEX_Schedules {
 
 	private const OPTION      = 'opex_schedules';
 	private const MAX         = 50;
-	private const FREQUENCIES = array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' );
+	private const FREQUENCIES = array( 'manual', 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' );
 	private const HOOK        = 'opex_run_schedule';
 
 	/** Default values for every key of a schedule record. */

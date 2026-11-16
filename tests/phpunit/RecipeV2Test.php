@@ -176,8 +176,9 @@ class RecipeV2Test extends TestCase {
 		$doc = OPEX_Schema::build();
 		$this->assertSame( 1, $doc['opex_schema'] );
 		$this->assertContains( 'csv', $doc['formats'] );
-		$this->assertSame( array( 'csv_delimiter', 'csv_encoding', 'csv_eol' ), $doc['format_options']['csv']['options'] );
-		$this->assertSame( array( 'xml_template' ), $doc['format_options']['xml']['options'] );
+		$zip = class_exists( 'ZipArchive' ) ? array( 'compress' ) : array();
+		$this->assertSame( array_merge( array( 'csv_delimiter', 'csv_encoding', 'csv_eol', 'csv_enclosure', 'csv_quote_all' ), $zip ), $doc['format_options']['csv']['options'] );
+		$this->assertSame( array_merge( array( 'xml_template' ), $zip ), $doc['format_options']['xml']['options'] );
 		$this->assertSame( array_keys( OPEX_Transforms::types() ), array_keys( $doc['transforms']['types'] ) );
 		$this->assertSame( array( 'upper', 'lower', 'title' ), $doc['transforms']['types']['case']['args']->mode['values'] );
 		$this->assertSame( OPEX_Filter_Tree::MAX_DEPTH, $doc['filter_groups']['max_depth'] );

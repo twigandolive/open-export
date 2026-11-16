@@ -204,7 +204,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 	}
 
 	/**
-	 * History keeps 50 jobs; sweep removes jobs older than 30 days.
+	 * History keeps at most OPEX_Jobs::MAX_HISTORY (200) jobs, not counting running and paused ones. Sweep removes jobs older than 30 days.
 	 */
 	public function test_history_cap_and_sweep(): void {
 		$ids = array();
@@ -212,7 +212,8 @@ class TemplatesJobsTest extends CharacterizationCase {
 			$job   = OPEX_Exporter::create( $this->config( array( 'source' => 'terms:category', 'fields' => array( 'core:term_id' ) ) ), "h$i" );
 			$ids[] = $job['id'];
 		}
-		$this->assertLessThanOrEqual( 50, count( OPEX_Jobs::all() ) );
+		// The cap went from 50 to 200 in 2.0 (spec 3.8, D2). HistoryCapTest proves the cap and what it evicts.
+		$this->assertLessThanOrEqual( max( OPEX_Jobs::MAX_HISTORY, count( $ids ) ), count( OPEX_Jobs::all() ) );
 
 		$old            = OPEX_Jobs::get( end( $ids ) );
 		$old['created'] = time() - 31 * DAY_IN_SECONDS;

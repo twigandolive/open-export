@@ -121,7 +121,7 @@ class OPEX_Rest_Schedules {
 				),
 				'frequency'   => array(
 					'type'              => 'string',
-					'enum'              => array( 'manual', 'hourly', 'daily', 'weekly', 'monthly' ),
+					'enum'              => array( 'manual', 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' ),
 					'sanitize_callback' => 'sanitize_key',
 				),
 				'time'        => array(

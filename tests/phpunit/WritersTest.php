@@ -170,11 +170,11 @@ class WritersTest extends TestCase {
 	}
 
 	/**
-	 * formats() lists the four formats.
+	 * formats() lists the five formats.
 	 */
 	public function test_formats(): void {
 		$formats = OPEX_Writer::formats();
-		$this->assertSame( array( 'csv', 'json', 'xml', 'xlsx' ), array_keys( $formats ) );
+		$this->assertSame( array( 'csv', 'json', 'xml', 'xlsx', 'html' ), array_keys( $formats ) );
 		foreach ( $formats as $format ) {
 			$this->assertSame( array( 'label', 'extension', 'mime', 'available' ), array_keys( $format ) );
 		}

@@ -137,7 +137,8 @@
         "csv",
         "json",
         "xml",
-        "xlsx"
+        "xlsx",
+        "html"
     ],
     "csv_delimiters": [
         "comma",

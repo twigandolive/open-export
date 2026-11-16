@@ -2,6 +2,8 @@
 /**
  * Uninstall: remove everything Open Export stored. On multisite the cleanup
  * runs for each site, since options, cron events and export files are per site.
+ * A site whose settings say "keep data" keeps its options and files, and loses
+ * only its cron events.
  *
  * This file cannot load the plugin's classes, so it uses option names and
  * WordPress functions directly. The names below are shipped: keep them in step
@@ -11,12 +13,47 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 /**
- * Wipe all plugin data for the current site.
+ * Whether the current site asked to keep its data when the plugin is
+ * deleted (setting keep_data_on_uninstall in the opex_settings option).
+ */
+function opex_uninstall_keeps_data(): bool {
+	$settings = get_option( 'opex_settings', array() );
+	if ( ! is_array( $settings ) || ! isset( $settings['keep_data_on_uninstall'] ) ) {
+		return false;
+	}
+	return (bool) filter_var( $settings['keep_data_on_uninstall'], FILTER_VALIDATE_BOOLEAN );
+}
+
+/**
+ * Remove every cron event whose hook starts with opex_, whatever its arguments.
+ * This always runs, even when data is kept, because the callbacks are gone.
+ */
+function opex_uninstall_cron(): void {
+	foreach ( (array) _get_cron_array() as $timestamp => $hooks ) {
+		foreach ( (array) $hooks as $hook => $events ) {
+			if ( 0 !== strpos( (string) $hook, 'opex_' ) ) {
+				continue;
+			}
+			foreach ( (array) $events as $event ) {
+				wp_unschedule_event( (int) $timestamp, (string) $hook, (array) ( $event['args'] ?? array() ) );
+			}
+		}
+	}
+}
+
+/**
+ * Wipe all plugin data for the current site, unless the site asked to keep it.
+ * Then only the cron events go.
  *
  * @param string $dir Export folder. Empty means the folder under uploads. Tests pass their own.
  */
 function opex_uninstall_site( string $dir = '' ): void {
 	global $wpdb;
+
+	opex_uninstall_cron();
+	if ( opex_uninstall_keeps_data() ) {
+		return;
+	}
 
 	foreach ( array( 'opex_jobs', 'opex_templates', 'opex_schedules', 'opex_destinations', 'opex_settings' ) as $option ) {
 		delete_option( $option );
@@ -31,18 +68,6 @@ function opex_uninstall_site( string $dir = '' ): void {
 	// Lock rows. They are plain options, written straight to the table so that taking one is atomic.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup of our own prefixed lock rows.
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'opex_lock_' ) . '%' ) );
-
-	// Every cron event whose hook starts with opex_, whatever its arguments.
-	foreach ( (array) _get_cron_array() as $timestamp => $hooks ) {
-		foreach ( (array) $hooks as $hook => $events ) {
-			if ( 0 !== strpos( (string) $hook, 'opex_' ) ) {
-				continue;
-			}
-			foreach ( (array) $events as $event ) {
-				wp_unschedule_event( (int) $timestamp, (string) $hook, (array) ( $event['args'] ?? array() ) );
-			}
-		}
-	}
 
 	if ( '' === $dir ) {
 		$uploads = wp_upload_dir( null, false );

@@ -48,6 +48,9 @@
 			transforms: {},
 			custom_columns: [],
 			network: false,
+			csv_enclosure: 'double',
+			csv_quote_all: false,
+			compress: 'none',
 		};
 	};
 
@@ -101,6 +104,9 @@
 		}
 		out.batch_size = Number( out.batch_size ) || 400;
 		out.network = true === out.network;
+		out.csv_enclosure = 'single' === out.csv_enclosure ? 'single' : 'double';
+		out.csv_quote_all = true === out.csv_quote_all;
+		out.compress = 'zip' === out.compress ? 'zip' : 'none';
 		return out;
 	};
 

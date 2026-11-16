@@ -81,13 +81,23 @@ class OPEX_Templates {
 		}
 	}
 
+	/**
+	 * Public template shape. The source id and its translated name let the
+	 * screen show what each template exports without reading its config.
+	 *
+	 * @param array $template Stored template.
+	 * @return array
+	 */
 	public static function expose( array $template ): array {
+		$source = (string) ( $template['config']['source'] ?? '' );
 		return array(
-			'id'      => $template['id'],
-			'name'    => $template['name'],
-			'config'  => $template['config'],
-			'created' => (int) $template['created'],
-			'updated' => (int) $template['updated'],
+			'id'           => $template['id'],
+			'name'         => $template['name'],
+			'config'       => $template['config'],
+			'created'      => (int) $template['created'],
+			'updated'      => (int) $template['updated'],
+			'source'       => $source,
+			'source_label' => OPEX_Source_Labels::of( $source ),
 		);
 	}
 }

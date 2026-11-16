@@ -41,6 +41,19 @@
 	}
 
 	/**
+	 * A wall-clock time moved by whole hours, wrapping past midnight.
+	 *
+	 * @param {string} time  'HH:MM'.
+	 * @param {number} hours Hours to add.
+	 * @return {string} 'HH:MM'.
+	 */
+	function shiftHours( time, hours ) {
+		const parts = time.split( ':' );
+		const hour = ( ( parseInt( parts[ 0 ], 10 ) || 0 ) + hours ) % 24;
+		return ( hour < 10 ? '0' : '' ) + hour + ':' + ( parts[ 1 ] || '00' );
+	}
+
+	/**
 	 * The timetable in words. Times are the stored wall-clock time in the
 	 * site time zone, the same as the form shows them.
 	 *
@@ -57,6 +70,14 @@
 				}
 				/* translators: %d: minutes past the hour. */
 				return sprintf( _n( 'Hourly, %d minute past the hour', 'Hourly, %d minutes past the hour', minute, 'open-export' ), minute );
+			}
+			case 'every_6_hours':
+				/* translators: %s: time of day of the first run, such as 03:00. */
+				return sprintf( __( 'Every 6 hours from %s', 'open-export' ), time );
+			case 'twicedaily': {
+				const times = [ time, shiftHours( time, 12 ) ].sort();
+				/* translators: 1: earlier time of day, such as 03:00, 2: later time of day, such as 15:00. */
+				return sprintf( __( 'Twice a day at %1$s and %2$s', 'open-export' ), times[ 0 ], times[ 1 ] );
 			}
 			case 'daily':
 				/* translators: %s: time of day, such as 03:00. */

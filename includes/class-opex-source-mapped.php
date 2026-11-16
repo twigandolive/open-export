@@ -205,7 +205,7 @@ trait OPEX_Source_Mapped {
 		foreach ( $this->defs() as $id => $def ) {
 			$buckets[ (string) $def['group'] ][] = array(
 				'id'    => $id,
-				'label' => substr( $id, 4 ),
+				'label' => (string) ( $def['label'] ?? substr( $id, 4 ) ),
 				'type'  => (string) ( $def['type'] ?? 'text' ),
 			);
 		}

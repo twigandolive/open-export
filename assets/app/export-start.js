@@ -41,7 +41,8 @@
 			const keep = tplSelect.value;
 			app.clear( tplSelect );
 			tplSelect.appendChild( el( 'option', { value: '' }, list.length ? __( 'Saved templates', 'open-export' ) : __( 'No saved templates', 'open-export' ) ) );
-			list.forEach( ( t ) => tplSelect.appendChild( el( 'option', { value: t.id }, t.name ) ) );
+			// The source name helps tell apart templates with similar names. Older servers send none.
+			list.forEach( ( t ) => tplSelect.appendChild( el( 'option', { value: t.id }, t.source_label ? app.paren( t.name, t.source_label ) : t.name ) ) );
 			tplSelect.value = list.some( ( t ) => t.id === keep ) ? keep : '';
 			tplSelect.disabled = ! list.length;
 			tplLoad.disabled = ! list.length;

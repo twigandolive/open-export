@@ -87,17 +87,21 @@ class OPEX_Rest_Delivery {
 					'callback'            => array( __CLASS__, 'save_settings' ),
 					'args'                => self::with_schema(
 						array(
-							'retention_days' => array(
+							'retention_days'         => array(
 								'type'    => 'integer',
 								'minimum' => 1,
 								'maximum' => 365,
 							),
-							'link_days'      => array(
+							'link_days'              => array(
 								'type'    => 'integer',
 								'minimum' => 1,
 								'maximum' => 30,
 							),
-							'background'     => array(
+							'background'             => array(
+								'type'              => 'boolean',
+								'sanitize_callback' => 'rest_sanitize_boolean',
+							),
+							'keep_data_on_uninstall' => array(
 								'type'              => 'boolean',
 								'sanitize_callback' => 'rest_sanitize_boolean',
 							),
@@ -350,7 +354,7 @@ class OPEX_Rest_Delivery {
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
 		$params = $request->get_params();
 		$raw    = array();
-		foreach ( array( 'retention_days', 'link_days', 'background' ) as $key ) {
+		foreach ( array_keys( OPEX_Settings::defaults() ) as $key ) {
 			if ( array_key_exists( $key, $params ) ) {
 				$raw[ $key ] = $params[ $key ];
 			}
@@ -403,11 +407,13 @@ class OPEX_Rest_Delivery {
 					),
 					'frequencies'       => $list(
 						array(
-							'manual'  => __( 'Manual only', 'open-export' ),
-							'hourly'  => __( 'Hourly', 'open-export' ),
-							'daily'   => __( 'Daily', 'open-export' ),
-							'weekly'  => __( 'Weekly', 'open-export' ),
-							'monthly' => __( 'Monthly', 'open-export' ),
+							'manual'        => __( 'Manual only', 'open-export' ),
+							'hourly'        => __( 'Hourly', 'open-export' ),
+							'every_6_hours' => __( 'Every 6 hours', 'open-export' ),
+							'twicedaily'    => __( 'Twice a day', 'open-export' ),
+							'daily'         => __( 'Daily', 'open-export' ),
+							'weekly'        => __( 'Weekly', 'open-export' ),
+							'monthly'       => __( 'Monthly', 'open-export' ),
 						)
 					),
 					'destination_types' => $list(

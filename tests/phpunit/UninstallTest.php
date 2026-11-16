@@ -11,7 +11,8 @@
 use PHPUnit\Framework\TestCase;
 
 /**
- * Uninstall removes every stored item and nothing else.
+ * Uninstall removes every stored item and nothing else, unless the site
+ * asked to keep its data.
  */
 class UninstallTest extends TestCase {
 
@@ -116,6 +117,91 @@ class UninstallTest extends TestCase {
 		$this->assertSame( '0', (string) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE 'opex\\_lock\\_%'" ) );
 		$this->assertSame( 'keep', get_option( 'other_lock_j2' ) );
 		$this->assertNotFalse( wp_next_scheduled( 'other_plugin_hook' ) );
+	}
+
+	/** With keep_data_on_uninstall on, options, transients, locks and files stay. Cron events still go. */
+	public function test_keep_data_keeps_everything_but_cron() {
+		foreach ( self::OPTIONS as $name ) {
+			update_option( $name, array( 'x' => 1 ), false );
+		}
+		update_option( 'opex_settings', array( 'retention_days' => 30, 'keep_data_on_uninstall' => true ), false );
+		set_transient( 'opex_table_status', array( 1 ), 300 );
+		OPEX_Lock::acquire( 'j2', 300 );
+		$in_future = time() + 3600;
+		wp_schedule_single_event( $in_future, 'opex_run_job', array( 'j1' ) );
+		wp_schedule_event( $in_future, 'hourly', 'opex_maintenance' );
+		wp_schedule_single_event( $in_future, 'other_plugin_hook' );
+		file_put_contents( $this->dir . '/export.csv', 'data' );
+
+		opex_uninstall_site( $this->dir );
+
+		wp_cache_flush();
+		foreach ( self::OPTIONS as $name ) {
+			$this->assertNotFalse( get_option( $name ), $name );
+		}
+		$this->assertTrue( get_option( 'opex_settings' )['keep_data_on_uninstall'] );
+		$this->assertSame( array( 1 ), get_transient( 'opex_table_status' ) );
+		$this->assertTrue( OPEX_Lock::is_held( 'j2' ) );
+		$this->assertFileExists( $this->dir . '/export.csv' );
+		$this->assertFalse( wp_next_scheduled( 'opex_run_job', array( 'j1' ) ), 'cron events always go, their callbacks are gone' );
+		$this->assertFalse( wp_next_scheduled( 'opex_maintenance' ) );
+		$this->assertNotFalse( wp_next_scheduled( 'other_plugin_hook' ) );
+		delete_transient( 'opex_table_status' );
+	}
+
+	/** The setting is read as saved: off, missing, a string or a broken option all mean remove. */
+	public function test_keep_data_reads_the_saved_option() {
+		update_option( 'opex_settings', array( 'keep_data_on_uninstall' => false ), false );
+		$this->assertFalse( opex_uninstall_keeps_data() );
+		update_option( 'opex_settings', array( 'retention_days' => 9 ), false );
+		$this->assertFalse( opex_uninstall_keeps_data() );
+		update_option( 'opex_settings', 'corrupt', false );
+		$this->assertFalse( opex_uninstall_keeps_data() );
+		update_option( 'opex_settings', array( 'keep_data_on_uninstall' => '1' ), false );
+		$this->assertTrue( opex_uninstall_keeps_data() );
+		OPEX_Settings::save( array( 'keep_data_on_uninstall' => true ) );
+		$this->assertTrue( opex_uninstall_keeps_data(), 'the shape OPEX_Settings saves' );
+		OPEX_Settings::save( array( 'keep_data_on_uninstall' => false ) );
+		$this->assertFalse( opex_uninstall_keeps_data() );
+	}
+
+	/** On a network each site's own setting decides for that site. */
+	public function test_keep_data_is_read_per_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Needs a multisite network.' );
+		}
+		$other = 0;
+		foreach ( get_sites( array( 'fields' => 'ids', 'number' => 0 ) ) as $site ) {
+			if ( (int) $site !== get_current_blog_id() ) {
+				$other = (int) $site;
+				break;
+			}
+		}
+		if ( ! $other ) {
+			$this->markTestSkipped( 'Needs a second site.' );
+		}
+		update_option( 'opex_jobs', array( 'x' => 1 ), false );
+		update_option( 'opex_settings', array( 'keep_data_on_uninstall' => true ), false );
+		switch_to_blog( $other );
+		// The other site's own records are put back afterwards.
+		$before = array();
+		foreach ( self::OPTIONS as $name ) {
+			$before[ $name ] = get_option( $name, null );
+		}
+		update_option( 'opex_jobs', array( 'x' => 2 ), false );
+		update_option( 'opex_settings', array( 'keep_data_on_uninstall' => false ), false );
+		opex_uninstall_site( $this->dir . '-other' );
+		$this->assertFalse( get_option( 'opex_jobs' ), 'the other site removes its data' );
+		foreach ( $before as $name => $value ) {
+			if ( null === $value ) {
+				delete_option( $name );
+			} else {
+				update_option( $name, $value, false );
+			}
+		}
+		restore_current_blog();
+		opex_uninstall_site( $this->dir );
+		$this->assertSame( array( 'x' => 1 ), get_option( 'opex_jobs' ), 'this site keeps its data' );
 	}
 
 	public function test_missing_folder_is_fine() {

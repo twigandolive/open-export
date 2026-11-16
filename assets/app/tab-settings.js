@@ -1,7 +1,7 @@
 /**
  * Open Export admin screen: the Settings tab.
  *
- * Three saved settings (GET and POST /settings) and a read-only list of what
+ * Four saved settings (GET and POST /settings) and a read-only list of what
  * this server can do, from the /options features flags.
  *
  * Registers the tab "settings".
@@ -46,6 +46,7 @@
 		const keep = numberInput( saved.retention_days, 'retention_days' );
 		const links = numberInput( saved.link_days, 'link_days' );
 		const background = ui.switchControl( { label: __( 'Run exports in the background by default', 'open-export' ), checked: !! saved.background } );
+		const keepData = el( 'input', { type: 'checkbox', checked: !! saved.keep_data_on_uninstall } );
 		const result = ui.result();
 		const save = ui.button( { label: __( 'Save changes', 'open-export' ), primary: true, type: 'submit' } );
 
@@ -69,7 +70,17 @@
 				rowLabel: true,
 				help: __( 'Used when an export starts without choosing. Background exports keep running after you leave this page.', 'open-export' ),
 			} ),
+			keep_data_on_uninstall: ui.field( {
+				label: __( 'When the plugin is deleted', 'open-export' ),
+				control: el( 'label', { class: 'opex-checkline' }, [ keepData, __( 'Keep my templates, schedules, export history and files', 'open-export' ) ] ),
+				input: keepData,
+				rowLabel: true,
+				help: __( 'Leave this off to remove everything Open Export saved when you delete the plugin. Turn it on if you plan to install it again and want to keep your setup. Scheduled runs stop either way.', 'open-export' ),
+			} ),
 		};
+
+		// The row label names the group, so the help is tied to the box itself.
+		keepData.setAttribute( 'aria-describedby', rows.keep_data_on_uninstall.help.id );
 
 		function readNumber( input, key ) {
 			const raw = input.value.trim();
@@ -90,6 +101,7 @@
 				retention_days: readNumber( keep, 'retention_days' ),
 				link_days: readNumber( links, 'link_days' ),
 				background: background.input.checked,
+				keep_data_on_uninstall: keepData.checked,
 			};
 			if ( null === data.retention_days || null === data.link_days ) {
 				( null === data.retention_days ? keep : links ).focus();
@@ -104,6 +116,7 @@
 				keep.value = String( next.retention_days );
 				links.value = String( next.link_days );
 				background.input.checked = !! next.background;
+				keepData.checked = !! next.keep_data_on_uninstall;
 				// The Export tab reads its background default from /options.
 				store.update( 'options', ( options ) => {
 					const copy = Object.assign( {}, options );
@@ -127,6 +140,7 @@
 			rows.retention_days.root,
 			rows.link_days.root,
 			rows.background.root,
+			rows.keep_data_on_uninstall.root,
 			el( 'div', { class: 'opex-run-foot' }, [ save, result.root ] ),
 		] );
 	}

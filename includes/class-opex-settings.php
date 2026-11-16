@@ -23,9 +23,10 @@ class OPEX_Settings {
 	 */
 	public static function defaults(): array {
 		return array(
-			'retention_days' => 30,
-			'link_days'      => 7,
-			'background'     => false,
+			'retention_days'         => 30,
+			'link_days'              => 7,
+			'background'             => false,
+			'keep_data_on_uninstall' => false,
 		);
 	}
 
@@ -71,10 +72,23 @@ class OPEX_Settings {
 	private static function clean( array $in ): array {
 		$d = self::defaults();
 		return array(
-			'retention_days' => self::clamp( $in['retention_days'] ?? $d['retention_days'], 1, 365, $d['retention_days'] ),
-			'link_days'      => self::clamp( $in['link_days'] ?? $d['link_days'], 1, 30, $d['link_days'] ),
-			'background'     => isset( $in['background'] ) ? (bool) filter_var( $in['background'], FILTER_VALIDATE_BOOLEAN ) : $d['background'],
+			'retention_days'         => self::clamp( $in['retention_days'] ?? $d['retention_days'], 1, 365, $d['retention_days'] ),
+			'link_days'              => self::clamp( $in['link_days'] ?? $d['link_days'], 1, 30, $d['link_days'] ),
+			'background'             => self::flag( $in, 'background' ),
+			// uninstall.php reads this key straight from the option, because it cannot load this class.
+			'keep_data_on_uninstall' => self::flag( $in, 'keep_data_on_uninstall' ),
 		);
+	}
+
+	/**
+	 * A yes or no setting, false when it is missing.
+	 *
+	 * @param array  $in  Input.
+	 * @param string $key Setting key.
+	 * @return bool
+	 */
+	private static function flag( array $in, string $key ): bool {
+		return isset( $in[ $key ] ) ? (bool) filter_var( $in[ $key ], FILTER_VALIDATE_BOOLEAN ) : (bool) self::defaults()[ $key ];
 	}
 
 	/**

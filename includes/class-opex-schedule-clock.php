@@ -22,7 +22,7 @@ class OPEX_Schedule_Clock {
 	 */
 	public static function next_run( array $schedule, int $now, ?DateTimeZone $tz = null ): int {
 		$freq = (string) ( $schedule['frequency'] ?? 'manual' );
-		if ( empty( $schedule['enabled'] ) || ! in_array( $freq, array( 'hourly', 'daily', 'weekly', 'monthly' ), true ) ) {
+		if ( empty( $schedule['enabled'] ) || ! in_array( $freq, array( 'hourly', 'every_6_hours', 'twicedaily', 'daily', 'weekly', 'monthly' ), true ) ) {
 			return 0;
 		}
 		$tz = $tz ? $tz : wp_timezone();
@@ -65,9 +65,17 @@ class OPEX_Schedule_Clock {
 	 */
 	private static function candidates( string $freq, DateTimeImmutable $day, array $schedule, int $hour, int $min ): array {
 		$date = $day->format( 'Y-m-d' );
-		if ( 'hourly' === $freq ) {
+		// Hourly, every 6 hours and twice a day repeat through the day, keeping
+		// the minutes of the saved time. The two longer steps are anchored on its
+		// hour, so 03:00 every 6 hours means 03:00, 09:00, 15:00 and 21:00.
+		$steps = array(
+			'hourly'        => 1,
+			'every_6_hours' => 6,
+			'twicedaily'    => 12,
+		);
+		if ( isset( $steps[ $freq ] ) ) {
 			$out = array();
-			for ( $h = 0; $h < 24; $h++ ) {
+			for ( $h = $hour % $steps[ $freq ]; $h < 24; $h += $steps[ $freq ] ) {
 				$out[] = sprintf( '%s %02d:%02d', $date, $h, $min );
 			}
 			return $out;

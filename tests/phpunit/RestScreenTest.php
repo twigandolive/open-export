@@ -225,7 +225,7 @@ class RestScreenTest extends TestCase {
 			$this->assertSame( array(), $list );
 			return;
 		}
-		$this->assertSame( array( 'google-merchant', 'meta-catalog', 'pinterest-catalog' ), array_column( $list, 'id' ) );
+		$this->assertSame( array( 'google-merchant', 'meta-catalog', 'pinterest-catalog', 'woocommerce-product-csv' ), array_column( $list, 'id' ) );
 		foreach ( $list as $preset ) {
 			$this->assertSame( array( 'id', 'label', 'description', 'config' ), array_keys( $preset ) );
 			$this->assertSame( 'woo:products', $preset['config']['source'] );

@@ -149,6 +149,9 @@
 				csv_delimiter: keep.csv_delimiter,
 				csv_encoding: keep.csv_encoding,
 				csv_eol: keep.csv_eol,
+				csv_enclosure: keep.csv_enclosure,
+				csv_quote_all: keep.csv_quote_all,
+				compress: keep.compress,
 				xml_template: keep.xml_template,
 				network: keep.network,
 			} );

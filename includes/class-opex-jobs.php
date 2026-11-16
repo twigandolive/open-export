@@ -9,9 +9,11 @@ defined( 'ABSPATH' ) || exit;
 
 class OPEX_Jobs {
 
-	private const OPTION      = 'opex_jobs';
-	private const MAX_HISTORY = 50;
-	private const LOCK_TTL    = 120;
+	private const OPTION   = 'opex_jobs';
+	private const LOCK_TTL = 120;
+
+	/** Most jobs the history keeps. Running and paused jobs never count against it. */
+	public const MAX_HISTORY = 200;
 
 	/** Lock owner tokens held by this process, by job id. */
 	private static array $tokens = array();
@@ -80,6 +82,9 @@ class OPEX_Jobs {
 		'custom_columns' => array(),
 		'network'        => false,
 		'acf_flatten'    => array(),
+		'csv_enclosure'  => 'double',
+		'csv_quote_all'  => false,
+		'compress'       => 'none',
 	);
 
 	/** The stored registry, exactly as saved. */
@@ -120,20 +125,7 @@ class OPEX_Jobs {
 		$jobs               = self::stored();
 		$jobs[ $job['id'] ] = $job;
 
-		// Trim history oldest-first, removing files with their jobs.
-		if ( count( $jobs ) > self::MAX_HISTORY ) {
-			uasort(
-				$jobs,
-				static function ( $a, $b ) {
-					return $a['created'] <=> $b['created'];
-				}
-			);
-			while ( count( $jobs ) > self::MAX_HISTORY ) {
-				$oldest = array_key_first( $jobs );
-				self::remove_file( $jobs[ $oldest ] );
-				unset( $jobs[ $oldest ] );
-			}
-		}
+		$jobs = self::trim_history( $jobs, (string) $job['id'] );
 
 		update_option( self::OPTION, $jobs, false );
 	}
@@ -238,6 +230,41 @@ class OPEX_Jobs {
 		return $out;
 	}
 
+	/**
+	 * Trims the history to MAX_HISTORY, oldest first, removing files with
+	 * their jobs. A running or paused job is never removed to make room,
+	 * because someone is still waiting on it, and neither is the job being
+	 * saved. When every job is still in progress the list may stay over the
+	 * cap until some finish.
+	 *
+	 * @param array  $jobs Stored jobs by id.
+	 * @param string $keep Id of the job being saved.
+	 * @return array
+	 */
+	private static function trim_history( array $jobs, string $keep ): array {
+		if ( count( $jobs ) <= self::MAX_HISTORY ) {
+			return $jobs;
+		}
+		$ended = array();
+		foreach ( $jobs as $id => $job ) {
+			$status = is_array( $job ) ? (string) ( $job['status'] ?? 'running' ) : '';
+			if ( $keep !== (string) $id && ! in_array( $status, array( 'running', 'paused' ), true ) ) {
+				$ended[ $id ] = is_array( $job ) ? (int) ( $job['created'] ?? 0 ) : 0;
+			}
+		}
+		asort( $ended );
+		foreach ( array_keys( $ended ) as $id ) {
+			if ( count( $jobs ) <= self::MAX_HISTORY ) {
+				break;
+			}
+			if ( is_array( $jobs[ $id ] ) ) {
+				self::remove_file( $jobs[ $id ] );
+			}
+			unset( $jobs[ $id ] );
+		}
+		return $jobs;
+	}
+
 	/** Job record including full export config for load / re-run. */
 	public static function expose_detail( array $job ): array {
 		return array_merge(
@@ -297,7 +324,11 @@ class OPEX_Jobs {
 			return;
 		}
 		// The Excel writer keeps two sidecar files until it finishes.
-		foreach ( array( $path, $path . '.rows', $path . '.rows.n' ) as $file ) {
+		$files = array( $path, $path . '.rows', $path . '.rows.n' );
+		// Zip compression leaves the plain file next to the zip if it stops
+		// before the plain file is removed, and a half-built zip if it stops sooner.
+		$files = array_merge( $files, OPEX_Compress::related_files( $path ) );
+		foreach ( $files as $file ) {
 			if ( file_exists( $file ) ) {
 				wp_delete_file( $file );
 			}

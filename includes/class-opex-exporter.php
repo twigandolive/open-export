@@ -136,12 +136,18 @@ class OPEX_Exporter {
 			'wide'          => ! empty( $extra['wide'] ),
 		);
 
+		$plain = $job;
 		try {
-			$writer = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'], self::writer_options( $config ) );
+			// The HTML page takes its title from the export name.
+			$options = self::writer_options( $config ) + array( 'title' => $label );
+			$writer  = OPEX_Writer::make( $config['format'], OPEX_Jobs::file_path( $job ), $job['headers'], $options );
 			$writer->start();
 			if ( 0 === $total ) {
 				$writer->finish();
-				$job             = self::completed( $job );
+				$job = self::completed( $job );
+				if ( OPEX_Compress::wanted( $config ) ) {
+					$job['filename'] = OPEX_Compress::apply( $job );
+				}
 				$job['filesize'] = self::output_size( $job );
 			}
 			$job['checkpoint'] = $writer->checkpoint();
@@ -151,6 +157,9 @@ class OPEX_Exporter {
 		}
 
 		OPEX_Jobs::save( $job );
+		if ( $plain['filename'] !== $job['filename'] ) {
+			OPEX_Compress::discard_plain( $plain );
+		}
 		if ( 'done' === $job['status'] ) {
 			do_action( 'opex_job_done', OPEX_Jobs::get( $id ) );
 		}

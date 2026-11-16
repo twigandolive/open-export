@@ -153,7 +153,7 @@ class WooProductsTest extends WooSourceCase {
 		$fields = array_values( array_filter( $fields, static function ( $id ) {
 			return 0 === strpos( $id, 'woo:' );
 		} ) );
-		$this->assertCount( 35, $fields );
+		$this->assertCount( 36, $fields, '35 fields plus woo:global_unique_id (2.0 pass e)' );
 		$rows = $this->rows( $this->config( 'woo:products', array(
 			'fields'  => $fields,
 			'filters' => array( 'rules' => array( array( 'field' => 'woo:sku', 'op' => 'starts_with', 'value' => 'OPEX-' ) ) ),

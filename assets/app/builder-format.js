@@ -3,10 +3,15 @@
  *
  * Formats come from GET /options `formats` ({ id: { label, available } }).
  * An unavailable one shows disabled with its reason. Only the chosen
- * format's options show: CSV delimiter, encoding (/options csv_encodings)
- * and line endings (/options csv_eols), or the XML template editor. The
+ * format's options show: CSV delimiter, encoding (/options csv_encodings),
+ * line endings (/options csv_eols), quote character (/options
+ * csv_enclosures) and "quote every cell", or the XML template editor. The
  * template is checked through POST /preview, the only route that runs the
  * server's template validation without starting a job.
+ *
+ * Zip compression (config compress) shows for every format but Excel, which
+ * is a zip already. It is off with a reason when /options features.compress
+ * is false.
  *
  * Speed writes batch_size. The three choices are the old screen's batch
  * sizes. A loaded config with another size keeps it as a fourth choice.
@@ -36,6 +41,7 @@
 			json: __( 'Structured data for apps and scripts.', 'open-export' ),
 			xml: __( 'Tagged data, with an optional template.', 'open-export' ),
 			xlsx: __( 'A spreadsheet file for Excel and Numbers.', 'open-export' ),
+			html: __( 'A table page to open in a browser or print.', 'open-export' ),
 		}[ id ] || '';
 	}
 
@@ -62,6 +68,11 @@
 		const formatInputs = Object.keys( formats ).map( ( id ) => choice( formatName, id, formats[ id ].label, describe( id ), { reason: formats[ id ].available ? '' : unavailable( id ) } ) );
 		formatInputs.forEach( ( c ) => c.input.addEventListener( 'change', () => {
 			ctx.config.format = c.input.value;
+			if ( 'xlsx' === ctx.config.format ) {
+				// An Excel file is a zip already, so the server would turn compression off.
+				ctx.config.compress = 'none';
+				zip.checked = false;
+			}
 			syncVisible();
 			ctx.changed( 'format' );
 		} ) );
@@ -81,11 +92,36 @@
 		], 'csv_delimiter' );
 		const encoding = select( ctx.options.csv_encodings || [], 'csv_encoding' );
 		const eol = select( ctx.options.csv_eols || [], 'csv_eol' );
+		const enclosures = ctx.options.csv_enclosures || [];
+		const enclosure = select( enclosures, 'csv_enclosure' );
+		const quoteAll = el( 'input', { type: 'checkbox' } );
+		quoteAll.addEventListener( 'change', () => {
+			ctx.config.csv_quote_all = quoteAll.checked;
+			ctx.changed( 'format' );
+		} );
 		const csvBox = el( 'fieldset', { class: 'opex-optgroup' }, [
 			el( 'legend', {}, __( 'CSV options', 'open-export' ) ),
 			ui.field( { label: __( 'Delimiter', 'open-export' ), control: delimiter } ).root,
 			ui.field( { label: __( 'Encoding', 'open-export' ), control: encoding } ).root,
 			ui.field( { label: __( 'Line endings', 'open-export' ), control: eol } ).root,
+			enclosures.length ? ui.field( { label: __( 'Quote character', 'open-export' ), control: enclosure } ).root : null,
+			el( 'label', { class: 'opex-checkline' }, [ quoteAll, __( 'Quote every cell', 'open-export' ) ] ),
+			el( 'p', { class: 'opex-help' }, __( 'Without this, only cells that hold the delimiter, a quote, a space or a line break are quoted.', 'open-export' ) ),
+		] );
+
+		// Zip compression of the finished file.
+		const canZip = !! ( ctx.options.features || {} ).compress;
+		const zipReasonId = canZip ? null : app.uid( 'opex-reason' );
+		const zip = el( 'input', { type: 'checkbox', disabled: ! canZip, 'aria-describedby': zipReasonId } );
+		zip.addEventListener( 'change', () => {
+			ctx.config.compress = zip.checked ? 'zip' : 'none';
+			ctx.changed( 'format' );
+		} );
+		const zipBox = el( 'fieldset', { class: 'opex-optgroup' }, [
+			el( 'legend', {}, __( 'Compression', 'open-export' ) ),
+			el( 'label', { class: 'opex-checkline' }, [ zip, __( 'Compress the finished file as a zip', 'open-export' ) ] ),
+			el( 'p', { class: 'opex-help' }, __( 'The download, email attachment, webhook link and server upload get one .zip file that holds the export.', 'open-export' ) ),
+			canZip ? null : el( 'p', { class: 'opex-choice-reason', id: zipReasonId }, [ app.icon( 'warning', { sm: true, cls: 'opex-c-warning' } ), unavailable( 'xlsx' ) ] ),
 		] );
 
 		// XML template editor.
@@ -231,6 +267,7 @@
 		function syncVisible() {
 			csvBox.hidden = 'csv' !== ctx.config.format;
 			xmlBox.hidden = 'xml' !== ctx.config.format;
+			zipBox.hidden = 'xlsx' === ctx.config.format;
 		}
 
 		function syncAll() {
@@ -240,6 +277,9 @@
 			delimiter.value = ctx.config.csv_delimiter;
 			encoding.value = ctx.config.csv_encoding;
 			eol.value = ctx.config.csv_eol;
+			enclosure.value = ctx.config.csv_enclosure;
+			quoteAll.checked = !! ctx.config.csv_quote_all;
+			zip.checked = 'zip' === ctx.config.compress;
 			stash = null;
 			useTemplate.checked = false;
 			syncXml();
@@ -252,6 +292,7 @@
 				el( 'fieldset', {}, [ el( 'legend', { class: 'opex-h3' }, __( 'File format', 'open-export' ) ), el( 'div', { class: 'opex-formats' }, formatInputs.map( ( c ) => c.label ) ) ] ),
 				csvBox,
 				xmlBox,
+				zipBox,
 				speedFieldset,
 			] ),
 			refresh( reason ) {
@@ -271,9 +312,15 @@
 					parts.push( delimiter.options[ delimiter.selectedIndex ] ? delimiter.options[ delimiter.selectedIndex ].text : c.csv_delimiter );
 					const enc = ( ctx.options.csv_encodings || [] ).find( ( e ) => e.id === c.csv_encoding );
 					parts.push( enc ? enc.label : c.csv_encoding );
+					if ( c.csv_quote_all ) {
+						parts.push( __( 'every cell quoted', 'open-export' ) );
+					}
 				}
 				if ( 'xml' === c.format && c.xml_template.row ) {
 					parts.push( __( 'custom template', 'open-export' ) );
+				}
+				if ( 'zip' === c.compress && 'xlsx' !== c.format ) {
+					parts.push( __( 'zipped', 'open-export' ) );
 				}
 				const speed = speedList.find( ( s ) => s.batch === c.batch_size );
 				/* translators: %s: number of rows. */
@@ -285,6 +332,9 @@
 				const def = formats[ ctx.config.format ];
 				if ( def && ! def.available ) {
 					list.push( { message: unavailable( ctx.config.format ), focus: () => formatInputs[ 0 ].input.focus() } );
+				}
+				if ( 'zip' === ctx.config.compress && ! canZip && 'xlsx' !== ctx.config.format ) {
+					list.push( { message: __( 'Zip compression needs the PHP zip extension. Turn compression off.', 'open-export' ), focus: () => zip.focus() } );
 				}
 				if ( 'xml' === ctx.config.format && useTemplate.checked ) {
 					PARTS.forEach( ( part ) => {

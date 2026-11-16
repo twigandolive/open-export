@@ -3,7 +3,8 @@
  * schedule form.
  *
  * Frequency comes from /options frequencies. Only the controls that apply
- * show: a time for hourly (its minutes), daily, weekly and monthly, a
+ * show: a time for hourly (its minutes), every 6 hours and twice a day
+ * (the time the runs repeat from), daily, weekly and monthly, a
  * weekday for weekly, a day of the month for monthly. Changes only writes
  * incremental { enabled, field }, with date fields from the chosen source,
  * and shows the watermark with a "Start over" action wired to
@@ -74,6 +75,12 @@
 					help = sprintf(
 						/* translators: %s: site time zone. */
 						__( 'Hourly runs use the minutes of this time. Times use the site time zone, %s.', 'open-export' ),
+						options.timezone || ''
+					);
+				} else if ( 'every_6_hours' === f || 'twicedaily' === f ) {
+					help = sprintf(
+						/* translators: %s: site time zone. */
+						__( 'Runs at this time and repeats through the day, for example 03:00, 09:00, 15:00 and 21:00 every 6 hours. Times use the site time zone, %s.', 'open-export' ),
 						options.timezone || ''
 					);
 				}

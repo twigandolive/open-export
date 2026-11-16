@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Recipe {
 
 	/** Keys a 1.3.1 recipe never had. */
-	const NEW_KEYS = array( 'transforms', 'custom_columns', 'csv_encoding', 'csv_eol', 'xml_template', 'network', 'acf_flatten' );
+	const NEW_KEYS = array( 'transforms', 'custom_columns', 'csv_encoding', 'csv_eol', 'xml_template', 'network', 'acf_flatten', 'csv_enclosure', 'csv_quote_all', 'compress' );
 
 	/** Entries the 1.3.1 resolver reads at the top level of the filters. */
 	const MAX_TOP_RULES = 20;
@@ -129,7 +129,7 @@ class OPEX_Recipe {
 			'column_labels'  => (array) ( $recipe['column_labels'] ?? array() ),
 			'custom_columns' => $custom,
 		);
-		foreach ( array( 'batch_size', 'transforms', 'csv_encoding', 'csv_eol', 'xml_template', 'network', 'acf_flatten' ) as $key ) {
+		foreach ( array_merge( array( 'batch_size' ), self::NEW_KEYS ) as $key ) {
 			if ( isset( $recipe[ $key ] ) ) {
 				$raw[ $key ] = $recipe[ $key ];
 			}

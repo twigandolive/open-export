@@ -84,6 +84,7 @@ class OPEX_Schema_Document {
 			' ',
 			array(
 				'A recipe may also set: "transforms" (per-field steps from "transforms.types"), "custom_columns" (see "custom_columns"), "csv_encoding" and "csv_eol" for CSV files, "xml_template" for XML files (see "xml_template"), and "network" on a multisite network (see "network").',
+				'CSV files may also set "csv_enclosure" and "csv_quote_all", and every format except xlsx may set "compress" to "zip" when "format_options" lists it.',
 				'Formats are listed under "formats", and "format_options" says which recipe keys each one reads.',
 				'Anything in a recipe that this site cannot honor is dropped and reported, never applied silently.',
 			)
@@ -129,6 +130,9 @@ class OPEX_Schema_Document {
 			),
 			'network'        => 'boolean: true to export from every site of a multisite network (see network), default false',
 			'acf_flatten'    => array( 'acf: field ids from fields, each spread into "<label> <n> <sub>" columns (at most 20 rows) instead of one JSON column' ),
+			'csv_enclosure'  => 'string: "double" (default) or "single", the character that wraps a quoted CSV cell',
+			'csv_quote_all'  => 'boolean: true to wrap every CSV cell in the quote character, default false (only cells that need it)',
+			'compress'       => 'string: "none" (default) or "zip", which packs the finished file into a zip. Not for xlsx, which is a zip already',
 		);
 	}
 
@@ -141,18 +145,24 @@ class OPEX_Schema_Document {
 	 */
 	private static function format_options( array $formats ): array {
 		$reads = array(
-			'csv'  => array( 'csv_delimiter', 'csv_encoding', 'csv_eol' ),
+			'csv'  => array( 'csv_delimiter', 'csv_encoding', 'csv_eol', 'csv_enclosure', 'csv_quote_all' ),
 			'json' => array(),
 			'xml'  => array( 'xml_template' ),
 			'xlsx' => array(),
+			'html' => array(),
 		);
+		$zip   = OPEX_Compress::available();
 		$out   = array();
 		foreach ( $formats as $id => $format ) {
+			$options = $reads[ $id ] ?? array();
+			if ( $zip && 'xlsx' !== $id ) {
+				$options[] = 'compress';
+			}
 			$out[ $id ] = array(
 				'label'     => (string) ( $format['label'] ?? $id ),
 				'extension' => (string) ( $format['extension'] ?? $id ),
 				'available' => ! empty( $format['available'] ),
-				'options'   => $reads[ $id ] ?? array(),
+				'options'   => $options,
 			);
 		}
 		return $out;

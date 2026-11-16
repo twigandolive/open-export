@@ -57,13 +57,16 @@ class WooPresetsTest extends WooSourceCase {
 	/** Each preset passes sanitize_config unchanged. */
 	public function test_each_preset_is_a_clean_config(): void {
 		$presets = $this->presets();
-		$this->assertSame( array( 'google-merchant', 'meta-catalog', 'pinterest-catalog' ), array_keys( $presets ) );
+		$this->assertSame( array( 'google-merchant', 'meta-catalog', 'pinterest-catalog', 'woocommerce-product-csv' ), array_keys( $presets ) );
 		foreach ( $presets as $id => $preset ) {
 			$notes = array();
 			$this->assertSame( $preset['config'], OPEX_Exporter::sanitize_config( $preset['config'], $notes ), $id );
 			$this->assertSame( array(), $notes, $id );
 			$this->assertNotSame( '', $preset['label'] );
-			$this->assertStringContainsString( 'condition', $preset['description'], 'the missing attribute is named' );
+			if ( 'woocommerce-product-csv' !== $id ) {
+				// The product CSV preset is checked in WooProductCsvPresetTest. It has no condition column to miss.
+				$this->assertStringContainsString( 'condition', $preset['description'], 'the missing attribute is named' );
+			}
 		}
 		$this->assertSame( 'xml', $presets['google-merchant']['config']['format'] );
 		$this->assertSame( 'csv', $presets['meta-catalog']['config']['format'] );

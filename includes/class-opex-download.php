@@ -105,12 +105,25 @@ class OPEX_Download {
 	}
 
 	/**
-	 * The name people see: the delivery name or label, with the right extension.
+	 * The name people see: the delivery name or label, with the right
+	 * extension, plus ".zip" when the file is compressed.
 	 *
 	 * @param array $job Job record.
 	 * @return string
 	 */
 	public static function file_name( array $job ): string {
+		$name = self::plain_name( $job );
+		return OPEX_Compress::is_compressed( $job ) ? $name . OPEX_Compress::SUFFIX : $name;
+	}
+
+	/**
+	 * The name people see for the export itself, without compression. It is
+	 * also the name of the one file inside a compressed export.
+	 *
+	 * @param array $job Job record.
+	 * @return string
+	 */
+	public static function plain_name( array $job ): string {
 		$format = (string) ( $job['config']['format'] ?? 'csv' );
 		$known  = OPEX_Writer::formats();
 		$ext    = isset( $known[ $format ] ) ? (string) $known[ $format ]['extension'] : $format;
@@ -134,6 +147,9 @@ class OPEX_Download {
 	 * @return string
 	 */
 	private static function content_type( array $job ): string {
+		if ( OPEX_Compress::is_compressed( $job ) ) {
+			return 'application/zip';
+		}
 		$format = (string) ( $job['config']['format'] ?? 'csv' );
 		$known  = OPEX_Writer::formats();
 		$mime   = isset( $known[ $format ] ) ? (string) $known[ $format ]['mime'] : 'application/octet-stream';

@@ -26,7 +26,9 @@
 
 	function rows( step, name ) {
 		if ( ! pairRows.has( step ) ) {
-			const pairs = step[ name ] && 'object' === typeof step[ name ] && ! Array.isArray( step[ name ] ) ? step[ name ] : {};
+			// PHP sends pairs whose "from" values are 0, 1, 2 and so on as a JSON list. Read the list's positions as those values.
+			const raw = step[ name ] && 'object' === typeof step[ name ] ? step[ name ] : {};
+			const pairs = Array.isArray( raw ) ? Object.assign( {}, raw ) : raw;
 			pairRows.set( step, Object.keys( pairs ).map( ( from ) => [ from, String( pairs[ from ] ) ] ) );
 		}
 		return pairRows.get( step );

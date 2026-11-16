@@ -34,13 +34,17 @@ abstract class OPEX_Writer {
 					throw new RuntimeException( 'Excel export needs the PHP zip extension, which is not installed on this server.' );
 				}
 				return new OPEX_Writer_XLSX( $path, $headers );
+			case 'html':
+				return new OPEX_Writer_HTML( $path, $headers, (string) ( $options['title'] ?? '' ) );
 			default:
 				return new OPEX_Writer_CSV(
 					$path,
 					$headers,
 					(string) ( $options['csv_delimiter'] ?? ',' ),
 					(string) ( $options['csv_encoding'] ?? 'utf8_bom' ),
-					(string) ( $options['csv_eol'] ?? 'lf' )
+					(string) ( $options['csv_eol'] ?? 'lf' ),
+					(string) ( $options['csv_enclosure'] ?? '"' ),
+					! empty( $options['csv_quote_all'] )
 				);
 		}
 	}
@@ -75,6 +79,12 @@ abstract class OPEX_Writer {
 				'extension' => 'xlsx',
 				'mime'      => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 				'available' => class_exists( 'ZipArchive' ),
+			),
+			'html' => array(
+				'label'     => __( 'HTML table', 'open-export' ),
+				'extension' => 'html',
+				'mime'      => 'text/html',
+				'available' => true,
 			),
 		);
 	}
@@ -191,11 +201,27 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	private string $encoding;
 	private string $eol;
 
-	public function __construct( string $path, array $headers, string $delimiter = ',', string $encoding = 'utf8_bom', string $eol = 'lf' ) {
+	/**
+	 * The quote character: a double or a single quote.
+	 *
+	 * @var string
+	 */
+	private string $enclosure;
+
+	/**
+	 * True to quote every cell, not only the cells that need it.
+	 *
+	 * @var bool
+	 */
+	private bool $quote_all;
+
+	public function __construct( string $path, array $headers, string $delimiter = ',', string $encoding = 'utf8_bom', string $eol = 'lf', string $enclosure = '"', bool $quote_all = false ) {
 		parent::__construct( $path, $headers );
 		$this->delimiter = in_array( $delimiter, array( ',', ';', "\t" ), true ) ? $delimiter : ',';
 		$this->encoding  = in_array( $encoding, array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' ), true ) ? $encoding : 'utf8_bom';
 		$this->eol       = 'crlf' === $eol ? 'crlf' : 'lf';
+		$this->enclosure = "'" === $enclosure ? "'" : '"';
+		$this->quote_all = $quote_all;
 	}
 
 	public function start(): void {
@@ -232,18 +258,11 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 	 * @param array    $fields Cell values.
 	 */
 	private function put( $handle, array $fields ): void {
-		if ( in_array( $this->encoding, array( 'utf8_bom', 'utf8' ), true ) && 'lf' === $this->eol ) {
-			fputcsv( $handle, $fields, $this->delimiter, '"', '\\' );
+		if ( ! $this->quote_all && in_array( $this->encoding, array( 'utf8_bom', 'utf8' ), true ) && 'lf' === $this->eol ) {
+			fputcsv( $handle, $fields, $this->delimiter, $this->enclosure, '\\' );
 			return;
 		}
-		$temp = fopen( 'php://temp', 'w+b' );
-		if ( false === $temp ) {
-			throw new RuntimeException( 'Could not open export file for writing.' );
-		}
-		fputcsv( $temp, $fields, $this->delimiter, '"', '\\' );
-		rewind( $temp );
-		$line = (string) stream_get_contents( $temp );
-		fclose( $temp );
+		$line = $this->quote_all ? $this->quoted_line( $fields ) : $this->csv_line( $fields );
 		// Only the record terminator changes: breaks inside a quoted cell stay as they are.
 		if ( 'crlf' === $this->eol && "\n" === substr( $line, -1 ) ) {
 			$line = substr( $line, 0, -1 ) . "\r\n";
@@ -254,6 +273,39 @@ class OPEX_Writer_CSV extends OPEX_Writer {
 			$line = $this->convert( $line, 'UTF-16LE' );
 		}
 		fwrite( $handle, $line );
+	}
+
+	/**
+	 * One record as fputcsv writes it, with only the cells that need it quoted.
+	 *
+	 * @param array $fields Cell values.
+	 */
+	private function csv_line( array $fields ): string {
+		$temp = fopen( 'php://temp', 'w+b' );
+		if ( false === $temp ) {
+			throw new RuntimeException( 'Could not open export file for writing.' );
+		}
+		fputcsv( $temp, $fields, $this->delimiter, $this->enclosure, '\\' );
+		rewind( $temp );
+		$line = (string) stream_get_contents( $temp );
+		fclose( $temp );
+		return $line;
+	}
+
+	/**
+	 * One record with every cell quoted. fputcsv cannot force quotes, so the
+	 * line is built here: a quote character inside a cell is doubled, which
+	 * is how every spreadsheet reads it back.
+	 *
+	 * @param array $fields Cell values.
+	 */
+	private function quoted_line( array $fields ): string {
+		$q     = $this->enclosure;
+		$cells = array();
+		foreach ( $fields as $field ) {
+			$cells[] = $q . str_replace( $q, $q . $q, (string) $field ) . $q;
+		}
+		return implode( $this->delimiter, $cells ) . "\n";
 	}
 
 	/**
