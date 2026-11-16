@@ -201,9 +201,8 @@ class OPEX_CLI {
 	 * [--since=<datetime>]
 	 * : Only export rows newer than this site-time value, as YYYY-MM-DD or
 	 * YYYY-MM-DD HH:MM:SS. It is passed to the job as its "since" on the
-	 * template's first date field. The export engine starts honoring it in a
-	 * later release, so older engines export every row. Not allowed for a
-	 * schedule, which keeps its own watermark.
+	 * first date field of the template's source, and the export keeps only
+	 * rows whose date is after it. Not allowed for a schedule, which keeps its own watermark.
 	 *
 	 * [--porcelain]
 	 * : Print only the final file path.
@@ -238,7 +237,7 @@ class OPEX_CLI {
 				$config['format'] = $wanted;
 				$config           = $this->sanitized( $config );
 				if ( $wanted !== $config['format'] ) {
-					WP_CLI::error( sprintf( 'The export engine does not accept the %s format yet.', $wanted ) );
+					WP_CLI::error( sprintf( 'The export engine does not accept the %s format on this site.', $wanted ) );
 				}
 			}
 			$extra = array( 'origin' => 'cli' );
@@ -299,7 +298,7 @@ class OPEX_CLI {
 		$label = 'CLI export';
 		if ( isset( $data['opex_recipe'] ) ) {
 			$notes  = array();
-			$result = OPEX_Schema::recipe_to_config( $data, $notes );
+			$result = OPEX_Recipe::to_config( $data, $notes );
 			OPEX_CLI_Runner::fail_on_error( $result );
 			foreach ( array_merge( $notes, (array) ( $result['notes'] ?? array() ) ) as $note ) {
 				WP_CLI::warning( (string) $note );

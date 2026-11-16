@@ -44,6 +44,11 @@ class OPEX_Source_Woo_Coupons extends OPEX_Source_Posts {
 	}
 
 	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Coupons', 'open-export' );
+	}
+
+	/** @inheritDoc */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,

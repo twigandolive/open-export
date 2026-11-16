@@ -136,7 +136,8 @@
     "formats": [
         "csv",
         "json",
-        "xml"
+        "xml",
+        "xlsx"
     ],
     "csv_delimiters": [
         "comma",

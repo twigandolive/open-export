@@ -360,10 +360,7 @@ class OPEX_Transforms {
 			case 'date_format':
 				return self::format_date( $v, (string) $s['format'], $s['tz'] );
 			case 'number':
-				if ( ! is_numeric( $v ) || ! is_finite( (float) $v ) ) {
-					return $v;
-				}
-				return number_format( (float) $v, (int) $s['decimals'], (string) $s['dec_point'], (string) $s['thousands_sep'] );
+				return self::format_number( $v, (int) $s['decimals'], (string) $s['dec_point'], (string) $s['thousands_sep'] );
 			case 'map':
 				if ( array_key_exists( $v, (array) $s['pairs'] ) ) {
 					return (string) $s['pairs'][ $v ];
@@ -377,6 +374,36 @@ class OPEX_Transforms {
 				return mb_substr( $v, 0, (int) $s['length'] );
 		}
 		return $v;
+	}
+
+	/**
+	 * Format a plain decimal number with string math, never floats, so a price
+	 * or a 20-digit id keeps every digit. Rounds half away from zero at
+	 * $decimals (OPEX_Money), then groups the whole part by thousands.
+	 * Anything that is not a plain decimal number is returned unchanged.
+	 *
+	 * @param string $v             Value.
+	 * @param int    $decimals      Places, 0 to 6.
+	 * @param string $dec_point     Decimal point.
+	 * @param string $thousands_sep Thousands separator.
+	 * @return string
+	 */
+	private static function format_number( string $v, int $decimals, string $dec_point, string $thousands_sep ): string {
+		$text = trim( $v );
+		if ( 1 !== preg_match( '/^[+-]?(\d+|\d*\.\d+)$/', $text ) ) {
+			return $v;
+		}
+		$rounded  = OPEX_Money::format( $text, max( 0, min( 6, $decimals ) ) );
+		$negative = '-' === $rounded[0];
+		$parts    = explode( '.', ltrim( $rounded, '-' ), 2 );
+		$whole    = $parts[0];
+		if ( '' !== $thousands_sep && strlen( $whole ) > 3 ) {
+			$head   = strlen( $whole ) % 3;
+			$groups = $head ? array( substr( $whole, 0, $head ) ) : array();
+			$whole  = implode( $thousands_sep, array_merge( $groups, str_split( substr( $whole, $head ), 3 ) ) );
+		}
+		$out = ( $negative ? '-' : '' ) . $whole;
+		return isset( $parts[1] ) ? $out . $dec_point . $parts[1] : $out;
 	}
 
 	/**

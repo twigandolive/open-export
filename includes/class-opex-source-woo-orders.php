@@ -49,7 +49,7 @@ class OPEX_Source_Woo_Orders extends OPEX_Source_Table {
 		// Refunds share the orders table; excluding them keeps one row
 		// per order and stops refund rows corrupting reported totals.
 		// Auto-drafts and checkout drafts are carts, not orders.
-		return array( array( "o.type = 'shop_order'", "o.status NOT IN ('auto-draft', 'checkout-draft')" ), array() );
+		return array( array( "o.type = 'shop_order'", 'o.status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' ), array() );
 	}
 
 	/** @inheritDoc */
@@ -85,6 +85,11 @@ class OPEX_Source_Woo_Orders extends OPEX_Source_Table {
 	/** @inheritDoc */
 	public function field_groups(): array {
 		return OPEX_Woo::fields();
+	}
+
+	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Orders', 'open-export' );
 	}
 
 	/** @inheritDoc */

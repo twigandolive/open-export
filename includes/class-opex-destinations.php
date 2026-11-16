@@ -122,6 +122,10 @@ class OPEX_Destinations {
 			'created'  => null === $existing ? $now : (int) ( $existing['created'] ?? $now ),
 			'updated'  => $now,
 		);
+		// The last test speaks for the connection it tried, so a change to it drops the result.
+		if ( null !== $existing && isset( $existing['last_test'] ) && self::same_connection( $existing, $record, '' !== (string) ( $raw['secret'] ?? '' ) ) ) {
+			$record['last_test'] = self::clean_test( $existing['last_test'] );
+		}
 
 		$list[ $id ] = $record;
 		update_option( self::OPTION, $list, false );
@@ -152,16 +156,27 @@ class OPEX_Destinations {
 		$out               = $record;
 		$out['has_secret'] = ! empty( $record['secret'] );
 		$out['host_key']   = (string) ( $record['host_key'] ?? '' );
+		$out['last_test']  = self::clean_test( $record['last_test'] ?? array() );
 		unset( $out['secret'] );
-		$type = (string) ( $record['type'] ?? '' );
-		if ( 'ftp' === $type ) {
-			$out['security_note'] = __( 'FTP sends your password and file without encryption. Use SFTP if the server offers it.', 'open-export' );
-		} elseif ( 'ftps' === $type ) {
-			$out['security_note'] = __( 'FTPS encrypts the connection, but PHP cannot verify the server\'s certificate. Use SFTP if the server offers it.', 'open-export' );
-		} else {
-			$out['security_note'] = '';
-		}
+		$out['security_note'] = self::security_note( (string) ( $record['type'] ?? '' ) );
 		return $out;
+	}
+
+	/**
+	 * The warning shown for a destination type, empty for SFTP. The screen
+	 * shows it before a new destination is saved, too.
+	 *
+	 * @param string $type ftp, ftps or sftp.
+	 * @return string
+	 */
+	public static function security_note( string $type ): string {
+		if ( 'ftp' === $type ) {
+			return __( 'FTP sends your password and file without encryption. Use SFTP if the server offers it.', 'open-export' );
+		}
+		if ( 'ftps' === $type ) {
+			return __( 'FTPS encrypts the connection, but PHP cannot verify the server\'s certificate. Use SFTP if the server offers it.', 'open-export' );
+		}
+		return '';
 	}
 
 	/**
@@ -200,6 +215,56 @@ class OPEX_Destinations {
 		} catch ( Throwable $e ) {
 			return new WP_Error( 'opex_destination_test', __( 'The test failed unexpectedly.', 'open-export' ) );
 		}
+	}
+
+	/**
+	 * Saves the result of a connection test on the record, for the list's
+	 * "Last test" column. The message is the one the test route shows.
+	 *
+	 * @param string $id      Destination id.
+	 * @param bool   $ok      Whether the test passed.
+	 * @param string $message Message shown to the person.
+	 * @return void
+	 */
+	public static function record_test( string $id, bool $ok, string $message ): void {
+		$list = self::all();
+		if ( ! isset( $list[ $id ] ) || ! is_array( $list[ $id ] ) ) {
+			return;
+		}
+		$list[ $id ]['last_test'] = self::clean_test( array( 'time' => time(), 'ok' => $ok, 'message' => $message ) );
+		update_option( self::OPTION, $list, false );
+	}
+
+	/**
+	 * The last test result in its one shape. Time 0 means never tested, which
+	 * is what a record saved before version 2.0 reads as.
+	 *
+	 * @param mixed $raw Stored result.
+	 * @return array
+	 */
+	private static function clean_test( $raw ): array {
+		$raw = is_array( $raw ) ? $raw : array();
+		return array(
+			'time'    => (int) ( $raw['time'] ?? 0 ),
+			'ok'      => (bool) ( $raw['ok'] ?? false ),
+			'message' => mb_substr( sanitize_text_field( (string) ( $raw['message'] ?? '' ) ), 0, 300 ),
+		);
+	}
+
+	/**
+	 * Whether a save left the connection as it was tested.
+	 *
+	 * @param array $old        Stored record.
+	 * @param array $new        Record about to be saved.
+	 * @param bool  $new_secret True when a new password or key was given.
+	 */
+	private static function same_connection( array $old, array $new, bool $new_secret ): bool {
+		foreach ( array( 'type', 'host', 'port', 'username', 'auth', 'path', 'passive', 'host_key' ) as $key ) {
+			if ( ( $old[ $key ] ?? null ) != $new[ $key ] ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- an old record may hold the port as text.
+				return false;
+			}
+		}
+		return ! $new_secret;
 	}
 
 	/**

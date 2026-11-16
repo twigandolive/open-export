@@ -90,6 +90,15 @@ abstract class OPEX_Source_Provider {
 		return array();
 	}
 
+	/**
+	 * The source's name as people read it, without counting rows. Providers
+	 * override this. The fallback reads the picker entry, which counts.
+	 */
+	public function label(): string {
+		$item = $this->picker_item();
+		return $item ? (string) $item['label'] : $this->id();
+	}
+
 	/** The picker entry (id, label, icon, count), or null when it has none. */
 	public function picker_item(): ?array {
 		return null;

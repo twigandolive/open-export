@@ -59,6 +59,11 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 	}
 
 	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Products', 'open-export' );
+	}
+
+	/** @inheritDoc */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,
@@ -168,7 +173,7 @@ class OPEX_Source_Woo_Products extends OPEX_Source_Posts {
 			'woo:height'             => array( 'group' => $ship, 'type' => 'number', 'read' => 'meta:_height' ),
 			'woo:short_description'  => array( 'group' => $content, 'type' => 'text', 'read' => 'core:post_excerpt' ),
 			'woo:description'        => array( 'group' => $content, 'type' => 'text', 'sql' => $this->description_sql() ),
-			'woo:attributes'         => array( 'group' => $terms, 'type' => 'text', 'php' => true ),
+			'woo:attributes'         => array( 'group' => $terms, 'type' => 'json', 'php' => true ),
 			'woo:categories'         => array( 'group' => $terms, 'type' => 'text', 'php' => true, 'terms' => 'product_cat' ),
 			'woo:tags'               => array( 'group' => $terms, 'type' => 'text', 'php' => true, 'terms' => 'product_tag' ),
 			'woo:image_url'          => array( 'group' => $media, 'type' => 'url', 'php' => true ),

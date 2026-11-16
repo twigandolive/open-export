@@ -135,6 +135,8 @@ class OPEX_Rest {
 			'permission_callback' => $can,
 			'callback'            => array( __CLASS__, 'delete_template' ),
 		) );
+
+		OPEX_Rest_Screen::register_routes();
 	}
 
 	public static function sources(): WP_REST_Response {
@@ -163,7 +165,7 @@ class OPEX_Rest {
 		}
 
 		return rest_ensure_response( array(
-			'groups'      => OPEX_Catalog::fields( $source ),
+			'groups'      => OPEX_Field_Types::decorate( $source, OPEX_Catalog::fields( $source ) ),
 			'date_fields' => $date_fields,
 			'presets'     => $presets,
 			'timezone'    => wp_timezone_string(),
@@ -196,7 +198,7 @@ class OPEX_Rest {
 		}
 
 		$notes  = array();
-		$result = OPEX_Schema::recipe_to_config( $body, $notes );
+		$result = OPEX_Recipe::to_config( $body, $notes );
 
 		// A recipe that resolves to nothing is a reportable outcome, not a
 		// transport error: the client needs the report to show the user which
@@ -205,11 +207,17 @@ class OPEX_Rest {
 	}
 
 	public static function preview( WP_REST_Request $request ) {
-		$config = OPEX_Exporter::sanitize_config( (array) $request->get_json_params() );
+		$notes  = array();
+		$config = OPEX_Exporter::sanitize_config( (array) $request->get_json_params(), $notes );
 		if ( is_wp_error( $config ) ) {
 			return $config;
 		}
-		return rest_ensure_response( OPEX_Exporter::preview( $config ) );
+		$result = OPEX_Exporter::preview( $config );
+		if ( is_array( $result ) ) {
+			// The same notes a job would carry, so the screen can say what was ignored before anything runs.
+			$result['notes'] = array_values( array_unique( array_map( 'strval', array_merge( OPEX_Query::export_notes( $config ), $notes ) ) ) );
+		}
+		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
 	}
 
 	public static function jobs(): WP_REST_Response {
@@ -256,7 +264,17 @@ class OPEX_Rest {
 		// Only the Resume button sends resume, so a late run call cannot undo a pause.
 		$resume = rest_sanitize_boolean( $request->get_param( 'resume' ) );
 		$result = OPEX_Exporter::run( (string) $request['id'], $resume );
-		return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		// A background job is driven by the runner, not the browser. Without
+		// this, a resumed background job ran one batch and then waited for the
+		// hourly maintenance to notice it had stalled.
+		$job = 'running' === $result['status'] ? OPEX_Jobs::get( (string) $request['id'] ) : null;
+		if ( $job && 'background' === $job['mode'] ) {
+			OPEX_Runner::dispatch( (string) $job['id'] );
+		}
+		return rest_ensure_response( $result );
 	}
 
 	public static function pause_job( WP_REST_Request $request ) {

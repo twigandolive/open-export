@@ -84,6 +84,11 @@ class OPEX_Source_Woo_Customers extends OPEX_Source_Table {
 	}
 
 	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Customers', 'open-export' );
+	}
+
+	/** @inheritDoc */
 	public function picker_item(): ?array {
 		return array(
 			'id'    => self::SOURCE,

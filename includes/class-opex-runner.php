@@ -219,6 +219,44 @@ class OPEX_Runner {
 	}
 
 	/**
+	 * Run a done job's pending and failed deliveries now, for the Retry button.
+	 * It holds the same lock as deliver(), skips the wait between attempts,
+	 * never sends an item marked sent, and never goes past the attempt limit.
+	 *
+	 * @param string $job_id Job id.
+	 * @return array|WP_Error The exposed job, or an error.
+	 */
+	public static function deliver_now( string $job_id ) {
+		$job = OPEX_Jobs::get( $job_id );
+		if ( ! $job ) {
+			return new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+		}
+		if ( 'done' !== $job['status'] ) {
+			return new WP_Error( 'opex_not_done', __( 'Deliveries run only after the export has finished.', 'open-export' ), array( 'status' => 409 ) );
+		}
+		$token = OPEX_Lock::acquire( 'deliver_' . $job_id, self::DELIVER_LOCK );
+		if ( false === $token ) {
+			return new WP_Error( 'opex_busy', __( 'These deliveries are being sent right now. Try again in a minute.', 'open-export' ), array( 'status' => 409 ) );
+		}
+		try {
+			$job = OPEX_Jobs::get( $job_id );
+			if ( $job && self::has_pending( $job ) ) {
+				$list  = OPEX_Delivery::process( $job, (array) ( $job['delivery'] ?? array() ), true );
+				$fresh = OPEX_Jobs::get( $job_id );
+				if ( $fresh ) {
+					$fresh['deliveries'] = $list;
+					OPEX_Jobs::save( $fresh );
+					self::queue_retry( $job_id, $list );
+				}
+			}
+		} finally {
+			OPEX_Lock::release( 'deliver_' . $job_id, $token );
+		}
+		$job = OPEX_Jobs::get( $job_id );
+		return $job ? OPEX_Jobs::expose( $job ) : new WP_Error( 'opex_missing', __( 'Export job not found.', 'open-export' ), array( 'status' => 404 ) );
+	}
+
+	/**
 	 * Schedule the next delivery attempt, if any item still has one coming.
 	 *
 	 * @param string $job_id Job id.

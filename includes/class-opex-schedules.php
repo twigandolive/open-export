@@ -92,11 +92,12 @@ class OPEX_Schedules {
 	/**
 	 * Validate and save. Returns the record or a WP_Error.
 	 *
-	 * @param array  $raw Untrusted input. Missing keys keep their stored value on update.
-	 * @param string $id  Existing schedule id, or '' to create.
+	 * @param array    $raw   Untrusted input. Missing keys keep their stored value on update.
+	 * @param string   $id    Existing schedule id, or '' to create.
+	 * @param string[] $notes Receives what the config and delivery cleaning changed or dropped.
 	 * @return array|WP_Error
 	 */
-	public static function save( array $raw, string $id = '' ) {
+	public static function save( array $raw, string $id = '', array &$notes = array() ) {
 		$all = self::all();
 		if ( '' !== $id ) {
 			if ( ! isset( $all[ $id ] ) ) {
@@ -119,7 +120,7 @@ class OPEX_Schedules {
 		$rec['name'] = $name;
 
 		if ( isset( $raw['config'] ) || '' === $id ) {
-			$config = OPEX_Exporter::sanitize_config( (array) ( $raw['config'] ?? array() ) );
+			$config = OPEX_Exporter::sanitize_config( (array) ( $raw['config'] ?? array() ), $notes );
 			if ( is_wp_error( $config ) ) {
 				return $config;
 			}
@@ -169,7 +170,7 @@ class OPEX_Schedules {
 		$rec['filename'] = '' === $pattern ? '{label}-{date}' : mb_substr( $pattern, 0, 200 );
 
 		$delivery        = is_array( $raw['delivery'] ?? null ) ? $raw['delivery'] : $base['delivery'];
-		$rec['delivery'] = self::sanitize_delivery( $delivery, $base['delivery'], ! empty( $raw['clear_secret'] ) );
+		$rec['delivery'] = self::sanitize_delivery( $delivery, $base['delivery'], ! empty( $raw['clear_secret'] ), $notes );
 
 		$now = time();
 		if ( '' === $id ) {
@@ -201,15 +202,32 @@ class OPEX_Schedules {
 	 * @param array $raw          Untrusted delivery settings.
 	 * @param array $base         Stored settings, used to keep a webhook secret left blank.
 	 * @param bool  $clear_secret True to remove the stored webhook secret.
+	 * @param array $notes        Receives notes, such as a channel turned off.
 	 */
-	private static function sanitize_delivery( array $raw, array $base, bool $clear_secret ): array {
+	private static function sanitize_delivery( array $raw, array $base, bool $clear_secret, array &$notes ): array {
 		if ( $clear_secret ) {
 			$raw['webhook']                 = is_array( $raw['webhook'] ?? null ) ? $raw['webhook'] : array();
 			$raw['webhook']['clear_secret'] = true;
 			$raw['webhook']['secret']       = '';
 		}
-		$notes = array();
 		return OPEX_Delivery::sanitize( $raw, $notes, $base );
+	}
+
+	/**
+	 * Clear the watermark, so the next incremental run exports every row again.
+	 *
+	 * @param string $id Schedule id.
+	 * @return array|null The saved record, or null when there is no such schedule.
+	 */
+	public static function reset_watermark( string $id ): ?array {
+		$all = self::all();
+		if ( ! isset( $all[ $id ] ) ) {
+			return null;
+		}
+		$all[ $id ]['watermark'] = '';
+		$all[ $id ]['updated']   = time();
+		self::write( $all );
+		return $all[ $id ];
 	}
 
 	/** Delete a schedule and its cron event. */

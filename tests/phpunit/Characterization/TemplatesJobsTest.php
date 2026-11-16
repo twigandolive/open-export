@@ -104,7 +104,7 @@ class TemplatesJobsTest extends CharacterizationCase {
 		$config = $this->config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'batch_size' => 20 ) );
 		$job    = OPEX_Exporter::create( $config, 'Lifecycle' );
 		$this->job_ids[] = $job['id'];
-		$this->assertSame( array( 'id', 'label', 'format', 'status', 'total', 'processed', 'created', 'filename', 'filesize', 'error', 'mode', 'origin', 'schedule_id', 'deliveries', 'notes', 'delivery_name' ), array_keys( $job ) );
+		$this->assertSame( array( 'id', 'label', 'format', 'status', 'total', 'processed', 'created', 'filename', 'filesize', 'error', 'mode', 'origin', 'schedule_id', 'deliveries', 'notes', 'delivery_name', 'finished', 'heartbeat', 'schedule_name', 'source', 'source_label' ), array_keys( $job ) );
 		$this->assertSame( 'running', $job['status'] );
 		$this->assertSame( 60, $job['total'] );
 		$this->assertSame( 0, $job['processed'] );

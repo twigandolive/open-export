@@ -29,7 +29,7 @@ class OPEX_Source_Woo_Orders_Legacy extends OPEX_Source_Posts {
 
 	/** @inheritDoc */
 	protected function extra_where(): array {
-		return array( "p.post_status <> 'checkout-draft'" );
+		return array( 'p.post_status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' );
 	}
 
 	/** @inheritDoc */
@@ -46,6 +46,11 @@ class OPEX_Source_Woo_Orders_Legacy extends OPEX_Source_Posts {
 	/** @inheritDoc */
 	public function field_groups(): array {
 		return OPEX_Woo::fields();
+	}
+
+	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Orders', 'open-export' );
 	}
 
 	/** @inheritDoc */

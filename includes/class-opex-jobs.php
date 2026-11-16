@@ -132,13 +132,19 @@ class OPEX_Jobs {
 		}
 	}
 
-	/** Remove jobs and files older than the retention setting. */
+	/**
+	 * Remove jobs and files older than the retention setting. The setting
+	 * means "keep finished exports for N days", so age counts from when a job
+	 * finished. A job that never finished (or a record from before finish
+	 * times were saved) counts from when it was created.
+	 */
 	public static function sweep(): void {
 		$jobs    = self::stored();
 		$changed = false;
 		$max_age = max( 1, (int) OPEX_Settings::get( 'retention_days' ) ) * DAY_IN_SECONDS;
 		foreach ( $jobs as $id => $job ) {
-			if ( time() - (int) ( $job['created'] ?? 0 ) > $max_age ) {
+			$since = (int) ( $job['finished'] ?? 0 ) > 0 ? (int) $job['finished'] : (int) ( $job['created'] ?? 0 );
+			if ( time() - $since > $max_age ) {
 				self::remove_file( $job );
 				unset( $jobs[ $id ] );
 				$changed = true;
@@ -168,7 +174,25 @@ class OPEX_Jobs {
 			'deliveries'    => self::expose_deliveries( (array) ( $job['deliveries'] ?? array() ) ),
 			'notes'         => array_map( 'strval', array_values( (array) ( $job['notes'] ?? array() ) ) ),
 			'delivery_name' => (string) ( $job['delivery_name'] ?? '' ),
+			'finished'      => (int) ( $job['finished'] ?? 0 ),
+			'heartbeat'     => (int) ( $job['heartbeat'] ?? 0 ),
+			'schedule_name' => self::schedule_name( (string) ( $job['schedule_id'] ?? '' ) ),
+			'source'        => (string) ( $job['config']['source'] ?? '' ),
+			'source_label'  => class_exists( 'OPEX_Source_Labels' ) ? OPEX_Source_Labels::of( (string) ( $job['config']['source'] ?? '' ) ) : '',
 		);
+	}
+
+	/**
+	 * Name of the schedule that started a job, or '' when there is none or it was deleted.
+	 *
+	 * @param string $id Schedule id.
+	 */
+	private static function schedule_name( string $id ): string {
+		if ( '' === $id || ! class_exists( 'OPEX_Schedules' ) ) {
+			return '';
+		}
+		$schedule = OPEX_Schedules::get( $id );
+		return $schedule ? (string) $schedule['name'] : '';
 	}
 
 	/**

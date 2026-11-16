@@ -116,6 +116,28 @@ class TransformsTest extends TestCase {
 		$this->assertSame( '1000', $this->run_step( array( 'type' => 'number', 'decimals' => 0, 'thousands_sep' => '' ), '1000' ) );
 	}
 
+	public function test_number_uses_exact_string_math(): void {
+		$step = static function ( int $decimals, string $sep = ',' ): array {
+			return array( 'type' => 'number', 'decimals' => $decimals, 'dec_point' => '.', 'thousands_sep' => $sep );
+		};
+		// Half rounds away from zero at the chosen place, where a float would miss.
+		$this->assertSame( '1.01', $this->run_step( $step( 2 ), '1.005' ) );
+		$this->assertSame( '2.68', $this->run_step( $step( 2 ), '2.675' ) );
+		$this->assertSame( '0.5', $this->run_step( $step( 1 ), '0.45' ) );
+		$this->assertSame( '-1.01', $this->run_step( $step( 2 ), '-1.005' ) );
+		$this->assertSame( '-1,234.57', $this->run_step( $step( 2 ), '-1234.567' ) );
+		$this->assertSame( '0.00', $this->run_step( $step( 2 ), '-0.001' ), 'no negative zero' );
+		$this->assertSame( '3', $this->run_step( $step( 0 ), '2.5' ) );
+		$this->assertSame( '1,000,000', $this->run_step( $step( 0 ), '999999.5' ) );
+		$this->assertSame( '12,345,678,901,234,567,890.00', $this->run_step( $step( 2 ), '12345678901234567890' ), 'a 20-digit number keeps every digit' );
+		$this->assertSame( "1\u{202F}234.50", $this->run_step( $step( 2, "\u{202F}" ), '1234.5' ), 'a multibyte separator stays whole' );
+		$this->assertSame( '0.50', $this->run_step( $step( 2, '' ), '.5' ) );
+		$this->assertSame( '7', $this->run_step( $step( 0 ), ' +7 ' ), 'spaces and a plus sign around a number are fine' );
+		foreach ( array( 'abc', '1e3', '12 apples', '0x1A', '1,5', '', '-', '1.2.3' ) as $text ) {
+			$this->assertSame( $text, $this->run_step( $step( 2 ), $text ), "\"$text\" passes through" );
+		}
+	}
+
 	public function test_number_clamps_decimals(): void {
 		$notes = array();
 		$out   = OPEX_Transforms::sanitize( array( 'core:x' => array( array( 'type' => 'number', 'decimals' => 99 ), array( 'type' => 'number', 'decimals' => -4 ) ) ), array( 'core:x' ), $notes );

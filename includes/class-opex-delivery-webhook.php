@@ -20,6 +20,31 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Delivery_Webhook {
 
 	/**
+	 * Whether a webhook URL may carry the signed payload: https, or plain
+	 * http only to this site's own host or a loopback address of this
+	 * machine. Plain http to another machine would send the payload and its
+	 * download link in the clear. Saving and sending both use this one rule.
+	 * (A loopback URL still has to pass wp_http_validate_url, which refuses it
+	 * unless a site opts in through the http_request_host_is_external filter.)
+	 *
+	 * @param string $url Webhook URL.
+	 * @return bool
+	 */
+	public static function transport_allowed( string $url ): bool {
+		if ( 'https' === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) ) {
+			return true;
+		}
+		$host = strtolower( trim( (string) wp_parse_url( $url, PHP_URL_HOST ), '[]' ) );
+		if ( '' === $host ) {
+			return false;
+		}
+		if ( 'localhost' === $host || '::1' === $host || ( false !== filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) && 0 === strpos( $host, '127.' ) ) ) {
+			return true;
+		}
+		return strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) === $host;
+	}
+
+	/**
 	 * Sends the notice.
 	 *
 	 * @param array  $job       Job record.
@@ -31,6 +56,10 @@ class OPEX_Delivery_Webhook {
 		$url = trim( (string) ( $settings['url'] ?? '' ) );
 		if ( 1 !== preg_match( '#^https?://#i', $url ) || false === wp_http_validate_url( $url ) ) {
 			return new WP_Error( 'opex_webhook_url', __( 'The webhook URL is not allowed.', 'open-export' ) );
+		}
+		// Checked again here because a stored URL may predate the rule or be edited in the database.
+		if ( ! self::transport_allowed( $url ) ) {
+			return new WP_Error( 'opex_webhook_url', __( 'The webhook URL must use https unless it points at this site.', 'open-export' ) );
 		}
 
 		$secret = '';

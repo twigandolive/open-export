@@ -321,7 +321,7 @@ class WooProductsTest extends WooSourceCase {
 			'woo:featured'           => 'boolean',
 			'woo:date_on_sale_from'  => 'date',
 			'woo:image_url'          => 'url',
-			'woo:attributes'         => 'text',
+			'woo:attributes'         => 'json',
 			'woo:catalog_visibility' => 'enum',
 		) );
 		$doc    = OPEX_Schema::build( 'woo:products' );

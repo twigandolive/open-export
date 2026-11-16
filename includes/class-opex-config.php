@@ -15,7 +15,7 @@ class OPEX_Config {
 	private const FORMATS        = array( 'csv', 'json', 'xml' );
 	private const CSV_ENCODINGS  = array( 'utf8_bom', 'utf8', 'win1252', 'utf16le' );
 	private const CSV_EOLS       = array( 'lf', 'crlf' );
-	private const XML_PART_MAX   = 20000;
+	public const XML_PART_MAX    = 20000;
 
 	/**
 	 * Validate a raw config from the client and reduce it to exactly the
@@ -26,6 +26,12 @@ class OPEX_Config {
 		$src    = OPEX_Query::parse_source( $source );
 		if ( ! $src ) {
 			return new WP_Error( 'opex_bad_source', __( 'Unknown data source.', 'open-export' ), array( 'status' => 400 ) );
+		}
+
+		// A network export reads every site, so only a super admin of a network may ask for one.
+		$network = ! empty( $raw['network'] ) && rest_sanitize_boolean( $raw['network'] );
+		if ( $network && ! ( is_multisite() && is_super_admin() ) ) {
+			return new WP_Error( 'opex_bad_network', __( 'Only a network super admin can export from every site, and only on a multisite network.', 'open-export' ), array( 'status' => 400 ) );
 		}
 
 		$fields = array();
@@ -171,7 +177,7 @@ class OPEX_Config {
 			'xml_template'   => $template,
 			'transforms'     => $transforms,
 			'custom_columns' => $custom,
-			'network'        => ! empty( $raw['network'] ) && rest_sanitize_boolean( $raw['network'] ),
+			'network'        => $network,
 		);
 		foreach ( $optional as $key => $value ) {
 			if ( OPEX_Jobs::CONFIG_DEFAULTS[ $key ] !== $value ) {

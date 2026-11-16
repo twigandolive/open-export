@@ -4,7 +4,7 @@
  *
  * Two halves of one round trip:
  *
- *   build()            describes what this site can export — sources, fields,
+ *   build()            describes what this site can export: sources, fields,
  *                      filter operators, date columns, and the legal values for
  *                      the fields where a wrong guess would silently return
  *                      nothing. The user hands that JSON to an assistant.
@@ -87,7 +87,7 @@ class OPEX_Schema {
 			}
 		}
 
-		return array(
+		return OPEX_Schema_Document::extend( array(
 			'opex_schema'    => self::SCHEMA_VERSION,
 			'plugin'         => 'Open Export',
 			'plugin_version' => OPEX_VERSION,
@@ -101,7 +101,7 @@ class OPEX_Schema {
 			'csv_delimiters' => array( 'comma', 'semicolon', 'tab' ),
 			'all_sources'    => $index,
 			'sources'        => $detailed,
-		);
+		) );
 	}
 
 	private static function site_info(): array {
@@ -128,7 +128,7 @@ class OPEX_Schema {
 				'To request an export, reply with a JSON object matching "recipe_format" below.',
 				'Use only field ids that appear in this document under sources[].fields[].id — a field id that is not listed will be dropped and reported.',
 				'Field ids are prefixed by where the value comes from: "core:" is a column on the main table, "meta:" is a custom field, "tax:" is a taxonomy, "computed:" is derived, "col:" is a raw table column, and "woo:" is a WooCommerce field (orders, order items, customers, products or coupons).',
-				'Filters are a flat list of rules joined by a single relation, either AND or OR; there is no nesting.',
+				'Filters are a group of rules joined by one relation, AND or OR. A rule may itself be a group with its own relation, as described under "filter_groups".',
 				'The date range is separate from the filter rules and is always combined with AND, so it narrows the export even when the rules use OR.',
 				'Dates are whole calendar days in the site timezone given under site.timezone, written as YYYY-MM-DD, and the "to" date is included in full.',
 				'Prefer a named preset from "date_presets" over explicit dates when the user asked for a relative period such as last month, because a preset stays relative when the export is saved and re-run.',
@@ -293,7 +293,7 @@ class OPEX_Schema {
 	}
 
 	/** Coarse type hint so an assistant knows what a field holds. */
-	private static function field_type( array $src, string $field ): string {
+	public static function field_type( array $src, string $field ): string {
 		if ( 0 === strpos( $field, 'woo:' ) ) {
 			$provider = OPEX_Sources::for_src( $src );
 			return $provider ? $provider->field_type( $field ) : 'text';
@@ -359,7 +359,7 @@ class OPEX_Schema {
 
 	/**
 	 * Legal values for the handful of fields where guessing wrong yields an
-	 * empty export — statuses, roles, taxonomy terms. Everything else returns
+	 * empty export (statuses, roles, taxonomy terms). Everything else returns
 	 * an empty array rather than paying for a DISTINCT over a large column.
 	 */
 	private static function field_values( array $src, string $field ): array {
@@ -409,8 +409,8 @@ class OPEX_Schema {
 	 * and a nearest match, and a recipe where nothing resolves is refused
 	 * outright rather than applied as an empty export.
 	 *
-	 * Returns array( ok, report, config, name ). Only a malformed request —
-	 * no source, or a source this site does not have — is a WP_Error.
+	 * Returns array( ok, report, config, name ). Only a malformed request
+	 * (no source, or a source this site does not have) is a WP_Error.
 	 */
 	public static function recipe_to_config( array $recipe, array &$notes = array() ) {
 		$report = array(
@@ -619,7 +619,7 @@ class OPEX_Schema {
 	 * else falls back to edit distance, and only when it is close enough to be
 	 * worth showing.
 	 */
-	private static function suggest( string $wanted, array $candidates ): string {
+	public static function suggest( string $wanted, array $candidates ): string {
 		$wanted = strtolower( trim( $wanted ) );
 		if ( '' === $wanted || ! $candidates ) {
 			return '';

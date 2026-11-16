@@ -26,6 +26,27 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 	/** The source id saved configs use. */
 	const SOURCE = 'woo:order_items';
 
+	/**
+	 * Where each item type keeps its line amounts. A fee has no subtotal, and
+	 * shipping, coupon and tax items name their amounts differently.
+	 */
+	const SUBTOTAL_KEYS     = array( 'line_item' => '_line_subtotal' );
+	const SUBTOTAL_TAX_KEYS = array( 'line_item' => '_line_subtotal_tax' );
+	const TOTAL_KEYS        = array(
+		'line_item' => '_line_total',
+		'fee'       => '_line_total',
+		'shipping'  => 'cost',
+		'coupon'    => 'discount_amount',
+		'tax'       => 'tax_amount',
+	);
+	const TAX_KEYS          = array(
+		'line_item' => '_line_tax',
+		'fee'       => '_line_tax',
+		'shipping'  => 'total_tax',
+		'coupon'    => 'discount_amount_tax',
+		'tax'       => 'shipping_tax_amount',
+	);
+
 	/** The provider when WooCommerce is active, else null. */
 	public static function resolve(): ?OPEX_Source_Provider {
 		return OPEX_Woo::is_active() ? OPEX_Sources::instance( __CLASS__ ) : null;
@@ -75,9 +96,9 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 	public function base_where(): array {
 		// The same orders the orders source exports: no refunds, no carts.
 		if ( OPEX_Woo::use_hpos() ) {
-			return array( array( "o.type = 'shop_order'", "o.status NOT IN ('auto-draft', 'checkout-draft')" ), array() );
+			return array( array( "o.type = 'shop_order'", 'o.status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' ), array() );
 		}
-		return array( array( "op.post_type = 'shop_order'", "op.post_status NOT IN ('auto-draft', 'checkout-draft')" ), array() );
+		return array( array( "op.post_type = 'shop_order'", 'op.post_status NOT IN (' . OPEX_Woo::DRAFT_STATUS_SQL . ')' ), array() );
 	}
 
 	/** @inheritDoc */
@@ -93,6 +114,11 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 	/** @inheritDoc */
 	protected function base_select(): string {
 		return 'oi.order_item_id';
+	}
+
+	/** @inheritDoc */
+	public function label(): string {
+		return __( 'WooCommerce Order Items', 'open-export' );
 	}
 
 	/** @inheritDoc */
@@ -150,15 +176,29 @@ class OPEX_Source_Woo_Order_Items extends OPEX_Source_Table {
 			'woo:variation_id'       => array( 'group' => $item, 'type' => 'id', 'sql' => $variation ),
 			'woo:sku'                => array( 'group' => $item, 'type' => 'text', 'sql' => $sku ),
 			'woo:quantity'           => array( 'group' => $item, 'type' => 'number', 'sql' => $this->item_meta( '_qty' ) ),
-			'woo:line_subtotal'      => array( 'group' => $money, 'type' => 'number', 'sql' => $this->item_meta( '_line_subtotal' ), 'format' => 'money' ),
-			'woo:line_subtotal_tax'  => array( 'group' => $money, 'type' => 'number', 'sql' => $this->item_meta( '_line_subtotal_tax' ), 'format' => 'money' ),
-			'woo:line_total'         => array( 'group' => $money, 'type' => 'number', 'sql' => $this->item_meta( '_line_total' ), 'format' => 'money' ),
-			'woo:line_tax'           => array( 'group' => $money, 'type' => 'number', 'sql' => $this->item_meta( '_line_tax' ), 'format' => 'money' ),
+			'woo:line_subtotal'      => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::SUBTOTAL_KEYS ), 'format' => 'money' ),
+			'woo:line_subtotal_tax'  => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::SUBTOTAL_TAX_KEYS ), 'format' => 'money' ),
+			'woo:line_total'         => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::TOTAL_KEYS ), 'format' => 'money' ),
+			'woo:line_tax'           => array( 'group' => $money, 'type' => 'number', 'sql' => $this->by_type( self::TAX_KEYS ), 'format' => 'money' ),
 			'woo:order_number'       => array( 'group' => $order, 'type' => 'id', 'sql' => $hpos ? 'o.id' : 'op.ID' ),
 			'woo:order_date_created' => array( 'group' => $order, 'type' => 'date', 'sql' => $hpos ? 'o.date_created_gmt' : 'op.post_date', 'format' => $hpos ? 'utc' : 'local' ),
 			'woo:order_status'       => array( 'group' => $order, 'type' => 'enum', 'sql' => $hpos ? 'o.status' : 'op.post_status', 'values' => $stati ),
 			'woo:billing_email'      => array( 'group' => $order, 'type' => 'email', 'sql' => $email ),
 		);
+	}
+
+	/**
+	 * SQL that reads a different meta key for each item type. A type with no
+	 * key gives NULL, which prints empty.
+	 *
+	 * @param array<string, string> $keys Item type => meta key, constants in this class.
+	 */
+	private function by_type( array $keys ): string {
+		$sql = 'CASE oi.order_item_type';
+		foreach ( $keys as $type => $key ) {
+			$sql .= " WHEN '{$type}' THEN " . $this->item_meta( $key );
+		}
+		return $sql . ' END';
 	}
 
 	/**

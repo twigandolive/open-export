@@ -65,8 +65,7 @@ class OPEX_Delivery {
 			$hon     = false;
 			$notes[] = __( 'Webhook delivery was turned off because it has no URL.', 'open-export' );
 		}
-		if ( $hon && '' !== $url && 'https' !== strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) && strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) ) !== strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ) {
-			// Plain http to another machine would send the signed payload in the clear.
+		if ( $hon && '' !== $url && ! OPEX_Delivery_Webhook::transport_allowed( $url ) ) {
 			$hon     = false;
 			$notes[] = __( 'Webhook delivery was turned off because its URL must use https unless it points at this site.', 'open-export' );
 		}
@@ -136,9 +135,10 @@ class OPEX_Delivery {
 	 *
 	 * @param array $job      Job record (uses its deliveries list when present).
 	 * @param array $delivery Delivery settings the items came from.
+	 * @param bool  $now      True when a person asked to retry now, so the wait between attempts is skipped.
 	 * @return array The updated deliveries list. The caller saves it.
 	 */
-	public static function process( array $job, array $delivery ): array {
+	public static function process( array $job, array $delivery, bool $now = false ): array {
 		$items = isset( $job['deliveries'] ) && is_array( $job['deliveries'] ) ? array_values( $job['deliveries'] ) : self::plan( $delivery );
 		$path  = OPEX_Jobs::file_path( $job );
 
@@ -151,7 +151,7 @@ class OPEX_Delivery {
 			if ( 'sent' === $status || $attempts >= self::MAX_ATTEMPTS || ! in_array( $status, array( 'pending', 'failed' ), true ) ) {
 				continue;
 			}
-			if ( $attempts > 0 && self::due_at( $item ) > time() ) {
+			if ( ! $now && $attempts > 0 && self::due_at( $item ) > time() ) {
 				continue;
 			}
 

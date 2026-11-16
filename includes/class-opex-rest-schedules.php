@@ -234,11 +234,12 @@ class OPEX_Rest_Schedules {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function create( WP_REST_Request $request ) {
-		$saved = OPEX_Schedules::save( self::raw( $request ) );
+		$notes = array();
+		$saved = OPEX_Schedules::save( self::raw( $request ), '', $notes );
 		if ( is_wp_error( $saved ) ) {
 			return self::fail( $saved );
 		}
-		$response = rest_ensure_response( OPEX_Schedules::expose( $saved ) );
+		$response = rest_ensure_response( self::with_notes( $saved, $notes ) );
 		$response->set_status( 201 );
 		return $response;
 	}
@@ -277,8 +278,23 @@ class OPEX_Rest_Schedules {
 			unset( $hook['clear_secret'], $hook['has_secret'] );
 			$raw['delivery']['webhook'] = $hook;
 		}
-		$saved = OPEX_Schedules::save( $raw, $id );
-		return is_wp_error( $saved ) ? self::fail( $saved ) : rest_ensure_response( OPEX_Schedules::expose( $saved ) );
+		$notes = array();
+		$saved = OPEX_Schedules::save( $raw, $id, $notes );
+		return is_wp_error( $saved ) ? self::fail( $saved ) : rest_ensure_response( self::with_notes( $saved, $notes ) );
+	}
+
+	/**
+	 * The exposed schedule plus the notes from cleaning its config and delivery,
+	 * so the screen can say why a field was dropped or a channel switched off.
+	 *
+	 * @param array    $schedule Saved record.
+	 * @param string[] $notes    Notes.
+	 * @return array
+	 */
+	private static function with_notes( array $schedule, array $notes ): array {
+		$out          = OPEX_Schedules::expose( $schedule );
+		$out['notes'] = array_values( array_unique( array_map( 'strval', $notes ) ) );
+		return $out;
 	}
 
 	/**

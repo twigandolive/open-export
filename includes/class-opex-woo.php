@@ -26,6 +26,12 @@ class OPEX_Woo {
 	/** Post type backing legacy order storage. */
 	public const LEGACY_POST_TYPE = 'shop_order';
 
+	/**
+	 * Order statuses that are carts, not orders, as a SQL list. WooCommerce
+	 * saves a checkout draft as "wc-checkout-draft", older code wrote the plain spelling.
+	 */
+	public const DRAFT_STATUS_SQL = "'auto-draft', 'checkout-draft', 'wc-checkout-draft'";
+
 	/** True when WooCommerce is present and loaded. */
 	public static function is_active(): bool {
 		return class_exists( 'WooCommerce' ) || defined( 'WC_VERSION' );
@@ -245,7 +251,7 @@ class OPEX_Woo {
 	 *
 	 * post_date is a real column. _date_paid and _date_completed are postmeta
 	 * holding a UNIX timestamp, so they compare as integers against epochs
-	 * computed in PHP — never against a datetime literal, and never through
+	 * computed in PHP, never against a datetime literal, and never through
 	 * MySQL's UNIX_TIMESTAMP(), whose result depends on the session timezone.
 	 */
 	public static function legacy_date_fields(): array {
@@ -314,8 +320,8 @@ class OPEX_Woo {
 	}
 
 	/**
-	 * FROM clause for the HPOS query. Every join is many-to-one — one billing
-	 * row, one shipping row, one operational row per order — so the result is
+	 * FROM clause for the HPOS query. Every join is many-to-one (one billing
+	 * row, one shipping row, one operational row per order), so the result is
 	 * exactly one row per order and keyset paging on o.id stays sound.
 	 */
 	public static function from_clause(): string {
@@ -451,11 +457,11 @@ class OPEX_Woo {
 			$table = self::table( 'orders' );
 			$safe  = str_replace( '`', '', $table );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- identifier validated above; one cheap COUNT for the picker.
-			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN ('auto-draft', 'checkout-draft')", 'shop_order' ) );
+			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$safe}` WHERE type = %s AND status NOT IN (" . self::DRAFT_STATUS_SQL . ')', 'shop_order' ) );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one cheap COUNT for the picker.
 			$count = (int) $wpdb->get_var( $wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN ('auto-draft', 'checkout-draft')",
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status NOT IN (" . self::DRAFT_STATUS_SQL . ')',
 				self::LEGACY_POST_TYPE
 			) );
 		}

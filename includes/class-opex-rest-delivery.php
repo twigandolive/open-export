@@ -183,6 +183,10 @@ class OPEX_Rest_Delivery {
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 			),
+			'reset_host_key' => array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			),
 		) );
 	}
 
@@ -215,7 +219,7 @@ class OPEX_Rest_Delivery {
 	private static function raw( WP_REST_Request $request ): array {
 		$params = $request->get_params();
 		$raw    = array();
-		foreach ( array( 'name', 'type', 'host', 'port', 'username', 'auth', 'secret', 'path', 'passive' ) as $key ) {
+		foreach ( array( 'name', 'type', 'host', 'port', 'username', 'auth', 'secret', 'path', 'passive', 'reset_host_key' ) as $key ) {
 			if ( array_key_exists( $key, $params ) ) {
 				$raw[ $key ] = $params[ $key ];
 			}
@@ -312,11 +316,11 @@ class OPEX_Rest_Delivery {
 		if ( ! OPEX_Destinations::get( $id ) ) {
 			return self::missing();
 		}
-		$result = OPEX_Destinations::test( $id );
-		if ( is_wp_error( $result ) ) {
-			return rest_ensure_response( array( 'ok' => false, 'message' => $result->get_error_message() ) );
-		}
-		return rest_ensure_response( array( 'ok' => true, 'message' => __( 'The connection works.', 'open-export' ) ) );
+		$result  = OPEX_Destinations::test( $id );
+		$ok      = ! is_wp_error( $result );
+		$message = $ok ? __( 'The connection works.', 'open-export' ) : $result->get_error_message();
+		OPEX_Destinations::record_test( $id, $ok, $message );
+		return rest_ensure_response( array( 'ok' => $ok, 'message' => $message ) );
 	}
 
 	/**
@@ -364,7 +368,7 @@ class OPEX_Rest_Delivery {
 			return $out;
 		};
 		return rest_ensure_response(
-			array(
+			OPEX_Rest_Screen::extend_options( array(
 				'formats'          => OPEX_Writer::formats(),
 				'transforms'       => OPEX_Transforms::types(),
 				'csv_encodings'    => $list(
@@ -414,7 +418,7 @@ class OPEX_Rest_Delivery {
 					'transform_steps' => OPEX_Transforms::MAX_STEPS,
 					'custom_columns'  => OPEX_Custom_Columns::MAX_COLUMNS,
 				),
-			)
+			) )
 		);
 	}
 }

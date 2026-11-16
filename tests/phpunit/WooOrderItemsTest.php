@@ -75,8 +75,8 @@ class WooOrderItemsTest extends WooSourceCase {
 		$draft_line->set_props( array( 'product' => wc_get_product( $this->ids['simple'] ), 'quantity' => 9, 'total' => '90' ) );
 		$draft->add_item( $draft_line );
 		$this->ids['draft'] = (int) $draft->save();
-		// WooCommerce saves this status as "wc-checkout-draft". The orders source
-		// excludes the plain spelling, so the fixture stores that one (see the pass report).
+		// WooCommerce saves this status as "wc-checkout-draft". This fixture stores
+		// the plain spelling, which older code wrote. WooDraftOrdersTest covers the real one.
 		global $wpdb;
 		if ( OPEX_Woo::use_hpos() ) {
 			$wpdb->update( OPEX_Woo::table( 'orders' ), array( 'status' => 'checkout-draft' ), array( 'id' => $this->ids['draft'] ) );
@@ -163,7 +163,7 @@ class WooOrderItemsTest extends WooSourceCase {
 
 		$this->assertSame( 'Flat rate', $rows[2]['woo:item_name'] );
 		$this->assertSame( '', $rows[2]['woo:product_id'] );
-		$this->assertSame( '', $rows[2]['woo:line_total'] );
+		$this->assertSame( '4.99', $rows[2]['woo:line_total'], 'a shipping item reads its cost (ruling 3.6)' );
 		$this->assertSame( '2.50', $rows[3]['woo:line_total'] );
 		$this->assertSame( 'opex-items', $rows[4]['woo:item_name'] );
 	}

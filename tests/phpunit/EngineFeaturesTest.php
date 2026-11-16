@@ -105,11 +105,18 @@ class EngineFeaturesTest extends TestCase {
 			'fields'       => array( 'core:ID' ),
 			'csv_encoding' => 'win1252',
 			'csv_eol'      => 'crlf',
-			'network'      => true,
 		) );
 		$this->assertSame( 'win1252', $config['csv_encoding'] );
 		$this->assertSame( 'crlf', $config['csv_eol'] );
-		$this->assertTrue( $config['network'] );
+
+		// Ruling 3.5: network is kept only for a super admin on a multisite network.
+		$network = OPEX_Exporter::sanitize_config( array( 'source' => 'posts:post', 'fields' => array( 'core:ID' ), 'network' => true ) );
+		if ( is_multisite() && is_super_admin() ) {
+			$this->assertTrue( $network['network'] );
+		} else {
+			$this->assertWPError( $network );
+			$this->assertSame( 'opex_bad_network', $network->get_error_code() );
+		}
 
 		$config = $this->config( array( 'fields' => array( 'core:ID' ), 'csv_encoding' => 'ebcdic', 'csv_eol' => 'cr' ) );
 		$this->assertArrayNotHasKey( 'csv_encoding', $config );

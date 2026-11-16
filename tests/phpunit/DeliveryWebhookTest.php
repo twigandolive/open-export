@@ -86,6 +86,43 @@ class DeliveryWebhookTest extends TestCase {
 		}
 	}
 
+	public function test_stored_plain_http_to_another_host_is_refused_at_send_time() {
+		$calls = 0;
+		$block = static function ( $pre ) use ( &$calls ) {
+			++$calls;
+			return new WP_Error( 'opex_test_blocked', 'No real request in tests.' );
+		};
+		add_filter( 'pre_http_request', $block );
+		try {
+			$job = $this->make_job();
+			// Stored before the rule existed, or edited in the database: the save check never saw it.
+			// A documentation address, let through wp_http_validate_url without DNS, so only the https rule refuses it.
+			add_filter( 'http_request_host_is_external', '__return_true' );
+			$this->assertNotFalse( wp_http_validate_url( 'http://203.0.113.10/hook' ) );
+			$res = OPEX_Delivery_Webhook::send( $job, array( 'url' => 'http://203.0.113.10/hook' ), OPEX_Jobs::file_path( $job ) );
+			$this->assertInstanceOf( WP_Error::class, $res );
+			$this->assertSame( 'opex_webhook_url', $res->get_error_code() );
+			$this->assertStringContainsString( 'https', $res->get_error_message() );
+			$this->assertSame( 0, $calls, 'nothing was sent' );
+			$this->assertSame( array(), OPEX_Jobs::get( $job['id'] )['tokens'], 'no download link was issued' );
+
+			// Through the delivery runner too: the item fails and nothing goes out.
+			$delivery          = array( 'webhook' => array( 'enabled' => true, 'url' => 'http://203.0.113.10/hook', 'secret' => '' ) );
+			$job['deliveries'] = OPEX_Delivery::plan( $delivery );
+			$list              = OPEX_Delivery::process( $job, $delivery );
+			$this->assertSame( 'failed', $list[0]['status'] );
+			$this->assertStringContainsString( 'https', $list[0]['message'] );
+			$this->assertSame( 0, $calls );
+
+			// The same rule allows https and this site's own host.
+			$this->assertTrue( OPEX_Delivery_Webhook::transport_allowed( 'https://example.com/hook' ) );
+			$this->assertTrue( OPEX_Delivery_Webhook::transport_allowed( home_url( '/hook' ) ) );
+			$this->assertFalse( OPEX_Delivery_Webhook::transport_allowed( 'http://example.com/hook' ) );
+		} finally {
+			remove_filter( 'pre_http_request', $block );
+		}
+	}
+
 	public function test_signed_post_reaches_receiver() {
 		if ( ! self::$server ) {
 			$this->markTestSkipped( 'Could not start the local php -S receiver.' );
