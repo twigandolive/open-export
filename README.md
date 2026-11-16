@@ -4,8 +4,7 @@ Export anything from your WordPress database: every feature included, no add-ons
 
 Open Export is a free WordPress plugin. Choose a source, choose fields, filter, and export to CSV, Excel, JSON, XML or an HTML table. Save the setup, run it on a schedule, and have the file sent by email, webhook, FTP, FTPS or SFTP.
 
-> **Status:** version 2.0.0 is in development on this branch and this page describes it. The latest release is 1.3.1.
-
+- **Version:** 2.0.0
 - **Requires:** WordPress 7.0+, PHP 7.4+
 - **License:** [GPLv2 or later](LICENSE)
 - **Plugin page:** [Open Export in the Twig & Olive shop](https://twigandolive.com/shop/)

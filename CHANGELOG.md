@@ -5,7 +5,7 @@ All notable changes to Open Export are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-11-16
 
 Open Export now runs exports on a schedule, sends the file where you need it, and covers more of a WooCommerce store. It also closes a multisite data gap: see "Security". Read "Changed" before you upgrade. WooCommerce order files look different, and a few loose inputs that 1.3.1 ignored, such as a filter on a field the source does not have, are now errors.
 
