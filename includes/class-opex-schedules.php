@@ -1,8 +1,9 @@
 <?php
 /**
  * Saved export schedules. Stored in one non-autoloaded option. The next-run
- * math lives in OPEX_Schedule_Clock, the cron work in OPEX_Runner, and the
- * record defaults and input checks in OPEX_Schedule_Rules.
+ * math lives in OPEX_Schedule_Clock, the cron work in OPEX_Runner, the
+ * record defaults and input checks in OPEX_Schedule_Rules, and starting a
+ * run in OPEX_Schedule_Start.
  *
  * @package Open_Export
  */
@@ -19,9 +20,6 @@ class OPEX_Schedules {
 	private const OPTION = 'opex_schedules';
 	public const MAX     = 50;
 	private const HOOK   = 'opex_run_schedule';
-
-	/** Seconds the start lock lives between renewals. */
-	private const START_LOCK = 60;
 
 	/**
 	 * Default values for every key of a schedule record. See OPEX_Schedule_Rules.
@@ -250,8 +248,10 @@ class OPEX_Schedules {
 	 * @param string     $id       Schedule id.
 	 * @param array|null $last_run New last_run, or null to keep the stored one.
 	 * @return array|null The stored record, or null when there is no such schedule.
+	 *
+	 * @internal Shared with OPEX_Schedule_Start only.
 	 */
-	private static function rearm( string $id, ?array $last_run ): ?array {
+	public static function rearm( string $id, ?array $last_run ): ?array {
 		$saved = self::patch(
 			$id,
 			static function ( array $rec ) use ( $last_run ): array {
@@ -269,129 +269,25 @@ class OPEX_Schedules {
 	}
 
 	/**
-	 * Start a run now.
+	 * Start a run now. See OPEX_Schedule_Start.
 	 *
 	 * @param string $id     Schedule id.
 	 * @param string $origin 'cron', 'trigger', 'manual' or 'cli'.
 	 * @return array|WP_Error Exposed job or error.
 	 */
 	public static function start( string $id, string $origin ) {
-		// A run whose bookkeeping is still owed moves the watermark first, so
-		// this run does not export its rows again.
-		OPEX_Schedule_Owed::settle( $id );
-		$s = self::get( $id );
-		if ( ! $s ) {
-			return new WP_Error( 'opex_missing', __( 'Schedule not found.', 'open-export' ), array( 'status' => 404 ) );
-		}
-		if ( 'cron' === $origin && ! $s['enabled'] ) {
-			return new WP_Error( 'opex_disabled', __( 'This schedule is turned off.', 'open-export' ), array( 'status' => 409 ) );
-		}
-		// The check and the job creation happen under one lock, so two starts
-		// (the trigger URL, cron, a person) cannot both see "idle". Counting the
-		// rows can outlast the lock, so create() renews it as it goes and saves
-		// no job when it was lost: another start owns the schedule then.
-		$token = OPEX_Lock::acquire( 'sched_' . $id, self::START_LOCK );
-		if ( false === $token ) {
-			return self::busy();
-		}
-		$guard = static function () use ( $id, $token ): bool {
-			return OPEX_Lock::refresh( 'sched_' . $id, $token, self::START_LOCK );
-		};
-		try {
-			foreach ( OPEX_Jobs::all() as $job ) {
-				if ( ( $job['schedule_id'] ?? '' ) === $id && 'running' === $job['status'] ) {
-					return self::busy();
-				}
-			}
-			$job = OPEX_Exporter::create( $s['config'], $s['name'], self::job_extra( $s, $origin ), $guard );
-		} finally {
-			OPEX_Lock::release( 'sched_' . $id, $token );
-		}
-		if ( is_wp_error( $job ) ) {
-			return $job;
-		}
-
-		// A job that finished inside create() already set last_run through
-		// opex_job_done, so only a job still running writes it here.
-		$last_run = null;
-		if ( 'running' === $job['status'] ) {
-			$last_run = array(
-				'time'   => time(),
-				'job_id' => (string) $job['id'],
-				'status' => (string) $job['status'],
-				'rows'   => (int) $job['processed'],
-			);
-		}
-		self::rearm( $id, $last_run );
-
-		if ( 'running' === $job['status'] ) {
-			OPEX_Runner::dispatch( (string) $job['id'] );
-		}
-		return $job;
+		return OPEX_Schedule_Start::start( $id, $origin );
 	}
 
 	/**
-	 * Records that a cron start of this schedule was given up after the store
-	 * stayed busy, so its last run shows an error, and queues its next
-	 * regular run.
+	 * Records that a cron start of this schedule was given up. See OPEX_Schedule_Start.
 	 *
 	 * @param string $id Schedule id.
 	 * @return void
 	 * @throws OPEX_User_Error With the code BUSY when the store is still busy.
 	 */
 	public static function start_failed( string $id ): void {
-		self::rearm(
-			$id,
-			array(
-				'time'   => time(),
-				'job_id' => '',
-				'status' => 'error',
-				'rows'   => 0,
-			)
-		);
-	}
-
-	/**
-	 * The error for a schedule that is already running.
-	 *
-	 * @return WP_Error The error to return.
-	 */
-	private static function busy(): WP_Error {
-		return new WP_Error( 'opex_busy', __( 'This schedule is still running.', 'open-export' ), array( 'status' => 409 ) );
-	}
-
-	/**
-	 * What a schedule hands to OPEX_Exporter::create().
-	 *
-	 * @param array  $s      Schedule record.
-	 * @param string $origin Who started it.
-	 * @return array Extra job settings: mode, origin, delivery, file name, generation and since.
-	 */
-	private static function job_extra( array $s, string $origin ): array {
-		$extra = array(
-			'mode'          => 'background',
-			'schedule_id'   => (string) $s['id'],
-			'origin'        => in_array( $origin, array( 'manual', 'cron', 'trigger', 'cli' ), true ) ? $origin : 'manual',
-			'delivery'      => $s['delivery'],
-			'wide'          => ! empty( $s['wide'] ),
-			'generation'    => (string) $s['generation'],
-			'delivery_name' => OPEX_Filename::render(
-				(string) $s['filename'],
-				array(
-					'label'  => $s['name'],
-					'source' => (string) ( $s['config']['source'] ?? '' ),
-					'id'     => (string) $s['id'],
-				)
-			),
-		);
-		$field = (string) $s['incremental']['field'];
-		if ( $s['incremental']['enabled'] && '' !== $field && '' !== (string) $s['watermark'] ) {
-			$extra['since'] = array(
-				'field' => $field,
-				'after' => (string) $s['watermark'],
-			);
-		}
-		return $extra;
+		OPEX_Schedule_Start::start_failed( $id );
 	}
 
 	/**
