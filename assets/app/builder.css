@@ -1,0 +1,164 @@
+/*
+ * Open Export admin screen: the export builder, the Export tab and the
+ * delivery block. Taken from the approved v0 blueprint
+ * (.handoff/v0/open-export.html) with the review notes applied. Loads after
+ * app.css and uses only the color tokens defined on .opex-wrap there.
+ */
+
+/* Numbered builder cards */
+.opex-marker-check{display:none}
+.opex-card.is-done .opex-marker-num{display:none}
+.opex-card.is-done .opex-marker-check{display:block}
+.opex-card.is-locked .opex-card-body{display:none}
+.opex-push{margin-left:auto}
+
+/* Start from row and recipe */
+.opex-startbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
+.opex-startbar-label{font-weight:600;color:var(--text-secondary)}
+.opex-wrap .opex-preset-help{margin:-4px 0 12px}
+.opex-wrap .opex-preset-help:empty{display:none}
+.opex-recipe{margin:0 0 12px;padding:16px;border:1px solid var(--border);border-radius:4px;background:var(--panel)}
+.opex-recipe-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.opex-recipe .opex-result{margin-top:8px}
+.opex-report{margin-top:12px;border:1px solid var(--separator);border-radius:3px}
+.opex-report li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;padding:8px 12px;overflow-wrap:anywhere}
+.opex-report li + li{border-top:1px solid var(--separator)}
+.opex-report-name{display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.opex-wrap .opex-messages .opex-notice{margin-bottom:12px}
+
+/* Source */
+.opex-wrap input.opex-search[type="search"]{width:100%;max-width:320px}
+.opex-sourcegroup{margin-top:12px}
+.opex-groupname{margin:16px 0 8px;font-weight:600;color:var(--text-secondary)}
+.opex-sourcegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.opex-source{position:relative;display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 10px;border:1px solid var(--separator);border-radius:3px;background:var(--panel);cursor:pointer}
+.opex-source:hover{border-color:var(--border);background:var(--well)}
+.opex-source:has(input:checked){border-color:var(--accent);background:var(--accent-tint)}
+.opex-source:has(input:focus-visible){outline:2px solid var(--focus-ring);outline-offset:2px}
+.opex-source .dashicons{color:var(--text-secondary)}
+.opex-source:has(input:checked) .dashicons{color:var(--accent)}
+.opex-source-name{font-weight:600;overflow-wrap:anywhere}
+.opex-source-count{margin-left:auto;color:var(--text-secondary)}
+.opex-source-check{display:none;color:var(--accent)}
+.opex-source:has(input:checked) .opex-source-check{display:block}
+.opex-disclosure{display:inline-flex;align-items:center;gap:4px;margin-top:16px;font-weight:600}
+.opex-wrap .opex-caution{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--text-secondary)}
+
+/* Columns */
+.opex-cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px}
+.opex-fieldsearch{margin-bottom:8px}
+.opex-pane{max-height:480px;overflow:auto;padding:8px 12px;border:1px solid var(--separator);border-radius:3px}
+.opex-wrap .opex-pane-title{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;min-height:30px;margin:0 0 8px;font-weight:600}
+.opex-pane-title span{font-weight:400;color:var(--text-secondary)}
+.opex-fieldgroup + .opex-fieldgroup{margin-top:12px}
+.opex-fieldgroup-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--separator)}
+.opex-fieldgroup-name{font-weight:600}
+.opex-fieldgroup-links{display:flex;gap:12px}
+.opex-check{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.opex-check code{margin-left:auto;color:var(--text-secondary);overflow-wrap:anywhere}
+.opex-colrow{margin-bottom:4px;border:1px solid var(--separator);border-radius:3px;background:var(--panel)}
+.opex-colrow.is-dragging{opacity:.5}
+.opex-colrow.opex-drop-before{box-shadow:0 -3px 0 var(--accent)}
+.opex-colrow.opex-drop-after{box-shadow:0 3px 0 var(--accent)}
+.opex-colrow-main{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 8px}
+.opex-grip{display:inline-flex;color:var(--text-secondary);cursor:grab}
+.opex-wrap .opex-colrow-main input[type="text"]{flex:1 1 130px;min-width:0}
+.opex-wrap code.opex-colfield{flex:0 1 auto;color:var(--text-secondary);background:none;padding:0;overflow-wrap:anywhere}
+.opex-tag{padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);font-size:12px;font-weight:600;line-height:18px}
+.opex-tag-warn{border-color:var(--warning);background:var(--warning-tint)}
+.opex-transform{padding:12px;border-top:1px solid var(--separator);background:var(--well)}
+.opex-wrap .opex-steps-count{margin:0 0 8px}
+.opex-steps{margin:8px 0}
+.opex-step{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;padding:8px;border:1px solid var(--separator);border-radius:3px;background:var(--panel)}
+.opex-step-num{display:grid;place-items:center;flex:none;width:22px;height:30px;font-weight:600;color:var(--text-secondary)}
+.opex-step-body{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.opex-step-body .opex-field-error{flex-basis:100%}
+.opex-step-actions{display:flex;flex:none}
+.opex-mini{display:inline-flex;align-items:center;gap:8px}
+.opex-pairs{width:100%;margin:4px 0;border-collapse:collapse}
+.opex-pairs th{padding:0 8px 4px 0;text-align:left;font-weight:600}
+.opex-pairs td{padding:0 8px 4px 0}
+.opex-pairs td:last-child{width:34px;padding-right:0}
+.opex-wrap .opex-pairs input{width:100%}
+.opex-custom{margin-top:16px;padding:12px;border:1px solid var(--separator);border-radius:3px;background:var(--well)}
+.opex-custom .opex-result{margin-top:8px}
+.opex-custom-edit .opex-h3{display:block}
+
+/* Filters */
+.opex-fgroup{padding:12px;border:1px solid var(--border);border-radius:3px;background:var(--well)}
+.opex-fgroup .opex-fgroup{margin:8px 0 0 16px;background:var(--panel)}
+.opex-fgroup-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.opex-fgroup-title{font-weight:600}
+.opex-fgroup-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.opex-rule{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.4fr) auto;gap:8px;margin-top:8px;align-items:center}
+.opex-wrap .opex-rule :is(select,input){width:100%}
+.opex-wrap .opex-rules-head{margin-top:16px}
+.opex-reason{color:var(--text-secondary)}
+.opex-reason:empty{display:none}
+.opex-wrap .opex-limits{margin-top:8px;color:var(--text-secondary)}
+
+/* Format */
+.opex-formats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.opex-choice{display:flex;align-items:flex-start;gap:8px;padding:12px;border:1px solid var(--border);border-radius:4px;background:var(--panel);cursor:pointer}
+.opex-choice:hover{background:var(--well)}
+.opex-choice:has(input:checked){border-color:var(--accent);background:var(--accent-tint)}
+.opex-choice:has(input:focus-visible){outline:2px solid var(--focus-ring);outline-offset:2px}
+.opex-choice:has(input:disabled){background:var(--well);border-color:var(--separator);cursor:not-allowed}
+.opex-choice:has(input:disabled) .opex-choice-name{color:var(--text-secondary)}
+.opex-choice-name{display:block;font-weight:600}
+.opex-choice-desc{display:block;margin-top:2px;color:var(--text-secondary)}
+.opex-choice-reason{display:flex;align-items:flex-start;gap:4px;margin-top:4px;color:var(--text-primary)}
+.opex-wrap .opex-optgroup{margin-top:16px;padding-top:12px;border-top:1px solid var(--separator)}
+.opex-optgroup > legend{padding:0;font-weight:600;margin-bottom:4px}
+.opex-arealabel{display:block;margin-top:8px;font-weight:600}
+.opex-wrap .opex-xml-areas textarea{margin-top:4px}
+.opex-xml-areas .opex-result{margin-top:8px}
+.opex-speed{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+
+/* Preview */
+.opex-previewbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:12px}
+.opex-preview-count{font-weight:600}
+.opex-preview-table td{max-width:320px;overflow-wrap:anywhere}
+.opex-wrap .opex-problems{margin:4px 0 0 18px;list-style:disc}
+
+/* Run card */
+.opex-run-box:empty{display:none}
+.opex-run-box{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--separator)}
+.opex-run-view{display:flex;flex-direction:column;gap:12px}
+.opex-run-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.opex-run-name{font-weight:600}
+.opex-run-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.opex-run-foot{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--separator)}
+.opex-run-template{margin-top:12px;padding-top:4px;border-top:1px solid var(--separator)}
+.opex-collapser{display:inline-flex;align-items:center;gap:4px;margin:12px 0 8px;font-weight:600}
+
+/* Delivery block */
+.opex-delivery{border:1px solid var(--separator);border-radius:3px}
+.opex-switchrow{padding:12px}
+.opex-switchrow + .opex-switchrow{border-top:1px solid var(--separator)}
+.opex-switchbody{margin-top:8px;padding-left:44px}
+.opex-switchbody .opex-row{grid-template-columns:150px minmax(0,1fr)}
+.opex-wrap .opex-secret{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--text-primary)}
+
+/* Sticky summary bar */
+.opex-stickybar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px;padding:12px 16px;border:1px solid var(--border);border-radius:4px;background:var(--panel)}
+.opex-wrap .opex-stickybar-text{flex:1;min-width:0;font-weight:600}
+
+@media (max-width:782px){
+  .opex-formats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .opex-colfield{display:none}
+}
+@media (max-width:600px){
+  .opex-cols2,.opex-formats,.opex-speed{grid-template-columns:minmax(0,1fr)}
+  /* Review note 9: the chosen list grows with the page, so an open transform panel is never cut off. */
+  .opex-pane-chosen{max-height:none}
+  .opex-pane:not(.opex-pane-chosen){max-height:360px}
+  .opex-rule{grid-template-columns:minmax(0,1fr)}
+  .opex-switchbody{padding-left:0}
+  .opex-switchbody .opex-row{grid-template-columns:minmax(0,1fr)}
+  .opex-report li{grid-template-columns:minmax(0,1fr)}
+  .opex-fgroup .opex-fgroup{margin-left:8px}
+  .opex-step{flex-wrap:wrap}
+  .opex-stickybar{flex-direction:column;align-items:stretch}
+  .opex-stickybar .opex-btn{width:100%}
+}

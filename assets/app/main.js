@@ -8,9 +8,9 @@
  * Exposes opexApp.showTab( id, focus ) for parts that send people to
  * another tab, for example an empty state's button.
  *
- * Tabs without a registered module (Export and Schedules in this stage)
- * show a short placeholder. A later stage only has to load a file that
- * calls opexApp.registerTab( 'export', { mount } ).
+ * Tabs without a registered module (Schedules in this stage) show a short
+ * placeholder. A later stage only has to load a file that calls
+ * opexApp.registerTab( 'schedules', { mount } ).
  */
 ( function () {
 	'use strict';
@@ -44,6 +44,20 @@
 		] );
 	}
 
+	/**
+	 * "Open Export by Twig & Olive", with the maker's name as a link. The
+	 * sentence is translated whole and split at the placeholder, so no HTML
+	 * comes from the translation.
+	 *
+	 * @return {HTMLElement} Footer line.
+	 */
+	function footer() {
+		/* translators: %s: the maker's name, Twig & Olive, shown as a link. */
+		const parts = __( 'Open Export by %s', 'open-export' ).split( '%s' );
+		const link = el( 'a', { href: 'https://twigandolive.com', target: '_blank', rel: 'noopener noreferrer' }, 'Twig & Olive' );
+		return el( 'p', { class: 'opex-footer' }, [ parts[ 0 ] || '', link, parts.slice( 1 ).join( '' ) ] );
+	}
+
 	function start() {
 		const root = document.getElementById( 'opex-app' );
 		if ( ! root ) {
@@ -62,7 +76,7 @@
 		wrap.insertBefore( session, root );
 		app.clear( root );
 		app.append( root, [ tabs.list, top, stage ] );
-		wrap.appendChild( el( 'p', { class: 'opex-footer' }, __( 'Open Export by Twig & Olive', 'open-export' ) ) );
+		wrap.appendChild( footer() );
 
 		function open( id ) {
 			if ( active && mounted[ active ] && mounted[ active ].hide ) {

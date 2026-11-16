@@ -10,7 +10,7 @@
  *   fail( error )      Shows a normalized error.
  *   rows               The Map of row views by job id.
  *   body               The tab body, for focusing the empty state.
- *   hintId             Id of the "Open in builder" hint line.
+ *   hintId             Id of the hint line under the table.
  * Returns { build( row ), deliver( job ) }.
  */
 ( function () {
@@ -41,8 +41,7 @@
 			if ( 'done' === job.status || 'error' === job.status ) {
 				items.push( act( 'rerun', __( 'Run again', 'open-export' ), () => rerun( job ) ) );
 			}
-			// Loading a job into the builder needs the Export tab (next stage).
-			items.push( ui.linkButton( { label: __( 'Open in builder', 'open-export' ), action: 'builder', ariaDisabled: true, describedBy: hintId, onClick: () => {} } ) );
+			items.push( act( 'builder', __( 'Open in builder', 'open-export' ), () => openInBuilder( job ), { describedBy: hintId } ) );
 			items.push( act( 'delete', __( 'Delete', 'open-export' ), () => remove( row ), { danger: true } ) );
 			return el( 'span', { class: 'opex-actions' }, items );
 		}
@@ -80,6 +79,21 @@
 				say( 'success', sprintf( __( 'Started %s.', 'open-export' ), fresh.label ) );
 				if ( 'browser' === fresh.mode && 'running' === fresh.status ) {
 					jobs.drive( fresh.id, false ).catch( fail );
+				}
+			} );
+		}
+
+		// GET /jobs/{id} carries the config. The Export tab reads the store
+		// key builderLoad, even if it has not been opened yet.
+		function openInBuilder( job ) {
+			return app.api.get( '/jobs/' + encodeURIComponent( job.id ) ).then( ( detail ) => {
+				if ( ! detail || ! detail.config ) {
+					say( 'error', __( 'This export has no saved setup to open.', 'open-export' ) );
+					return;
+				}
+				app.store.set( 'builderLoad', { config: detail.config, name: detail.label || job.label } );
+				if ( app.showTab ) {
+					app.showTab( 'export', true );
 				}
 			} );
 		}

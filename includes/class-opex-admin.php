@@ -33,7 +33,36 @@ class OPEX_Admin {
 		'opex-app-destination-form'  => array( 'destination-form.js', array( 'opex-app-destination-parts', 'opex-app-api', 'opex-app-ui-widgets' ) ),
 		'opex-app-tab-destinations'  => array( 'tab-destinations.js', array( 'opex-app-destination-form' ) ),
 		'opex-app-tab-settings'      => array( 'tab-settings.js', array( 'opex-app-ui', 'opex-app-api' ) ),
-		'opex-app-main'              => array( 'main.js', array( 'opex-app-tab-history', 'opex-app-tab-destinations', 'opex-app-tab-settings' ) ),
+		'opex-app-builder-parts'     => array( 'builder-parts.js', array( 'opex-app-ui' ) ),
+		'opex-app-builder'           => array( 'builder.js', array( 'opex-app-builder-parts', 'opex-app-api', 'opex-app-store' ) ),
+		'opex-app-builder-source'    => array( 'builder-source.js', array( 'opex-app-builder' ) ),
+		'opex-app-builder-pairs'     => array( 'builder-pairs.js', array( 'opex-app-builder-parts' ) ),
+		'opex-app-builder-transforms' => array( 'builder-transforms.js', array( 'opex-app-builder-pairs' ) ),
+		'opex-app-builder-custom'    => array( 'builder-custom.js', array( 'opex-app-builder-parts' ) ),
+		'opex-app-builder-chosen'    => array( 'builder-chosen.js', array( 'opex-app-builder-transforms', 'opex-app-builder-custom' ) ),
+		'opex-app-builder-columns'   => array( 'builder-columns.js', array( 'opex-app-builder', 'opex-app-builder-chosen' ) ),
+		'opex-app-builder-dates'     => array( 'builder-dates.js', array( 'opex-app-builder-parts' ) ),
+		'opex-app-builder-filters'   => array( 'builder-filters.js', array( 'opex-app-builder', 'opex-app-builder-dates' ) ),
+		'opex-app-builder-format'    => array( 'builder-format.js', array( 'opex-app-builder' ) ),
+		'opex-app-builder-preview'   => array( 'builder-preview.js', array( 'opex-app-builder', 'opex-app-ui-widgets' ) ),
+		'opex-app-delivery'          => array( 'delivery.js', array( 'opex-app-ui', 'opex-app-api' ) ),
+		'opex-app-export-recipe'     => array( 'export-recipe.js', array( 'opex-app-ui', 'opex-app-api' ) ),
+		'opex-app-export-start'      => array( 'export-start.js', array( 'opex-app-ui-widgets', 'opex-app-api' ) ),
+		'opex-app-export-run-view'   => array( 'export-run-view.js', array( 'opex-app-history-view' ) ),
+		'opex-app-export-run'        => array( 'export-run.js', array( 'opex-app-jobs', 'opex-app-delivery', 'opex-app-export-run-view' ) ),
+		'opex-app-tab-export'        => array(
+			'tab-export.js',
+			array( 'opex-app-builder-source', 'opex-app-builder-columns', 'opex-app-builder-filters', 'opex-app-builder-format', 'opex-app-builder-preview', 'opex-app-export-recipe', 'opex-app-export-start', 'opex-app-export-run' ),
+		),
+		'opex-app-main'              => array( 'main.js', array( 'opex-app-tab-export', 'opex-app-tab-history', 'opex-app-tab-destinations', 'opex-app-tab-settings' ) ),
+	);
+
+	/**
+	 * Styles of the new screen in load order: handle => array( file, deps ).
+	 */
+	private const NEXT_STYLES = array(
+		'opex-app'         => array( 'app.css', array( 'dashicons' ) ),
+		'opex-app-builder' => array( 'builder.css', array( 'opex-app' ) ),
 	);
 
 	public static function register_menu(): void {
@@ -87,6 +116,15 @@ class OPEX_Admin {
 	}
 
 	/**
+	 * Handles of the new screen's styles, in load order.
+	 *
+	 * @return string[]
+	 */
+	public static function next_style_handles(): array {
+		return array_keys( self::NEXT_STYLES );
+	}
+
+	/**
 	 * Loads the new screen. OPEX_BOOT keeps the keys of the current screen
 	 * and adds adminUrl, the link back to the current screen.
 	 *
@@ -94,7 +132,9 @@ class OPEX_Admin {
 	 */
 	private static function enqueue_next(): void {
 		$base = OPEX_URL . 'assets/app/';
-		wp_enqueue_style( 'opex-app', $base . 'app.css', array(), OPEX_VERSION );
+		foreach ( self::NEXT_STYLES as $handle => $style ) {
+			wp_enqueue_style( $handle, $base . $style[0], $style[1], OPEX_VERSION );
+		}
 
 		foreach ( self::NEXT_SCRIPTS as $handle => $script ) {
 			wp_register_script( $handle, $base . $script[0], $script[1], OPEX_VERSION, true );

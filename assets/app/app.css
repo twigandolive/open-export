@@ -4,7 +4,7 @@
  * The resets weigh one element (:where() around the wrap), so they beat
  * wp-admin's bare element rules but never outrank a component class, which
  * fixes the blueprint's card headings and footer that lost their padding.
- * Builder, delivery and schedule styles are here for the next stage.
+ * Builder, Export tab and delivery styles are in builder.css.
  */
 
 .opex-wrap{
@@ -81,7 +81,8 @@
 
 /* Form controls */
 .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){min-height:30px;max-width:100%;margin:0;padding:0 8px;border:1px solid var(--border);border-radius:3px;background-color:var(--panel);color:var(--text-primary);font:inherit;box-shadow:none}
-.opex-wrap select{padding-right:24px}
+/* As heavy as the rule above plus one element, so the arrow never covers the text. */
+.opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):is(select){padding-right:24px}
 .opex-wrap textarea{padding:6px 8px;line-height:1.5;width:100%}
 .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus-visible{border-color:var(--accent);outline-offset:0}
 .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):disabled{background-color:var(--well);color:var(--text-disabled);border-color:var(--separator);cursor:not-allowed}
@@ -164,25 +165,6 @@
 @keyframes opex-pulse{50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.opex-skel i{animation:none}.opex-wrap input.opex-switch::before{transition:none}}
 
-/* Builder (next stage) */
-.opex-groupname{margin:16px 0 8px;font-weight:600;color:var(--text-secondary)}
-.opex-sourcegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.opex-source{position:relative;display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 10px;border:1px solid var(--separator);border-radius:3px;background:var(--panel);cursor:pointer}
-.opex-source:hover{border-color:var(--border);background:var(--well)}
-.opex-source:has(input:checked){border-color:var(--accent);background:var(--accent-tint)}
-.opex-cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px}
-.opex-pane{max-height:480px;overflow:auto;padding:8px 12px;border:1px solid var(--separator);border-radius:3px}
-.opex-check{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
-.opex-tag{padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);font-size:12px;font-weight:600;line-height:18px}
-.opex-fgroup{padding:12px;border:1px solid var(--border);border-radius:3px;background:var(--well)}
-.opex-fgroup .opex-fgroup{margin:8px 0 0 16px;background:var(--panel)}
-.opex-rule{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.4fr) auto;gap:8px;margin-top:8px;align-items:center}
-.opex-formats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.opex-choice{display:flex;align-items:flex-start;gap:8px;padding:12px;border:1px solid var(--border);border-radius:4px;background:var(--panel);cursor:pointer}
-.opex-choice:has(input:checked){border-color:var(--accent);background:var(--accent-tint)}
-.opex-choice:has(input:disabled){background:var(--well);border-color:var(--separator);cursor:not-allowed}
-.opex-stickybar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px;padding:12px 16px;border:1px solid var(--border);border-radius:4px;background:var(--panel)}
-
 /* Tables */
 .opex-tablewrap{overflow-x:auto}
 .opex-table{width:100%;border:1px solid var(--border);border-collapse:collapse;background:var(--panel)}
@@ -216,14 +198,6 @@
 .opex-bar-failed > span{background:var(--error)}
 .opex-progress-cell{min-width:120px}
 .opex-progress-cell .opex-bar{margin:4px 0}
-.opex-run-foot{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--separator)}
-
-/* Delivery block (next stage) */
-.opex-delivery{border:1px solid var(--separator);border-radius:3px}
-.opex-switchrow{padding:12px}
-.opex-switchrow + .opex-switchrow{border-top:1px solid var(--separator)}
-.opex-switchbody{margin-top:8px;padding-left:44px}
-.opex-wrap .opex-secret{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--text-primary)}
 
 /* Page heads, empty states, results */
 .opex-pagehead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px}
@@ -246,7 +220,7 @@
 
 /* Dialog */
 .opex-dialog{width:calc(100% - 32px);max-width:480px;padding:20px;border:1px solid var(--border);border-radius:4px;background:var(--panel);color:var(--text-primary)}
-.opex-dialog::backdrop{background:var(--text-primary,#1d2327);opacity:.45}
+.opex-dialog::backdrop{background:var(--text-primary);opacity:.45}
 .opex-wrap .opex-dialog-title{margin:0 0 8px;font-size:16px;font-weight:600}
 .opex-dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:20px}
 
@@ -257,20 +231,15 @@
   .opex-iconbtn{width:36px;height:36px}
   .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select){min-height:40px}
   .opex-seg label{min-height:40px}
-  .opex-formats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .opex-nameline strong{padding-top:9px}
 }
 @media (max-width:600px){
-  .opex-cols2,.opex-detail-grid,.opex-formats{grid-template-columns:minmax(0,1fr)}
-  .opex-pane{max-height:none}
+  .opex-detail-grid{grid-template-columns:minmax(0,1fr)}
   .opex-row,.opex-switchbody .opex-row{grid-template-columns:minmax(0,1fr)}
   .opex-row > label,.opex-row > .opex-rowlabel{padding-top:0}
-  .opex-rule{grid-template-columns:minmax(0,1fr)}
-  .opex-switchbody{padding-left:0}
   .opex-lines li{grid-template-columns:minmax(0,1fr)}
   .opex-status-list li{grid-template-columns:24px minmax(0,1fr)}
   .opex-status-list li > :nth-child(3){grid-column:2}
-  .opex-stickybar{flex-direction:column;align-items:stretch}
   .opex-tabs{gap:4px}
   .opex-tab{flex:1 1 auto;text-align:center}
   .opex-table tbody tr.opex-detail td{padding-left:10px}

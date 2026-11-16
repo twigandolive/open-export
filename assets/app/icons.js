@@ -41,6 +41,7 @@
 		lock: [ [ 'rect', { x: 4.5, y: 9, width: 11, height: 8, rx: 1.5 } ], 'M7 9V6.5a3 3 0 0 1 6 0V9' ],
 		search: [ [ 'circle', { cx: 8.5, cy: 8.5, r: 5 } ], 'M12.3 12.3L17 17' ],
 		doc: [ 'M5 2.5h6.5L15 6v11.5H5z', 'M11.5 2.5V6H15M7.5 10h5M7.5 13h5' ],
+		grip: [ [ 7.5, 5 ], [ 12.5, 5 ], [ 7.5, 10 ], [ 12.5, 10 ], [ 7.5, 15 ], [ 12.5, 15 ] ].map( ( c ) => [ 'circle', { cx: c[ 0 ], cy: c[ 1 ], r: 1.2, fill: 'currentColor', stroke: 'none' } ] ),
 	};
 
 	app.icons = icons;

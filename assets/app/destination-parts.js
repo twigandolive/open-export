@@ -86,9 +86,9 @@
 	}
 
 	/**
-	 * The server writes the security note on each saved record. A type the
-	 * person just picked shows the note from any saved record of that type,
-	 * or nothing until it is saved.
+	 * The server writes the security note on each saved record, and on each
+	 * GET /options destination_types entry. A type the person just picked
+	 * shows the note from /options, else from any saved record of that type.
 	 *
 	 * @param {HTMLElement} box    Container under the type select.
 	 * @param {Object|null} record Saved record.
@@ -97,8 +97,12 @@
 	 */
 	function showNote( box, record, notes, type ) {
 		let text = null;
+		const types = ( app.store.get( 'options' ) || {} ).destination_types || [];
+		const known = types.find( ( item ) => item.id === type );
 		if ( record && record.type === type ) {
 			text = record.security_note || '';
+		} else if ( known && 'string' === typeof known.security_note ) {
+			text = known.security_note;
 		} else if ( notes && Object.prototype.hasOwnProperty.call( notes, type ) ) {
 			text = notes[ type ];
 		}

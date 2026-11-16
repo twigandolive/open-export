@@ -125,7 +125,7 @@
 				cls: 'opex-stack-sm',
 				columns: [
 					{ label: __( 'Name', 'open-export' ) },
-					{ label: __( 'Format', 'open-export' ) },
+					{ label: __( 'Source and format', 'open-export' ) },
 					{ label: __( 'Status', 'open-export' ) },
 					{ label: __( 'Progress', 'open-export' ) },
 					{ label: __( 'Size', 'open-export' ) },
@@ -137,7 +137,7 @@
 			app.clear( body );
 			app.append( body, [
 				table.root,
-				el( 'p', { class: 'opex-help', id: hintId }, __( 'Open in builder arrives with the Export tab.', 'open-export' ) ),
+				el( 'p', { class: 'opex-help', id: hintId }, __( 'Open in builder loads the setup of an export into the Export tab, so you can change it and run it again.', 'open-export' ) ),
 			] );
 		}
 
@@ -184,7 +184,7 @@
 			const progress = view.progress( job );
 			// data-label names each cell when narrow screens stack the table.
 			const cells = {
-				format: el( 'td', { 'data-label': __( 'Format', 'open-export' ) } ),
+				format: el( 'td', { 'data-label': __( 'Source and format', 'open-export' ) } ),
 				status: el( 'td', { 'data-label': __( 'Status', 'open-export' ) } ),
 				progress: el( 'td', { class: 'opex-progress-cell', 'data-label': __( 'Progress', 'open-export' ) }, progress.root ),
 				size: el( 'td', { class: 'opex-nowrap', 'data-label': __( 'Size', 'open-export' ) } ),
@@ -239,7 +239,8 @@
 			setText( row.file, job.delivery_name || '' );
 			/* translators: %s: export name. */
 			row.toggle.setAttribute( 'aria-label', sprintf( __( 'Show details for %s', 'open-export' ), job.label ) );
-			setText( row.cells.format, view.formatLabel( job ) );
+			// source_label arrives with the server's add-only job fields. Older jobs show the format only.
+			setText( row.cells.format, [ job.source_label || '', view.formatLabel( job ) ].filter( Boolean ).join( ', ' ) );
 			if ( row.statusKey !== job.status ) {
 				row.statusKey = job.status;
 				app.clear( row.cells.status ).appendChild( view.statusBadge( job ) );

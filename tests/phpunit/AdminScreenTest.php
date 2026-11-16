@@ -55,7 +55,9 @@ class AdminScreenTest extends TestCase {
 
 		$this->assertTrue( wp_script_is( 'opex-admin', 'enqueued' ) );
 		$this->assertTrue( wp_style_is( 'opex-admin', 'enqueued' ) );
-		$this->assertFalse( wp_style_is( 'opex-app', 'enqueued' ) );
+		foreach ( OPEX_Admin::next_style_handles() as $handle ) {
+			$this->assertFalse( wp_style_is( $handle, 'enqueued' ), $handle );
+		}
 		foreach ( OPEX_Admin::next_handles() as $handle ) {
 			$this->assertFalse( wp_script_is( $handle, 'registered' ), $handle );
 		}
@@ -107,6 +109,53 @@ class AdminScreenTest extends TestCase {
 			$this->assertStringContainsString( '"' . $key . '"', $boot );
 		}
 		$this->assertStringContainsString( 'tools.php?page=open-export', $boot );
+	}
+
+	public function test_export_tab_and_builder_load_before_main_with_translations() {
+		$_GET['opex_ui'] = 'next';
+		OPEX_Admin::enqueue( self::HOOK );
+
+		$scripts = wp_scripts();
+		$scripts->all_deps( $scripts->queue );
+		$order = $this->ours( $scripts->to_do );
+
+		$stage2 = array(
+			'opex-app-builder-parts', 'opex-app-builder', 'opex-app-builder-source', 'opex-app-builder-pairs',
+			'opex-app-builder-transforms', 'opex-app-builder-custom', 'opex-app-builder-chosen', 'opex-app-builder-columns',
+			'opex-app-builder-dates', 'opex-app-builder-filters', 'opex-app-builder-format', 'opex-app-builder-preview',
+			'opex-app-delivery', 'opex-app-export-recipe', 'opex-app-export-start', 'opex-app-export-run-view',
+			'opex-app-export-run', 'opex-app-tab-export',
+		);
+		$main = array_search( 'opex-app-main', $order, true );
+		foreach ( $stage2 as $handle ) {
+			$this->assertContains( $handle, $order, $handle );
+			$this->assertLessThan( $main, array_search( $handle, $order, true ), $handle . ' loads before main' );
+		}
+		// The tab registers itself, so main must wait for it.
+		$this->assertContains( 'opex-app-tab-export', $scripts->registered['opex-app-main']->deps );
+
+		// Every file of the new screen gets its translations.
+		foreach ( OPEX_Admin::next_handles() as $handle ) {
+			$this->assertSame( 'open-export', $scripts->registered[ $handle ]->textdomain, $handle );
+			$this->assertFileExists( OPEX_DIR . 'assets/app/' . basename( (string) wp_parse_url( $scripts->registered[ $handle ]->src, PHP_URL_PATH ) ), $handle );
+		}
+	}
+
+	public function test_new_screen_styles_load_in_order_with_the_switch() {
+		$_GET['opex_ui'] = 'next';
+		OPEX_Admin::enqueue( self::HOOK );
+
+		$this->assertSame( array( 'opex-app', 'opex-app-builder' ), OPEX_Admin::next_style_handles() );
+		$styles = wp_styles();
+		foreach ( OPEX_Admin::next_style_handles() as $handle ) {
+			$this->assertTrue( wp_style_is( $handle, 'enqueued' ), $handle );
+			$this->assertStringContainsString( 'assets/app/', $styles->registered[ $handle ]->src, $handle );
+		}
+		$styles->all_deps( $styles->queue );
+		$order = $this->ours( $styles->to_do );
+		$this->assertLessThan( array_search( 'opex-app-builder', $order, true ), array_search( 'opex-app', $order, true ), 'builder.css loads after app.css' );
+		// Source tiles use the Dashicons font.
+		$this->assertContains( 'dashicons', $styles->to_do );
 	}
 
 	public function test_nothing_loads_on_other_admin_pages() {
