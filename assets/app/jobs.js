@@ -30,10 +30,19 @@
 	const api = app.api;
 	const store = app.store;
 	const POLL_MS = 5000;
-	// Job id to the token of the drive call that owns it. Pause and Resume can
-	// start a new drive while the old one still waits on a request, so each
-	// call checks that it still owns the job before it acts.
+	// Job id to the token of the drive call that is running its batches.
 	const driving = new Map();
+	// Job id to the token of the last action that claimed the job: a drive
+	// call, Pause, or a background Resume. Pause and Resume can start a new
+	// call while an old one still waits on a request, so an answer is put in
+	// the list only by the call whose token is still here. A finished call
+	// keeps its token until something else claims the job, so its own error
+	// read still lands, but an older call can never claim it back.
+	const owner = new Map();
+	// Job id to the clock value of the list's copy. A poll answer never
+	// replaces a copy written after the poll was sent.
+	const written = new Map();
+	let clock = 0;
 
 	/**
 	 * Gives the job list from the store.
@@ -65,6 +74,8 @@
 		if ( ! job || ! job.id ) {
 			return job;
 		}
+		// Marks the copy as newer than any poll already sent.
+		written.set( job.id, ++clock );
 		const jobs = list().filter( ( item ) => item.id !== job.id );
 		jobs.push( job );
 		store.set( 'jobs', sorted( jobs ) );
@@ -76,22 +87,68 @@
 	 */
 	function forget( id ) {
 		driving.delete( id );
+		owner.delete( id );
+		written.delete( id );
 		store.set( 'jobs', list().filter( ( item ) => item.id !== id ) );
 	}
 
 	/**
-	 * Loads the list. Jobs this screen is driving keep their local copy,
-	 * because a poll answer can be older than the last run answer.
+	 * Gives a job a new owner token, so answers to anything sent for it
+	 * before are no longer put in the list.
+	 *
+	 * @param {string} id Job id.
+	 * @return {Object} The new token.
+	 */
+	function claim( id ) {
+		const token = {};
+		owner.set( id, token );
+		return token;
+	}
+
+	/**
+	 * Tells whether a token is still the job's owner.
+	 *
+	 * @param {string} id    Job id.
+	 * @param {Object} token Token from claim().
+	 * @return {boolean} True while no later action has claimed the job.
+	 */
+	function owns( id, token ) {
+		return owner.get( id ) === token;
+	}
+
+	/**
+	 * Loads the list. A job keeps its local copy while this screen drives
+	 * it, or when that copy was written after this request was sent, because
+	 * the answer can then be older than what the screen already shows. A job
+	 * written after the request and missing from the answer is kept too, so
+	 * a new job does not vanish until the next poll.
 	 *
 	 * @return {Promise<Array>} Jobs.
 	 */
 	function load() {
+		const asked = ++clock;
 		return api.get( '/jobs' ).then( ( fresh ) => {
 			const local = {};
 			list().forEach( ( job ) => {
 				local[ job.id ] = job;
 			} );
-			const merged = ( Array.isArray( fresh ) ? fresh : [] ).map( ( job ) => ( driving.has( job.id ) && local[ job.id ] ? local[ job.id ] : job ) );
+			const newer = ( id ) => ( written.get( id ) || 0 ) > asked;
+			const rows = Array.isArray( fresh ) ? fresh : [];
+			const seen = {};
+			const merged = rows.map( ( job ) => {
+				seen[ job.id ] = true;
+				if ( local[ job.id ] && ( driving.has( job.id ) || newer( job.id ) ) ) {
+					return local[ job.id ];
+				}
+				// The copy now shows the server as of this request.
+				written.set( job.id, asked );
+				return job;
+			} );
+			Object.keys( local ).forEach( ( id ) => {
+				if ( ! seen[ id ] && newer( id ) ) {
+					merged.push( local[ id ] );
+				}
+			} );
 			return store.set( 'jobs', sorted( merged ) );
 		} );
 	}
@@ -114,57 +171,56 @@
 	 * Calls run until the job is no longer running. The id is held locally,
 	 * so deleting the job mid-run cannot break the loop.
 	 *
-	 * Each call gets its own token. After Pause and Resume a newer call owns
-	 * the job, and an older call that is still waiting on a request then
-	 * stops quietly: it does not apply its answer, run another batch, report
-	 * its error or clear the newer call's place. After a plain Pause (no
-	 * newer call) it behaves as before: no further batch.
+	 * Each call claims the job with its own token. Pause, a newer call or a
+	 * delete takes the token away, and from then on this call stops quietly:
+	 * it does not apply its answer, run another batch, report its error or
+	 * read the job again. That holds even after the newer call has finished.
 	 *
 	 * @param {string}  id     Job id.
 	 * @param {boolean} resume True only for the Resume button.
-	 * @return {Promise<Object|null>} The last job state, or null when another call drives the job.
+	 * @return {Promise<Object|null>} The last job state, or null when the call lost the job.
 	 */
 	async function drive( id, resume ) {
 		if ( driving.has( id ) ) {
 			return null;
 		}
-		const token = {};
-		const mine = () => driving.get( id ) === token;
-		const superseded = () => driving.has( id ) && ! mine();
+		const token = claim( id );
+		const mine = () => owns( id, token );
 		driving.set( id, token );
 		announce();
 		let job = null;
 		try {
 			job = await api.post( path( id, 'run' ), resume ? { resume: true } : {} );
-			if ( superseded() ) {
+			if ( ! mine() ) {
 				return null;
 			}
 			upsert( job );
-			while ( job && 'running' === job.status && mine() ) {
+			while ( job && 'running' === job.status ) {
 				job = await api.post( path( id, 'run' ) );
 				if ( ! mine() ) {
-					break;
+					return null;
 				}
 				upsert( job );
 			}
 			return job;
 		} catch ( err ) {
-			if ( superseded() ) {
+			if ( ! mine() ) {
 				return null;
 			}
 			if ( 'opex_missing' === err.code ) {
 				forget( id );
 			} else if ( ! err.session ) {
 				// The server records batch errors on the job itself. Fetch it so
-				// the row shows the real state, then report the error.
-				api.get( path( id ) ).then( upsert ).catch( () => {} );
+				// the row shows the real state, unless something newer claimed
+				// the job meanwhile. Then report the error.
+				api.get( path( id ) ).then( ( fresh ) => mine() && upsert( fresh ) ).catch( () => {} );
 			}
 			throw err;
 		} finally {
 			// Pause, forget and remove drop the id without telling the store,
-			// so a call that ends with no owner left still tells it. A newer
+			// so a call that ends with no driver left still tells it. A newer
 			// call's place is left alone.
-			if ( mine() ) {
+			if ( driving.get( id ) === token ) {
 				driving.delete( id );
 			}
 			if ( ! driving.has( id ) ) {
@@ -174,13 +230,34 @@
 	}
 
 	/**
-	 * Pauses a job and stops driving it from this window.
+	 * Sends one request that claims the job, and puts its answer in the list
+	 * only while no later action has claimed the job.
 	 *
+	 * @param {string} id     Job id.
+	 * @param {string} action Route action.
+	 * @param {Object} data   Request body.
+	 * @return {Promise<Object>} Resolves with the answer, applied or not.
+	 */
+	function claimAndPost( id, action, data ) {
+		const token = claim( id );
+		return api.post( path( id, action ), data ).then( ( job ) => {
+			if ( owns( id, token ) ) {
+				upsert( job );
+			}
+			return job;
+		} );
+	}
+
+	/**
+	 * Pauses a job and stops driving it from this window. Pause claims the
+	 * job, so a run answer still on its way is not put in the list.
+	 *
+	 * @param {string} id Job id.
 	 * @return {Promise} Resolves with the paused job.
 	 */
 	function pause( id ) {
 		driving.delete( id );
-		return api.post( path( id, 'pause' ) ).then( upsert );
+		return claimAndPost( id, 'pause' );
 	}
 
 	/**
@@ -192,7 +269,7 @@
 	 */
 	function resume( job ) {
 		if ( 'background' === job.mode ) {
-			return api.post( path( job.id, 'run' ), { resume: true } ).then( upsert );
+			return claimAndPost( job.id, 'run', { resume: true } );
 		}
 		return drive( job.id, true );
 	}
@@ -210,10 +287,16 @@
 	}
 
 	/**
-	 * Deletes a job and its file, then removes it from the store.
+	 * Deletes a job and its file, then removes it from the store. The job
+	 * loses its owner at once, so a run answer still on its way cannot put
+	 * it back.
+	 *
+	 * @param {string} id Job id.
+	 * @return {Promise} Resolves once the job is gone.
 	 */
 	function remove( id ) {
 		driving.delete( id );
+		owner.delete( id );
 		return api.del( path( id ) ).then( () => forget( id ) );
 	}
 
