@@ -1,163 +1,178 @@
 === Open Export ===
 Contributors: twigandolive
-Tags: export, csv export, woocommerce export, json export, database export
+Tags: export, csv export, xlsx, woocommerce export, scheduled export
 Requires at least: 7.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Export anything from your WordPress database: every feature included, no add-ons, no upsells, ever.
+Export posts, users, orders, products or any table to CSV, Excel, JSON or XML. Schedule it, send it on. Every feature included, no add-ons.
 
 == Description ==
 
-Open Export gets your data out of WordPress with a clean four-step flow: pick a source, filter it, choose your fields, export.
-
-* **Every source**: any post type (including WooCommerce products and orders), users, comments, terms from any taxonomy, and any raw database table.
-* **Smart field discovery**: meta keys are automatically grouped by the plugin that owns them: WooCommerce, ACF, Yoast SEO, Rank Math, Elementor, and more. Serialized values are unpacked into readable JSON.
-* **Real filters**: stack rules (equals, contains, greater than, is one of, is empty, …) with AND/OR matching, on core fields, custom fields, and taxonomies. Preview the first rows and the match count before you commit.
-* **Three formats**: CSV (Excel-safe: UTF-8 BOM, formula-injection guarded), JSON, and XML.
-* **Host-friendly pacing**: exports run in small batches with a configurable pause between them, so a 500,000-row export won't melt shared hosting. Interrupted exports resume where they left off.
-* **Templates and re-run**: save export setups, load them later, or re-run a previous export in one click.
-* **Column control**: drag chips to reorder columns; rename headers for spreadsheet-friendly output.
-* **CSV delimiters**: comma, semicolon, or tab for Excel-friendly regional formats.
-* **Works with AI assistants**: export a JSON description of everything this site can export, hand it to an assistant such as Claude or ChatGPT, and paste back the short recipe it replies with. The screen configures itself and tells you about anything in the recipe it could not honour. Nothing exports until you press the button.
-* **WooCommerce orders**: a dedicated Orders source that reads whichever storage your store uses, classic post storage or High-Performance Order Storage, and presents the same friendly fields either way: order number, status, customer, billing and shipping address, totals, and payment details.
-* **Date ranges**: pick a preset (today, last 30 days, last month, this quarter…) or set a From and To date. Whole days in your site's timezone, end date included.
-* **Relative date filters**: use tokens like `last 30 days` or `this month` in filter rules.
-* **Secure by default**: administrator capability plus REST nonces on every endpoint, prepared statements throughout, export files stored in a protected directory with unguessable names, and password hashes are never exportable.
+Open Export gets your data out of WordPress. Pick a source, choose fields, filter, and export. Then save the setup, put it on a schedule, and have the file sent where you need it.
 
 No Pro version. No add-ons to buy. This is all of it.
 
-WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, and other plugin names are trademarks of their respective owners and are used here only to describe compatibility. Open Export is an independent project and is not affiliated with or endorsed by any of them.
+= Sources =
+
+* Any post type, users, comments, and terms from any taxonomy.
+* Any database table, under Advanced.
+* WooCommerce orders, order line items (one row per item), customers (with order count, total spent and average order), products and variations, and coupons.
+* Custom fields are grouped by the plugin that owns them, such as WooCommerce, ACF, Yoast SEO, Rank Math and Elementor. Serialized values become readable JSON.
+* ACF repeater and flexible content fields export as JSON, or as numbered columns.
+* On multisite, a network super admin can run one export across every site.
+
+= Shape the file =
+
+* Filters with rules such as equals, contains, greater than, is one of and is empty, in nested groups such as (A and B) or C.
+* Date ranges: a preset (today, last 30 days, last month, this quarter so far) or your own From and To dates, in whole days in your site's timezone.
+* Preview the first rows and the match count before you export.
+* Drag columns into order and rename headers.
+* Transforms change a column's values without code: trim, change case, add text before or after, find and replace, format a date or number, map values, fill in when empty, remove HTML, shorten.
+* Custom columns combine fields and text, such as a full name from first and last name.
+
+= Formats =
+
+* CSV, with your choice of delimiter, encoding and line endings. The default (UTF-8 with BOM) opens cleanly in Excel. Cells that look like formulas are made safe.
+* Excel (XLSX), written by the plugin itself.
+* JSON.
+* XML, in a default layout or your own template.
+* Feed presets for Google Merchant Center, Meta catalogs and Pinterest catalogs.
+
+= Schedules and delivery =
+
+* Run a saved export hourly, daily, weekly, monthly or only when asked.
+* Incremental schedules export only rows that are new or changed since the last run.
+* A trigger URL lets a real server cron job start a schedule.
+* Background exports keep going after you close the tab.
+* When an export finishes, send it by email (a link, or the file attached), to a webhook, or to an FTP, FTPS or SFTP server. Failed deliveries are tried again, and you can retry them from History.
+
+= Built for shared hosting =
+
+* Exports run in small batches, so a large export does not overload a small host.
+* An interrupted export resumes where it stopped.
+* Finished exports are deleted after the number of days you choose (30 by default).
+
+= Work with an AI assistant =
+
+Copy a JSON description of everything your site can export, give it to an assistant, and paste back the short recipe it writes. The screen fills itself in and tells you about anything it could not use. Nothing is sent to the assistant by the plugin, and nothing exports until you press Start.
+
+= Good to know =
+
+* Scheduled and background exports run on WP-Cron, which runs only when someone visits your site. On a quiet site, set up a real cron job.
+* A schedule's trigger URL is a secret. Anyone who has it can start that export.
+* FTP sends your password and file without encryption. FTPS encrypts, but PHP cannot verify the server's certificate. Use SFTP when you can.
+* SFTP private keys with a passphrase are not supported.
+* Email attachments over 10 MB are sent as a download link instead.
+* Excel (XLSX) files need the PHP zip extension.
+
+WooCommerce, ACF (Advanced Custom Fields), Yoast SEO, Rank Math, Elementor, Excel, Google Merchant Center, Meta, Facebook, Instagram, Pinterest and other names are trademarks of their owners. They are used here only to describe compatibility. Open Export is an independent project and is not affiliated with or endorsed by any of them.
 
 == Installation ==
 
-1. Upload the `open-export` folder to `/wp-content/plugins/`, or install it from the Plugins screen in your WordPress admin.
-2. Activate the plugin through the **Plugins** screen.
-3. Go to **Tools → Open Export**, or use the **Open Export** link on the Plugins screen.
+1. In your WordPress admin, open Plugins, add a new plugin, and search for Open Export. Or upload the `open-export` folder to `/wp-content/plugins/`.
+2. Activate the plugin on the Plugins screen.
+3. Go to Tools, Open Export.
 
-No configuration is required. Exports are written to a protected folder inside your uploads directory and streamed to you through an authenticated download.
+You can export right away. Files go to a protected folder in your uploads directory, and you download them from the History tab.
 
-== Third-Party Services ==
-
-Open Export does not connect to any third-party services. It makes no external network requests of any kind: no API calls, no tracking, no telemetry, no update pings beyond WordPress.org's own plugin system. All export processing happens locally on your server, and export files never leave it unless you download them yourself.
-
-== Roadmap ==
-
-* Scheduled exports, webhooks, WP-CLI support, and WooCommerce line-item exports (version 1.5)
-* Custom XML templates, value transforms, FTP delivery, and multisite export (version 2.0)
+For schedules on a site with few visitors, add a real cron job that loads `wp-cron.php` every few minutes, or point your server's cron at a schedule's trigger URL.
 
 == Frequently Asked Questions ==
 
 = Can it export WooCommerce orders? =
 
-Yes. Orders are a post type, and their meta is grouped under a WooCommerce heading. Sites using HPOS (custom order tables) can export those tables directly via Raw Database Tables.
+Yes. Choose Orders under WooCommerce. It reads whichever storage your store uses, High-Performance Order Storage or the classic posts table, and gives the same file either way: order number, dates, status, customer, billing and shipping addresses, totals and payment details. Refunds and draft orders are left out. For one row per product sold, choose Order line items.
+
+= Did order exports change in 2.0.0? =
+
+Yes. Money now uses your store's price decimals (82.50, not 82.50000000), flags read yes or no, dates are in your site's time, and draft orders are left out. If another program reads your order files, check it against a new export.
+
+= How do scheduled exports run? =
+
+WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Set up a real cron job, or call the schedule's trigger URL from your server's cron. Site Health tells you when WP-Cron is switched off.
+
+= Is the trigger URL safe to share? =
+
+No. Treat it like a password: anyone who has it can start that export. If it leaks, replace the key on the Schedules tab and the old URL stops working.
+
+= Where can a finished export be sent? =
+
+To email addresses, a webhook URL, or an FTP, FTPS or SFTP server that you save on the Destinations tab. Use the Test button to check a destination before a schedule relies on it. A failed delivery is tried up to 3 times in all, and History shows each attempt.
+
+= Which delivery method should I use for private data? =
+
+SFTP. FTP sends your password and the file without encryption. FTPS encrypts the connection, but PHP cannot check the server's certificate. SFTP remembers the server's identity the first time it connects and refuses to send if it changes.
+
+= How large can an export be? =
+
+There is no fixed row limit. Exports run in batches, can run in the background, and resume after an interruption. Email can attach files up to 10 MB. Larger files go out as a download link that expires after the number of days you set.
+
+= Can I make a product feed? =
+
+Yes. On the Export tab, apply the Google Merchant Center, Meta catalog or Pinterest preset, then change anything you like. Product condition is not included, because no WooCommerce product field holds it. To keep a feed fresh, put it on a schedule and send it to a server your feed service reads from.
+
+= Can it export ACF repeater fields? =
+
+Yes. A repeater or flexible content field exports as JSON, or as numbered columns with one column for each sub-field, up to 20 rows.
+
+= Does it work on multisite? =
+
+Yes. Each site has its own exports. A network super admin can also run one export across every site, with the site id and URL on each row. Network exports are not offered for raw tables or users.
+
+= How do I use this with an AI assistant? =
+
+Open "Work with an AI assistant" on the Export tab and copy the schema. It describes your site's sources, fields, filters and date columns. Describe the report you want to the assistant, paste its recipe back, and press Apply recipe. Every field is checked against what the source really has, and anything unknown is named and left out.
 
 = Where do export files go? =
 
-`wp-content/uploads/open-export/`, protected with an .htaccess deny rule and random filenames. Downloads are streamed through an authenticated endpoint and files are cleaned up after 30 days.
+`wp-content/uploads/open-export/`. The folder has an `.htaccess` rule that denies access, and each file name includes random characters. Finished exports are deleted after 30 days, or the number of days you set on the Settings tab.
 
 = Does my data leave my server? =
 
-No. Open Export makes no external connections and sends nothing anywhere. Exports are generated on your server and stay there until you download or delete them.
+Only when you set up a delivery, or when you download a file. Open Export sends no usage data and contacts no outside service by itself.
 
 = What happens when I delete the plugin? =
 
-Uninstalling removes everything: saved templates, job history, cached data, and every generated export file, on every site of a multisite network.
+Uninstalling removes its templates, schedules, destinations, settings, job history, cached data, scheduled events and every export file, on every site of a network.
 
-== Screenshots ==
+= Can I run exports from the command line? =
 
-1. Pick a data source: post types, users, comments, taxonomies, or any raw database table.
-2. Filter, preview, and choose fields grouped by plugin (WooCommerce, ACF, Yoast, and more).
-3. Export with pacing controls; download CSV, JSON, or XML when finished.
+Yes, with WP-CLI. For example, `wp opex run "Weekly orders"` runs a saved template or schedule, and `wp opex jobs` lists recent exports.
 
-== Upgrade Notice ==
+== Third-party services ==
 
-= 1.3.1 =
-Fixes the AI round trip: the capability document now describes every Common source, WooCommerce ids work on both storage engines, and a recipe that does not resolve is reported rather than silently applied.
+Open Export contacts no outside service by itself. It has no tracking, no telemetry and no license checks. It sends data only to places you set up yourself, and only when an export you set up finishes or when you press Test:
 
-= 1.3.0 =
-Hand a JSON description of your site to an AI assistant and paste back the export recipe it writes. Also fixes date filters that excluded the last day of a range.
+* Email: a download link, or the file, to the addresses you enter, through your site's own mail setup.
+* Webhook: a JSON message to the URL you enter. It holds the export's id, name, format, row count, file size and finish time, a download link, and your site's address.
+* FTP, FTPS or SFTP: the export file, sent to the server you enter with the login you saved. Test uploads a small file and deletes it.
 
-= 1.2.0 =
-WooCommerce order exports (HPOS and classic) and a proper date-range filter. Fixes relative date tokens that resolved in UTC, and an attribute-escaping issue in the admin screen.
+A background export also asks your own site to run WP-Cron. That request goes to your own site, not to anyone else.
 
-= 1.1.2 =
-Compliance and translation release: the whole admin app is now translatable, uninstall wipes every trace (multisite included), and filter values with backslashes export correctly. Now requires WordPress 7.0.
-
-= 1.1.1 =
-UI cleanup: Open Export now lives under Tools. Source picker uses collapsible groups and an Advanced tab for database tables.
-
-= 1.1.0 =
-Workflow release: saved templates, one-click re-run, column reorder and rename, CSV delimiters, and relative date filters.
-
-= 1.0.1 =
-Security and stability update: blocks credential columns on raw table exports, adds REST nonce protection, per-job run locks, and server-side export pause. Recommended for all users.
-
-= 1.0.0 =
-Initial release.
+SFTP uses the bundled phpseclib library (MIT license).
 
 == Changelog ==
 
-= 1.3.1 =
-* Fixed: the capability document listed no fields unless a source was already selected, leaving an AI nothing to compose a recipe from. Every Common source is now described in full.
-* Fixed: WooCommerce field ids only worked on stores using High-Performance Order Storage. The same woo: ids now work on both storage engines, so one recipe fits any store.
-* Fixed: a recipe whose ids did not resolve was applied as an empty selection. Import now shows a report naming every id as matched, substituted or dropped, with a reason and a suggested correction, and refuses a recipe where nothing resolves.
-* Fixed: Orders appeared twice in Common sources; the raw shop_order post type moved to Advanced.
-* Fixed: date paid and date completed are now usable date ranges on stores that keep orders as posts.
-* Added: shipping email and guest flag order fields; a type on every field and a tier on every source in the capability document.
+= 2.0.0 =
+* Added: a new five-tab screen (Export, History, Schedules, Destinations, Settings).
+* Added: schedules, incremental runs, trigger URLs and background exports.
+* Added: delivery by email, webhook, FTP, FTPS and SFTP, with retries.
+* Added: Excel (XLSX), CSV encoding and line endings, XML templates, transforms, custom columns and nested filter groups.
+* Added: WooCommerce order line items, customers, products and coupons.
+* Added: feed presets for Google Merchant Center, Meta catalogs and Pinterest catalogs.
+* Added: multisite network exports, WP-CLI, Site Health and suggested privacy text.
+* Added: ACF repeater and flexible content fields.
+* Changed: WooCommerce order files are the same on both storage types: store price decimals, yes or no flags, site-time dates. Draft orders are left out.
+* Changed: a filter on a field the source does not have is now an error. Saving a template under an existing name updates it.
+* Fixed: database errors, repeated batches and parallel requests can no longer leave a broken or doubled file.
 
+Full history: CHANGELOG.md at https://github.com/twigandolive/open-export
 
-= 1.3.0 =
-* Added: an AI assistant panel that exports a JSON description of this site's sources, fields, operators, date columns, and legal field values, complete with the instructions and return format an assistant needs.
-* Added: paste the JSON recipe an assistant replies with and the export screen configures itself; nothing runs until you press Start export.
-* Added: recipes are validated field by field, and anything unrecognised is reported in plain language instead of silently exporting a blank column.
-* Added: REST endpoints /schema and /recipe, behind the same administrator capability and nonce as every other route.
-* Fixed: a date rule using "is on or before" excluded the whole of the end date; date columns now compare by calendar day.
-* Fixed: a compact date such as 20260301 was treated as a number and matched nothing.
-* Fixed: custom fields, taxonomies, and computed fields chosen on a raw database table exported as silently empty columns.
-* Fixed: post_modified_gmt is now offered in the field picker.
+== Upgrade Notice ==
 
-
-= 1.2.0 =
-* Added: WooCommerce Orders source that works with both High-Performance Order Storage and classic post storage, exposing order, customer, billing, shipping, totals, and payment fields under the same names on either engine.
-* Added: date-range filter on every source, with presets (today, last 7/30/90 days, this or last week/month/quarter/year) and a custom From/To range.
-* Added: date ranges are whole days in your site's timezone and the end date is fully included; the range is always combined with AND, so choosing "match ANY rule" cannot widen it.
-* Fixed: relative date tokens (`today`, `this month`, `last 30 days`) resolved against UTC instead of the site timezone, so on a UTC-8 site `today` returned no rows at all from late afternoon onward.
-* Fixed: `this month`, `last month`, `this year`, and `last year` started at the current time of day instead of midnight.
-* Security: the admin app escaped `&`, `<`, and `>` but not quotes when building HTML attributes, so a meta key, post type label, or table name containing a double quote could inject markup into the export screen.
-
-= 1.1.2 =
-* Added: full internationalization of the admin app; every UI string now runs through WordPress translation functions.
-* Added: multisite-aware uninstall that removes options, transients, guard files, and export directories on every site.
-* Added: Third-Party Services statement and privacy FAQ (the plugin makes no external connections).
-* Fixed: filter values containing literal backslashes are no longer altered before querying.
-* Changed: minimum supported WordPress version raised to 7.0.
-* Changed: translations now load automatically from WordPress.org; the bundled .pot template was removed.
-
-= 1.1.1 =
-* Changed: admin screen moved to Tools → Open Export.
-* Added: quick-start steps, collapsible source groups, Advanced tab for database tables, table search.
-
-= 1.1.0 =
-* Added: saved export templates (save, load, delete).
-* Added: one-click re-run and load setup from job history.
-* Added: drag-to-reorder columns and custom column headers.
-* Added: CSV delimiter choice (comma, semicolon, tab).
-* Added: relative date filter tokens (last 30 days, this month, etc.).
-
-= 1.0.1 =
-* Security: block password-hash columns on raw table exports.
-* Security: explicit REST nonce middleware for CSRF protection on API mutations.
-* Security: per-job run locks prevent duplicate/corrupt output from parallel requests.
-* Security: generic export error messages to clients; details logged only when debugging.
-* Added: server-side pause (`POST /jobs/{id}/pause`) so paused exports survive page refresh.
-* Fixed: empty meta keys no longer trigger PHP notices.
-* Added: translation loading, deactivation hook, and directory silence stubs.
-* Added: plugin action links, documentation row meta, Screenshots section, and Upgrade Notice for WordPress.org.
-* Added: `languages/open-export.pot` translation template.
-
-= 1.0.0 =
-* Initial release.
+= 2.0.0 =
+Schedules, delivery, Excel and new WooCommerce sources. Order files change: store price decimals, yes or no flags, site-time dates, no drafts. A filter on an unknown field is now an error. Check any program that reads your order exports.

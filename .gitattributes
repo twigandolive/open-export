@@ -1,0 +1,19 @@
+# The release zip is built with git archive. Everything below is for development
+# only and stays out of the zip, so the zip holds just the plugin.
+
+/.gitignore           export-ignore
+/.gitattributes       export-ignore
+/README.md            export-ignore
+/CHANGELOG.md         export-ignore
+/ROADMAP.md           export-ignore
+/ARCHITECTURE.md      export-ignore
+/SECURITY.md          export-ignore
+/CLAUDE.md            export-ignore
+/AGENTS.md            export-ignore
+/tests                export-ignore
+/phpunit.xml.dist     export-ignore
+/phpcs.xml.dist       export-ignore
+/composer.json        export-ignore
+/composer.lock        export-ignore
+/lib/composer.json    export-ignore
+/lib/composer.lock    export-ignore

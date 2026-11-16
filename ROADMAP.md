@@ -1,39 +1,23 @@
 # Roadmap
 
-Upcoming work for Open Export, grouped by target release. Plans may change as feedback comes in.
+Ideas for after Open Export 2.0.0. None of these has a date, and plans may change as feedback comes in. Everything the old roadmap listed for 1.5 and 2.0 ships in 2.0.0: see [CHANGELOG.md](CHANGELOG.md).
 
-## Version 1.5
+## Ideas
 
-Scheduled exports, richer WooCommerce order data, and room for it all:
-
-- **Interface refactor**: the single-page flow has taken on templates, history, date ranges, and the AI handoff, and adding scheduling and delivery on top will not fit. Reorganise into a tabbed or wizard layout with a persistent summary of the current export, so each step stays legible and new features have somewhere to live.
-- WP-Cron scheduled exports
-- Incremental export (new or changed records since last run)
-- Email on completion (download link or attachment)
-- Webhook on completion
-- External cron trigger URL (secret key for server cron)
-- Background processing (exports continue with the browser tab closed)
-- WP-CLI command (`wp opex run …`)
-- WooCommerce order line items (one row per line item)
-
-## Version 2.0
-
-Advanced shaping, delivery, and multi-site support:
-
-- Custom XML templates (safe placeholder syntax, no user PHP)
-- Safe declarative value transforms (date format, find/replace, prefix/suffix, concat)
-- Nested filter groups (`(A AND B) OR C`)
-- FTP / SFTP delivery on completion
-- Multisite network-wide export
-- Repeater and flexible content field flattening (optional; JSON blobs remain the default)
-- Feed presets for common product-feed formats
+- **SFTP keys with a passphrase.** Today a private key must have no passphrase. Support for an encrypted key would let you use the key you already have.
+- **Reuse a schedule's saved webhook secret for a one-off export.** Today a one-off export that sends a signed webhook needs the secret typed again.
+- **"Last used" on saved templates**, so you can tell which templates are still in use.
 
 ## Excluded
 
-Deliberately out of scope:
+Left out on purpose:
 
-- **Custom PHP / `eval()` snippets**: unacceptable security risk with user-supplied code
-- **Excel native (XLS / XLSX)**: heavy dependency and memory use; CSV with UTF-8 BOM opens correctly in Excel
-- **Direct cloud spreadsheet sync**: OAuth complexity; webhooks cover most automation needs
-- **Full re-import companion**: a separate product; exports will always include ID and stable keys for standard import workflows
-- **WordPress WXR export**: already provided by WordPress core
+- **Custom PHP or `eval()` snippets:** running code typed into a form is too great a security risk. Transforms and custom columns cover the common needs without code.
+- **Marking rows as exported:** it writes a flag into your own data for every row. Incremental schedules already export only what is new since the last run.
+- **Export when an order changes status:** it would run an export inside the checkout request and slow it down. A schedule or the trigger URL does the same job outside checkout.
+- **Google Sheets sync:** it needs a sign-in with Google and an outside service. A webhook or an SFTP upload covers most automation.
+- **Splitting one export into several files:** one export makes one file, which keeps history and delivery simple. A filter or date range can cut a large export into parts.
+- **A front-end shortcode:** it would put private data on public pages.
+- **PDF export:** it needs a large library, and a data export belongs in a spreadsheet.
+- **WordPress WXR export:** WordPress already has it under Tools, Export.
+- **A re-import companion:** that is a separate product. Exports always include ids and stable keys for standard import tools.

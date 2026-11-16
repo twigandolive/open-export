@@ -5,6 +5,79 @@ All notable changes to Open Export are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - Unreleased
+
+Open Export now runs exports on a schedule, sends the file where you need it, and covers more of a WooCommerce store. Read "Changed" before you upgrade: WooCommerce order files look different, and a few loose inputs that 1.3.1 ignored are now errors.
+
+### Added
+
+- **A new admin screen with five tabs:** Export, History, Schedules, Destinations and Settings. You build an export in one place and set up repeat exports in another, with the same builder in both.
+- **Excel (XLSX) files.** The plugin writes them itself, with no extra library. Ids with leading zeros and long numbers stay text, so Excel does not change them. XLSX needs the PHP zip extension.
+- **CSV options:** choose the encoding (UTF-8 with BOM, UTF-8, Windows-1252 or UTF-16 LE) and the line endings (LF or CRLF), so the file opens cleanly in the program that reads it.
+- **Custom XML templates.** Write a header, a row and a footer with `{field id}` placeholders. Values are escaped for you, and `{field id|cdata}` wraps a value in CDATA. The plugin checks that the result is well-formed XML before it runs.
+- **Column transforms.** Up to 8 steps per column: trim, change case, add text before or after, find and replace, format a date, format a number, map values, fill in when empty, remove HTML and shorten. Steps are plain settings, never code.
+- **Custom columns** that combine fields and text, such as `{woo:billing_first_name} {woo:billing_last_name}`.
+- **Nested filter groups**, such as (A and B) or C, up to 3 levels deep and 50 rules in total.
+- **New WooCommerce sources:** products and variations, coupons, order line items (one row per item, with the order's number, date, status and billing email beside it) and customers (with order count, total spent and average order, guests included). Money is exact decimal math, never floating point.
+- **Feed presets** for Google Merchant Center, Meta catalogs and Pinterest catalogs. Each one fills in a complete product export that you can change before you run it.
+- **Schedules.** Run an export hourly, daily, weekly, monthly or only when asked, at a time in your site's timezone. Name the file with tokens such as `{label}` and `{date}`.
+- **Incremental schedules** export only rows that are new or changed since the last successful run.
+- **Reset watermark** on a schedule makes its next incremental run export every row again.
+- **A trigger URL for each schedule**, so a real server cron job can start it. The URL holds a secret key. You can replace the key at any time, and the URL stops answering after 10 wrong keys in 10 minutes.
+- **Background exports** that keep going after you close the browser tab. They run on WP-Cron.
+- **Delivery when an export finishes:** email (a download link, or the file attached up to 10 MB), a signed webhook, or upload to a saved FTP, FTPS or SFTP destination. A failed delivery is tried up to 3 times in all, 5 and then 30 minutes apart.
+- **Retry delivery** on a finished export sends its failed or waiting deliveries again now. A delivery that already worked is never sent twice.
+- **Destinations** with a Test button. SFTP remembers the server's host key and refuses to send if it changes.
+- **Download links that expire**, for email and webhook deliveries. You set how many days they last.
+- **Settings:** how long to keep finished exports (1 to 365 days, default 30), how long download links last (1 to 30 days, default 7) and whether exports run in the background by default.
+- **Network exports on multisite.** A super admin can run one export across every site in the network, with the site id and URL on each row.
+- **ACF repeater and flexible content fields** export as JSON, or flattened into numbered columns such as "name 1 sub" (up to 20 rows).
+- **WP-CLI:** `wp opex` lists sources, templates, schedules and jobs, runs a template or schedule, runs a one-off export from a JSON file, prints the capability document and runs the cleanup.
+- **Site Health:** an Open Export section under Info, and a status test that tells you when scheduled exports need a real cron job.
+- **Suggested privacy policy text** under Settings, Privacy.
+- **Two abilities** for the WordPress Abilities API, `open-export/get-schema` and `open-export/list-sources`, when your WordPress has that API.
+- **Plain-language notes on each export** that say what was dropped and why, for example a field the source does not have.
+- Hooks for developers: the `opex_job_done` action, and the `opex_delivery_retry_wait` and `opex_cron_disabled` filters.
+- The capability document and recipe import now cover the new sources, formats, CSV options, transforms, custom columns, nested filter groups and XML templates. `opex_schema` stays at version 1, so a 1.3.1 recipe still works.
+
+### Changed
+
+- **WooCommerce order exports give the same file on both order storage types.** Money uses your store's price decimals (82.50, not 82.50000000), flags read yes or no, and dates are in your site's time. If a spreadsheet or import reads your order files, check it against a new export.
+- **Draft orders no longer export.** Auto-drafts and checkout drafts are left out of orders, order line items and the row counts.
+- **A filter on a field the source does not have is now an error** that names the field, on preview, export, template save and schedule save. Before, the rule was ignored and you got more rows than you asked for. Recipes still report and drop unknown fields.
+- **Saving a template under a name that already exists updates that template** instead of adding a second one with the same name.
+- A paused export stays paused until you press Resume.
+- Relative date words such as "today" in a filter apply only to date fields. In a text field they are plain text.
+- An empty "is one of" list matches nothing. Before, the rule disappeared and every row matched.
+- The spreadsheet formula guard leaves plain numbers such as -5 alone and now guards the header row too.
+- Taxonomy filters with starts with, ends with, greater than and less than now compare the term name. Before, they were ignored.
+- A user role filter with "is one of" takes a list of roles.
+- "This week", "this month", "this quarter" and "this year" are labeled "so far", because they end today.
+- A batch size that is not a number falls back to 500.
+- A raw table with no whole-number primary key is ordered by its primary key columns. A table with no key at all gets a note that row order is not guaranteed.
+- The field picker lists post type and MIME type for every post type, and the comment GMT date and karma for comments.
+- Old exports are removed by an hourly cleanup that follows the retention setting, instead of when you open the job list.
+- Deactivating the plugin clears its scheduled events. Uninstalling also removes schedules, destinations, settings, lock rows and every scheduled event, on every site of a network.
+
+### Fixed
+
+- A database error in the middle of an export now stops the job with an error you can resume from. Before, the export could finish with rows missing.
+- A batch that runs twice, for example after a timeout, no longer writes its rows twice.
+- Two requests can no longer run the same export batch at the same time.
+- Deleting an export while it runs now removes it for good, file included.
+- The `session_tokens` and `_application_passwords` user meta are never exported on any path, including the raw user meta table, and you cannot filter on them.
+- A blank text column now counts as empty for equals, does not equal and is empty.
+- The schema link in the capability document works on sites without pretty permalinks.
+- A recipe with values of the wrong shape is reported instead of causing an error.
+- Any PHP error during an export now marks the job as failed instead of stopping the request.
+- CSV export no longer raises a deprecation notice on newer PHP.
+- The `/schema` route refuses an unknown `scope`.
+- The Open Export link on the Plugins screen opens Tools, Open Export.
+
+### Removed
+
+- The old one-page export screen and its script and style (`assets/admin.js`, `assets/admin.css`). The five-tab screen replaces them.
+
 ## [1.3.1] - 2026-09-02
 
 Corrective release for the assistant round trip: hand the capability document
