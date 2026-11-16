@@ -166,7 +166,7 @@
 			}
 			table = ui.table( {
 				caption: __( 'Export history', 'open-export' ),
-				cls: 'opex-stack-sm',
+				cls: 'opex-stack-sm opex-stack-md',
 				columns: [
 					{ label: __( 'Name', 'open-export' ) },
 					{ label: __( 'Source and format', 'open-export' ) },

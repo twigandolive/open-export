@@ -54,15 +54,27 @@
 .opex-fieldgroup-name{font-weight:600}
 .opex-fieldgroup-links{display:flex;gap:12px}
 .opex-check{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
-.opex-check code{margin-left:auto;color:var(--text-secondary);overflow-wrap:anywhere}
+/* The label keeps its width (wrapping only past 65%); a long field id gives way and ends in an ellipsis, with its title holding it whole. */
+.opex-check > span{flex:none;max-width:65%;overflow-wrap:anywhere}
+.opex-check code{flex:0 1 auto;min-width:2em;margin-left:auto;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .opex-colrow{margin-bottom:4px;border:1px solid var(--separator);border-radius:3px;background:var(--panel)}
 .opex-colrow.is-dragging{opacity:.5}
 .opex-colrow.opex-drop-before{box-shadow:0 -3px 0 var(--accent)}
 .opex-colrow.opex-drop-after{box-shadow:0 3px 0 var(--accent)}
-.opex-colrow-main{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 8px}
+/* One line while the list is wide enough: the header box shrinks, a long field id ends in an ellipsis, the buttons never wrap. */
+.opex-colrow-main{display:flex;align-items:center;gap:4px 8px;padding:6px 8px}
+.opex-colrow-main > *{flex:none}
+.opex-colrow-tools{display:flex;align-items:center;gap:8px}
+/* The chosen list's own width decides when a row needs two lines (the admin menu and the window both change it). */
+.opex-pane-chosen{container-type:inline-size}
+@container (max-width:450px){
+  .opex-colfield{display:none}
+  .opex-colrow-main{flex-wrap:wrap}
+  .opex-colrow-tools{margin-left:auto}
+}
 .opex-grip{display:inline-flex;color:var(--text-secondary);cursor:grab}
-.opex-wrap .opex-colrow-main input[type="text"]{flex:1 1 130px;min-width:0}
-.opex-wrap code.opex-colfield{flex:0 1 auto;color:var(--text-secondary);background:none;padding:0;overflow-wrap:anywhere}
+.opex-wrap .opex-colrow-main input[type="text"]{flex:1 1 160px;min-width:72px}
+.opex-wrap code.opex-colfield{flex:0 3 auto;min-width:3em;overflow:hidden;color:var(--text-secondary);background:none;padding:0;text-overflow:ellipsis;white-space:nowrap}
 .opex-colrow-acf{padding:0 8px 8px 32px}
 .opex-tag{padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);font-size:12px;font-weight:600;line-height:18px}
 .opex-tag-warn{border-color:var(--warning);background:var(--warning-tint)}
@@ -121,13 +133,16 @@
 /* Preview */
 .opex-previewbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:12px}
 .opex-preview-count{font-weight:600}
-.opex-preview-table td{max-width:320px;overflow-wrap:anywhere}
+.opex-preview-table td{max-width:320px;overflow-wrap:break-word}
 .opex-wrap .opex-problems{margin:4px 0 0 18px;list-style:disc}
 
 /* Run card */
 .opex-run-box:empty{display:none}
 .opex-run-box{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--separator)}
 .opex-run-view{display:flex;flex-direction:column;gap:12px}
+/* Empty parts take no room, so the gaps stay even. A live region stays in place so it is still announced. */
+.opex-run-view > :empty:not([aria-live]){display:none}
+.opex-run-view > [aria-live]:empty{margin-top:-12px}
 .opex-run-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .opex-run-name{font-weight:600}
 .opex-run-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
@@ -158,7 +173,11 @@ html:has(#opex-panel-export:not([hidden]) .opex-stickybar){scroll-padding:48px 0
   /* Review note 9: the chosen list grows with the page, so an open transform panel is never cut off. */
   .opex-pane-chosen{max-height:none}
   .opex-pane:not(.opex-pane-chosen){max-height:360px}
-  .opex-rule{grid-template-columns:minmax(0,1fr)}
+  /* A rule stacks its field, test and value, with Remove beside them and a line between rules. */
+  .opex-rule{grid-template-columns:minmax(0,1fr) auto}
+  .opex-rule > :not(:last-child){grid-column:1}
+  .opex-rule > :last-child{grid-column:2;grid-row:1}
+  .opex-rule + .opex-rule{padding-top:8px;border-top:1px solid var(--separator)}
   .opex-switchbody{padding-left:0}
   .opex-switchbody .opex-row{grid-template-columns:minmax(0,1fr)}
   .opex-report li{grid-template-columns:minmax(0,1fr)}

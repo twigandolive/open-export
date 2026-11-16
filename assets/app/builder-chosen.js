@@ -218,27 +218,31 @@
 			const main = el( 'div', { class: 'opex-colrow-main' }, [
 				grip,
 				headerInput( id, custom ),
-				custom ? el( 'span', { class: 'opex-tag' }, __( 'Custom', 'open-export' ) ) : el( 'code', { class: 'opex-colfield' }, id ),
+				// A long field id is cut short on screen; the title and the text keep it whole.
+				custom ? el( 'span', { class: 'opex-tag' }, __( 'Custom', 'open-export' ) ) : el( 'code', { class: 'opex-colfield', title: id }, id ),
 				known ? null : el( 'span', { class: 'opex-tag opex-tag-warn' }, __( 'Not on this source', 'open-export' ) ),
-				toggle,
-				/* translators: %s: column name. */
-				icon( 'up', sprintf( __( 'Move %s up', 'open-export' ), name ), 0 === index, () => {
-					moveTo( id, index - 1 );
-					after( id, 'up' );
-				} ),
-				/* translators: %s: column name. */
-				icon( 'down', sprintf( __( 'Move %s down', 'open-export' ), name ), index === count - 1, () => {
-					moveTo( id, index + 1 );
-					after( id, 'down' );
-				} ),
-				/* translators: %s: column name. */
-				icon( 'remove', sprintf( __( 'Remove %s', 'open-export' ), name ), false, () => {
-					const next = ctx.config.fields[ index + 1 ] || ctx.config.fields[ index - 1 ] || null;
-					dropColumn( id );
+				// The buttons stay together, so they never wrap one by one.
+				el( 'span', { class: 'opex-colrow-tools' }, [
+					toggle,
 					/* translators: %s: column name. */
-					live.textContent = sprintf( __( '%s removed.', 'open-export' ), name );
-					after( next, 'remove' );
-				} ),
+					icon( 'up', sprintf( __( 'Move %s up', 'open-export' ), name ), 0 === index, () => {
+						moveTo( id, index - 1 );
+						after( id, 'up' );
+					} ),
+					/* translators: %s: column name. */
+					icon( 'down', sprintf( __( 'Move %s down', 'open-export' ), name ), index === count - 1, () => {
+						moveTo( id, index + 1 );
+						after( id, 'down' );
+					} ),
+					/* translators: %s: column name. */
+					icon( 'remove', sprintf( __( 'Remove %s', 'open-export' ), name ), false, () => {
+						const next = ctx.config.fields[ index + 1 ] || ctx.config.fields[ index - 1 ] || null;
+						dropColumn( id );
+						/* translators: %s: column name. */
+						live.textContent = sprintf( __( '%s removed.', 'open-export' ), name );
+						after( next, 'remove' );
+					} ),
+				] ),
 			] );
 			app.append( item, [ main, custom ? null : acfChoice( id ) ] );
 

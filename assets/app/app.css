@@ -19,7 +19,7 @@
   font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
 }
 .opex-wrap,.opex-wrap *,.opex-wrap *::before,.opex-wrap *::after{box-sizing:border-box}
-:where(.opex-wrap) :is(h1,h2,h3,p,ul,ol,dl,dd,fieldset){margin:0;padding:0}
+:where(.opex-wrap) :is(h1,h2,h3,h4,p,ul,ol,dl,dd,fieldset){margin:0;padding:0}
 :where(.opex-wrap) :is(ul,ol){list-style:none}
 :where(.opex-wrap) fieldset{border:0;min-width:0}
 .opex-wrap [hidden]{display:none!important}
@@ -73,7 +73,7 @@
 .opex-link:disabled,.opex-link[aria-disabled="true"]{color:var(--text-disabled);cursor:not-allowed}
 .opex-link-danger,.opex-wrap a.opex-link-danger{color:var(--error)}
 .opex-link-danger:hover,.opex-wrap a.opex-link-danger:hover{color:var(--error);text-decoration-thickness:2px}
-.opex-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:3px;background:none;color:var(--text-secondary);cursor:pointer}
+.opex-iconbtn{display:inline-flex;flex:none;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:3px;background:none;color:var(--text-secondary);cursor:pointer}
 .opex-iconbtn:hover{background:var(--well);border-color:var(--separator);color:var(--text-primary)}
 .opex-iconbtn:disabled{color:var(--text-disabled);background:none;border-color:transparent;cursor:not-allowed}
 [aria-expanded="true"] > .opex-chev{transform:rotate(180deg)}
@@ -93,10 +93,12 @@
 .opex-w-full{width:100%}
 .opex-wrap .opex-w-num{width:96px}
 .opex-wrap .opex-w-sm{width:140px}
-.opex-wrap .opex-w-md{width:260px}
+.opex-wrap .opex-w-md{width:25em}
 .opex-wrap .opex-help{margin-top:4px;color:var(--text-secondary)}
 .opex-wrap .opex-field-error{margin-top:4px;color:var(--error);font-weight:600}
 .opex-inline{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+/* A row whose parts are all hidden takes no room, so the spacing around it stays even. */
+.opex-inline:has(> [hidden]):not(:has(> :not([hidden]))){display:none}
 .opex-stack{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .opex-row{display:grid;grid-template-columns:190px minmax(0,1fr);gap:4px 16px;align-items:start;padding:8px 0}
 .opex-row > label,.opex-row > .opex-rowlabel{padding-top:6px;font-weight:600}
@@ -166,7 +168,7 @@
 @media (prefers-reduced-motion:reduce){.opex-skel i{animation:none}.opex-wrap input.opex-switch::before{transition:none}}
 
 /* Tables */
-.opex-tablewrap{overflow-x:auto}
+.opex-tablewrap{overflow-x:auto;container-type:inline-size}
 .opex-table{width:100%;border:1px solid var(--border);border-collapse:collapse;background:var(--panel)}
 .opex-table th,.opex-table td{padding:8px 10px;text-align:left;vertical-align:top}
 .opex-table thead th{border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap}
@@ -176,12 +178,16 @@
 .opex-nameline{display:flex;align-items:flex-start;gap:4px}
 .opex-nameline strong{display:block;padding-top:6px}
 .opex-actions{display:flex;flex-wrap:wrap;gap:2px 12px}
+.opex-actions > *{white-space:nowrap}
+/* History rows list their actions one per line while the table has columns. */
+.opex-stack-md .opex-actions{flex-direction:column;align-items:flex-start}
 .opex-nowrap{white-space:nowrap}
 .opex-detail-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-top:8px}
 .opex-lines li{display:grid;grid-template-columns:110px 90px minmax(0,1fr);gap:8px;align-items:start;padding:6px 0;border-top:1px solid var(--separator)}
 .opex-lines li:first-child{border-top:0}
 .opex-lines .opex-line-name{display:inline-flex;align-items:center;gap:4px;font-weight:600}
 .opex-notes li{display:flex;align-items:flex-start;gap:8px;padding:4px 0}
+.opex-notes li > :last-child{min-width:0;overflow-wrap:anywhere}
 .opex-badge{display:inline-block;padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--well);font-size:12px;font-weight:600;line-height:20px;white-space:nowrap}
 
 /* Status and progress */
@@ -256,6 +262,8 @@
   .opex-wrap :is(input:not([type="checkbox"]):not([type="radio"]),select){min-height:40px}
   .opex-seg label{min-height:40px}
   .opex-nameline strong{padding-top:9px}
+  /* Controls grow to 40px here, so each label lines up with its control's text instead of a fixed offset. */
+  .opex-row{align-items:baseline}
   .opex-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
   .opex-chip{min-height:36px;padding:0 8px}
 }
@@ -268,8 +276,16 @@
   .opex-status-list li > :nth-child(3){grid-column:2}
   .opex-tabs{gap:4px}
   .opex-tab{flex:1 1 auto;text-align:center}
-  .opex-table tbody tr.opex-detail td{padding-left:10px}
-  /* Narrow screens: each row becomes a block and each cell names itself. */
+  .opex-wrap .opex-w-md{width:100%}
+  .opex-meta{grid-template-columns:minmax(0,1fr)}
+  .opex-formactions{flex-direction:column;align-items:stretch}
+  .opex-sched-actions .opex-link-danger,.opex-formactions .opex-link-danger{margin-left:0}
+  .opex-sched-builder{padding:8px}
+}
+/* Tables stack when their own box is narrow (the admin menu changes it): each row becomes a block and
+   each cell names itself. At 782px, as wp-admin list tables do; History has more columns and stacks at 1000px. */
+@container (max-width:782px){
+  .opex-stack-sm tbody tr.opex-detail td{padding-left:10px}
   .opex-stack-sm thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
   .opex-stack-sm,.opex-stack-sm tbody,.opex-stack-sm tr,.opex-stack-sm td{display:block;width:100%}
   .opex-stack-sm tbody tr:not(.opex-detail){padding:8px 0;border-top:1px solid var(--separator)}
@@ -278,11 +294,22 @@
   .opex-stack-sm td[data-label]{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
   .opex-stack-sm td[data-label]::before{content:attr(data-label);font-weight:600;color:var(--text-secondary)}
   .opex-stack-sm td[data-label] > *{justify-self:start;max-width:100%}
-  .opex-stack-sm td.opex-progress-cell > *{justify-self:stretch}
+  .opex-stack-sm td[data-label] > * + *{grid-column:2;margin-left:0}
+  .opex-stack-sm td.opex-progress-cell > *{justify-self:stretch;max-width:360px}
   .opex-stack-sm .opex-progress-cell{min-width:0}
-  .opex-wrap .opex-w-md{width:100%}
-  .opex-meta{grid-template-columns:minmax(0,1fr)}
-  .opex-formactions{flex-direction:column;align-items:stretch}
-  .opex-sched-actions .opex-link-danger,.opex-formactions .opex-link-danger{margin-left:0}
-  .opex-sched-builder{padding:8px}
+}
+@container (max-width:1000px){
+  .opex-stack-md tbody tr.opex-detail td{padding-left:10px}
+  .opex-stack-md thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .opex-stack-md,.opex-stack-md tbody,.opex-stack-md tr,.opex-stack-md td{display:block;width:100%}
+  .opex-stack-md tbody tr:not(.opex-detail){padding:8px 0;border-top:1px solid var(--separator)}
+  .opex-stack-md tbody tr:first-child{border-top:0}
+  .opex-stack-md td{padding:4px 12px}
+  .opex-stack-md td[data-label]{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
+  .opex-stack-md td[data-label]::before{content:attr(data-label);font-weight:600;color:var(--text-secondary)}
+  .opex-stack-md td[data-label] > *{justify-self:start;max-width:100%}
+  .opex-stack-md td[data-label] > * + *{grid-column:2;margin-left:0}
+  .opex-stack-md td.opex-progress-cell > *{justify-self:stretch;max-width:360px}
+  .opex-stack-md .opex-progress-cell{min-width:0}
+  .opex-stack-md .opex-actions{flex-direction:row;align-items:center}
 }

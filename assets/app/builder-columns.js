@@ -94,7 +94,7 @@
 					return el( 'label', { class: 'opex-check', 'data-search': ( field.label + ' ' + field.id ).toLowerCase() }, [
 						box,
 						el( 'span', {}, field.label ),
-						field.label !== field.id ? el( 'code', {}, field.id ) : null,
+						field.label !== field.id ? el( 'code', { title: field.id }, field.id ) : null,
 					] );
 				} );
 				pane.appendChild( el( 'fieldset', { class: 'opex-fieldgroup', 'data-group': key, 'aria-labelledby': nameId }, [ head, items ] ) );
