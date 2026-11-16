@@ -170,8 +170,8 @@ SFTP uses the bundled phpseclib library (MIT license).
 * Added: WooCommerce order items, customers, products and coupons, feed presets with GTIN, and a product importer preset.
 * Added: multisite network exports, ACF repeaters, WP-CLI, Site Health, privacy text and a setting to keep data on uninstall.
 * Changed: order files match on both storage types, and drafts are left out. A filter on an unknown field is an error. Saving under an existing template name updates it.
-* Fixed: errors, repeated batches and parallel requests no longer break or double a file or lose a change. CSV cells with a backslash before a quote, and number filters, are now exact.
-* Security: on multisite, a site administrator who is not a super admin now reaches only their own site's users and tables. The export folder is also blocked on IIS.
+* Fixed: errors, repeated batches and parallel requests no longer break a file or lose a change. CSV cells with a backslash before a quote, and number filters, are now exact.
+* Security: on multisite, a site admin who is not a super admin reaches only their own site's users and tables. Stored PHP objects are never rebuilt during an export. The export folder is also blocked on IIS.
 
 Full history: CHANGELOG.md at https://github.com/twigandolive/open-export
 
