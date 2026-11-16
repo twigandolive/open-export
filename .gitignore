@@ -10,6 +10,7 @@ Thumbs.db
 
 # Dependencies (if added later)
 /vendor/
+/tests/php74/vendor/
 /node_modules/
 
 # Local environment

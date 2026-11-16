@@ -1,0 +1,12 @@
+{
+	"name": "twigandolive/open-export-php74-tests",
+	"description": "PHPUnit 9.6 for running the Open Export tests on PHP 7.4, the plugin's floor. Test tooling only.",
+	"license": "GPL-2.0-or-later",
+	"require-dev": {
+		"phpunit/phpunit": "^9.6"
+	},
+	"config": {
+		"platform": { "php": "7.4.33" },
+		"sort-packages": true
+	}
+}
