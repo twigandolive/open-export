@@ -8,7 +8,7 @@ Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Export posts, users, orders, products or any table to CSV, Excel, JSON or XML. Schedule it, send it on. Every feature included, no add-ons.
+Export posts, users, orders, products or any table to CSV, Excel, JSON, XML or HTML. Schedule it, send it on. Every feature included, no add-ons.
 
 == Description ==
 
@@ -90,7 +90,7 @@ Yes. Money uses your store's price decimals (82.50, not 82.50000000), flags read
 
 = How do scheduled exports run? =
 
-WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Add a real cron job that loads `wp-cron.php` every few minutes, or call the schedule's trigger URL from your server's cron. Site Health warns you when a schedule is on and WP-Cron is switched off. A scheduled or background export that fails stops and shows as Failed on the History tab. It is not tried again by itself: only deliveries are.
+WordPress runs scheduled tasks with WP-Cron when someone visits your site. On a quiet site a schedule can start late. Add a real cron job that loads `wp-cron.php` every few minutes, or call the schedule's trigger URL from your server's cron. Site Health warns you when a schedule is on and WP-Cron is switched off, and when a background export has not moved for an hour. A scheduled or background export that fails stops and shows as Failed on the History tab. It is not tried again by itself: only deliveries are.
 
 = Is the trigger URL safe to share? =
 
@@ -102,7 +102,7 @@ SFTP. FTP sends your password and the file without encryption. FTPS encrypts the
 
 = How large can an export be? =
 
-CSV, JSON, XML and HTML have no fixed row limit. One Excel sheet holds 1,048,576 rows, header included: a bigger export stops and says the sheet is full: use CSV for those. An HTML export is one page, so a very large one is slow to open. Email attaches files up to 10 MB and sends a download link for larger ones.
+CSV, JSON, XML and HTML have no fixed row limit. One Excel sheet holds 1,048,576 rows, header included. A bigger export stops with a message that says so. Use CSV for those. An HTML export is one page, so a very large one is slow to open. Email attaches files up to 10 MB and sends a download link for larger ones.
 
 = How long are finished exports kept? =
 
@@ -169,8 +169,8 @@ SFTP uses the bundled phpseclib library (MIT license).
 * Added: WooCommerce order items, customers, products and coupons, feed presets with GTIN, and a product importer preset.
 * Added: multisite network exports, ACF repeaters, WP-CLI, Site Health, privacy text and a setting to keep data on uninstall.
 * Changed: order files match on both storage types, and drafts are left out. A filter on an unknown field is an error. Saving under an existing template name updates it.
-* Fixed: errors, repeated batches and parallel requests no longer break or double a file.
-* Security: on multisite, a site administrator who is not a super admin now reaches only their own site's users and tables.
+* Fixed: errors, repeated batches and parallel requests no longer break or double a file or lose a change. CSV cells with a backslash before a quote, and number filters, are now exact.
+* Security: on multisite, a site administrator who is not a super admin now reaches only their own site's users and tables. The export folder is also blocked on IIS.
 
 Full history: CHANGELOG.md at https://github.com/twigandolive/open-export
 

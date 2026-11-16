@@ -19,12 +19,13 @@ Only the latest release gets security fixes. Update before you report.
 
 - Every screen, REST route and ability that touches site data needs the `manage_options` capability. A site can change it with the `opex_capability` filter. WordPress checks the REST nonce on requests from a logged-in browser.
 - Two routes work without a login: the schedule trigger URL and the file download link. Each answers only to a secret, and a wrong secret gets a short reply that does not say why.
-- A trigger key is 40 random characters, compared in constant time. After 10 wrong keys in 10 minutes the URL stops answering for the rest of that window. Wrong keys from one IP address are limited too. A schedule starts at most once every 30 seconds from its URL.
+- A trigger key is 40 random characters, compared in constant time. Wrong keys are counted per schedule and per IP address. After 10 wrong keys for one schedule, or 30 from one IP address across all schedules, the URL answers 429 with a `Retry-After` header, even to the right key, until 10 minutes after the first wrong key. An unknown schedule id gets the same reply as a wrong key. A schedule starts at most once every 30 seconds from its URL.
 - A download link carries a random token that expires. The site stores only a keyed hash of the token.
-- Export files live in `wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. The folder holds an `index.php`, an `.htaccess` file that denies access on Apache and LiteSpeed, and a `web.config` file that denies access on IIS. Each file name includes 12 random characters.
+- Export files live in `wp-content/uploads/open-export/`, or `wp-content/uploads/sites/<id>/open-export/` on a multisite sub-site. The folder holds an `index.php`, an `.htaccess` file that denies access on Apache (2.2 and 2.4 rules) and LiteSpeed, and a `web.config` file that denies access on IIS. Site Health names the deny files in place and says nginx needs its own rule. Each file name includes 12 random characters.
 - Destination passwords, private keys and webhook secrets are encrypted with libsodium, with a key derived from your site's salts. The screen and the REST API never send a saved secret back.
 - SFTP checks the server's host key before it sends any password or key, and refuses a server whose key has changed.
 - A webhook must use https unless it points at your own site or a loopback address. The rule is checked when you save the webhook and again before each send, so a stored plain http address to another host is refused. It is signed with HMAC-SHA256 in the `X-Opex-Signature` header when you set a secret. It goes through WordPress's safe request function, which refuses local network addresses, and it does not follow redirects.
+- A failed export shows a plain message, never PHP's own error text, which can hold server paths. The detail goes to the PHP error log only when `WP_DEBUG` and `WP_DEBUG_LOG` are on.
 - `user_pass`, `user_activation_key`, `session_tokens` and `_application_passwords` are never exported, on any source.
 - CSV cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a leading apostrophe, so a spreadsheet does not run them as formulas. Plain numbers such as -5 stay numbers. XLSX cells are written as text or plain numbers, never formulas.
 - XML templates cannot declare a DOCTYPE or entities.
@@ -39,6 +40,7 @@ Only the latest release gets security fixes. Update before you report.
 - SFTP trusts the host key it sees the first time a test or delivery works. Test a new destination on a network you trust.
 - SFTP private keys with a passphrase are not supported.
 - A schedule's trigger URL is a secret. Anyone who has it can start that export. Replace the key if it leaks.
+- The trigger limit counts the address the connection comes from and ignores forwarding headers, which any caller can set. Behind a proxy or CDN every caller shares one count, so 30 wrong keys from anyone pause every trigger URL for up to 10 minutes.
 - Trigger keys are stored as plain text in the database, because the screen shows the URL again. Anyone who can read your database can read them.
 - nginx ignores `.htaccess` and `web.config` files, so there the export folder relies on its random file names. Block the folder in your server settings. The readme's "Where do export files go?" answer has an example rule.
 - Webhook addresses are checked when you save them and again before each send. On servers that send with cURL, the checked address is pinned for the request. Other transports cannot pin it, so there a hostile DNS answer could still send the request to another address.
