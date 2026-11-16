@@ -50,8 +50,16 @@ require_once OPEX_DIR . 'includes/class-opex-schedules.php';
 require_once OPEX_DIR . 'includes/class-opex-runner.php';
 require_once OPEX_DIR . 'includes/class-opex-exporter.php';
 require_once OPEX_DIR . 'includes/class-opex-schema.php';
+require_once OPEX_DIR . 'includes/class-opex-download.php';
 require_once OPEX_DIR . 'includes/class-opex-rest.php';
+require_once OPEX_DIR . 'includes/class-opex-rest-schedules.php';
+require_once OPEX_DIR . 'includes/class-opex-rest-delivery.php';
+require_once OPEX_DIR . 'includes/class-opex-rest-public.php';
 require_once OPEX_DIR . 'includes/class-opex-admin.php';
+require_once OPEX_DIR . 'includes/class-opex-privacy.php';
+require_once OPEX_DIR . 'includes/class-opex-site-health.php';
+require_once OPEX_DIR . 'includes/class-opex-abilities.php';
+require_once OPEX_DIR . 'includes/class-opex-cli.php';
 
 /**
  * Capability check for all screens, endpoints, and downloads. Administrator-level;
@@ -145,6 +153,10 @@ add_action( 'admin_menu', array( 'OPEX_Admin', 'register_menu' ) );
 add_action( 'admin_enqueue_scripts', array( 'OPEX_Admin', 'enqueue' ) );
 add_filter( 'plugin_action_links_' . OPEX_BASENAME, 'opex_plugin_action_links' );
 add_filter( 'plugin_row_meta', 'opex_plugin_row_meta', 10, 2 );
+
+OPEX_Privacy::register();
+OPEX_Site_Health::register();
+OPEX_Abilities::register();
 
 register_activation_hook( __FILE__, 'opex_export_dir' );
 register_deactivation_hook( __FILE__, 'opex_deactivate' );
