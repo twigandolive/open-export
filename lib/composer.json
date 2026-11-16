@@ -1,0 +1,16 @@
+{
+	"name": "twigandolive/open-export-lib",
+	"description": "Bundled libraries for the Open Export plugin.",
+	"type": "project",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=7.4",
+		"phpseclib/phpseclib": "^3.0"
+	},
+	"config": {
+		"platform": { "php": "7.4.33" },
+		"optimize-autoloader": true,
+		"sort-packages": true,
+		"allow-plugins": {}
+	}
+}
