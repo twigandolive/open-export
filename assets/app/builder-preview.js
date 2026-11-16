@@ -33,6 +33,7 @@
 		const stale = el( 'p', { class: 'opex-help', hidden: true }, __( 'The setup changed after this preview. Preview again to see the new rows.', 'open-export' ) );
 		let busy = false;
 
+		// Checks the setup, asks the server for a preview and shows it.
 		function run() {
 			if ( busy ) {
 				return;
@@ -53,6 +54,9 @@
 				const data = answer || {};
 				ctx.preview = { key, total: Number( data.total ) || 0 };
 				show( data );
+				// The setup may have changed while the request was out. Then
+				// these rows are already old, so keep the warning showing.
+				stale.hidden = key === JSON.stringify( ctx.config );
 				ctx.changed( 'preview' );
 			} ).catch( ( err ) => {
 				count.textContent = '';

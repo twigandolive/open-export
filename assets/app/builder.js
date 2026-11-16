@@ -154,6 +154,11 @@
 		 * A new source makes every field id stale, so everything that points
 		 * at fields starts over. Format choices stay.
 		 *
+		 * The old source's field list is cleared before the cards hear of the
+		 * change (fetchFields does that first, synchronously). Otherwise the
+		 * date range row would fill the empty date field from the old source,
+		 * and the new source's default would never replace it.
+		 *
 		 * @param {string} id Source id.
 		 */
 		function setSource( id ) {
@@ -172,8 +177,8 @@
 				network: keep.network,
 			} );
 			ctx.preview = null;
-			changed( 'source' );
 			fetchFields( true );
+			changed( 'source' );
 		}
 
 		function getConfig() {

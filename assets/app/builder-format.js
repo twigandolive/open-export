@@ -91,6 +91,7 @@
 				// An Excel file is a zip already, so the server would turn compression off.
 				ctx.config.compress = 'none';
 				zip.checked = false;
+				zip.disabled = ! canZip;
 			}
 			syncVisible();
 			ctx.changed( 'format' );
@@ -291,6 +292,7 @@
 			zipBox.hidden = 'xlsx' === ctx.config.format;
 		}
 
+		// Puts every control of the card back in line with the config, after a load or a source change.
 		function syncAll() {
 			formatInputs.forEach( ( c ) => {
 				c.input.checked = c.input.value === ctx.config.format;
@@ -301,6 +303,10 @@
 			enclosure.value = ctx.config.csv_enclosure;
 			quoteAll.checked = !! ctx.config.csv_quote_all;
 			zip.checked = 'zip' === ctx.config.compress;
+			// A server that cannot zip keeps the box off, except for a loaded
+			// zip choice: the person must be able to untick it, or errors()
+			// would block the form with no way out.
+			zip.disabled = ! canZip && ! zip.checked;
 			stash = null;
 			useTemplate.checked = false;
 			syncXml();

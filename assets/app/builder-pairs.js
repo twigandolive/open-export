@@ -43,8 +43,10 @@
 	function editor( step, name, n, validate ) {
 		const rows = B.pairs.rows( step, name );
 		const tbody = el( 'tbody', {} );
+		// Writes the rows back to the step. The object has no prototype, so a
+		// "from" value such as __proto__ is stored as a plain key, not lost.
 		const write = () => {
-			const pairs = {};
+			const pairs = Object.create( null );
 			rows.forEach( ( row ) => {
 				if ( ( row[ 0 ] || row[ 1 ] ) && ! Object.prototype.hasOwnProperty.call( pairs, row[ 0 ] ) ) {
 					pairs[ row[ 0 ] ] = row[ 1 ];

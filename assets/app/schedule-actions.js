@@ -32,18 +32,52 @@
 		// Job id to schedule id, for jobs seen running.
 		const following = new Map();
 
+		// Schedule id to the switch state the person wants, while a write is out.
+		const switching = new Map();
+
+		/**
+		 * Saves the on and off switch at once. Writes for one schedule go one
+		 * at a time: a change made while a write is out is remembered and sent
+		 * after it, so the server always ends with the last choice and answers
+		 * reach the screen in the order they were sent. The card shows the
+		 * person's choice meanwhile and the saved record when the last write ends.
+		 *
+		 * @param {Object}  s     Schedule as the card shows it.
+		 * @param {boolean} on    The switch's new state.
+		 * @param {Element} input The switch, set back when a write fails.
+		 * @return {Promise} Resolves when the writes have ended.
+		 */
 		async function toggle( s, on, input ) {
+			const out = switching.get( s.id );
+			if ( out ) {
+				out.want = on;
+				return;
+			}
+			const wanted = { want: on };
+			switching.set( s.id, wanted );
+			let saved = null;
+			let sent = on;
 			try {
-				const saved = await api.post( '/schedules/' + encodeURIComponent( s.id ), { enabled: on } );
+				do {
+					sent = wanted.want;
+					saved = await api.post( '/schedules/' + encodeURIComponent( s.id ), { enabled: sent } );
+				} while ( wanted.want !== sent );
+				switching.delete( s.id );
 				delete saved.notes;
 				put( saved );
-				say( 'success', on
+				say( 'success', sent
 					/* translators: %s: schedule name. */
 					? sprintf( __( '%s is on.', 'open-export' ), saved.name )
 					/* translators: %s: schedule name. */
 					: sprintf( __( '%s is off. It runs only when started by hand or by its trigger URL.', 'open-export' ), saved.name ) );
 			} catch ( err ) {
-				input.checked = ! on;
+				switching.delete( s.id );
+				// Show what the server has: the last saved answer, or the state before the first write.
+				if ( saved ) {
+					delete saved.notes;
+					put( saved );
+				}
+				input.checked = saved ? !! saved.enabled : !! s.enabled;
 				fail( err );
 			}
 		}

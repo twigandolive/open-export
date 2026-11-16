@@ -159,6 +159,7 @@
 			onView: viewJob,
 		};
 
+		// Asks first, deletes the schedule, then drops it from the shared list.
 		async function remove( s ) {
 			const yes = await ui.confirm( {
 				title: __( 'Delete this schedule?', 'open-export' ),
@@ -178,7 +179,9 @@
 				if ( form ) {
 					closeForm( false );
 				}
-				store.set( 'schedules', items.filter( ( item ) => item.id !== s.id ) );
+				// Filter the list as it is now, not the copy read before the
+				// request: a switch or save may have changed another schedule meanwhile.
+				store.set( 'schedules', ( list() || [] ).filter( ( item ) => item.id !== s.id ) );
 				/* translators: %s: schedule name. */
 				say( 'success', sprintf( __( '%s was deleted.', 'open-export' ), s.name ) );
 				focusCard( neighbor ? neighbor.id : null, 'run' );

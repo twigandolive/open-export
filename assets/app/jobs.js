@@ -20,7 +20,8 @@
  *   resume( job )        Resume button: drives browser jobs, nudges background jobs once.
  *   rerun( id )          Starts a new job from an old one and drives it if it runs in the browser.
  *   remove( id )         Deletes a job and its file.
- *   startPolling()       Polls every 5 seconds while any job is running or paused. Returns stop().
+ *   startPolling()       Polls every 5 seconds while any job is running or paused, or has
+ *                        deliveries left to try. Returns stop().
  */
 ( function () {
 	'use strict';
@@ -29,7 +30,10 @@
 	const api = app.api;
 	const store = app.store;
 	const POLL_MS = 5000;
-	const driving = new Set();
+	// Job id to the token of the drive call that owns it. Pause and Resume can
+	// start a new drive while the old one still waits on a request, so each
+	// call checks that it still owns the job before it acts.
+	const driving = new Map();
 
 	/**
 	 * Gives the job list from the store.
@@ -100,31 +104,54 @@
 	}
 
 	/**
+	 * Tells the store which jobs this screen is driving.
+	 */
+	function announce() {
+		store.set( 'driving', Array.from( driving.keys() ) );
+	}
+
+	/**
 	 * Calls run until the job is no longer running. The id is held locally,
 	 * so deleting the job mid-run cannot break the loop.
 	 *
+	 * Each call gets its own token. After Pause and Resume a newer call owns
+	 * the job, and an older call that is still waiting on a request then
+	 * stops quietly: it does not apply its answer, run another batch, report
+	 * its error or clear the newer call's place. After a plain Pause (no
+	 * newer call) it behaves as before: no further batch.
+	 *
 	 * @param {string}  id     Job id.
 	 * @param {boolean} resume True only for the Resume button.
-	 * @return {Promise<Object|null>} The last job state.
+	 * @return {Promise<Object|null>} The last job state, or null when another call drives the job.
 	 */
 	async function drive( id, resume ) {
 		if ( driving.has( id ) ) {
 			return null;
 		}
-		driving.add( id );
-		store.set( 'driving', Array.from( driving ) );
+		const token = {};
+		const mine = () => driving.get( id ) === token;
+		const superseded = () => driving.has( id ) && ! mine();
+		driving.set( id, token );
+		announce();
 		let job = null;
 		try {
-			job = upsert( await api.post( path( id, 'run' ), resume ? { resume: true } : {} ) );
-			while ( job && 'running' === job.status && driving.has( id ) ) {
+			job = await api.post( path( id, 'run' ), resume ? { resume: true } : {} );
+			if ( superseded() ) {
+				return null;
+			}
+			upsert( job );
+			while ( job && 'running' === job.status && mine() ) {
 				job = await api.post( path( id, 'run' ) );
-				if ( ! driving.has( id ) ) {
+				if ( ! mine() ) {
 					break;
 				}
 				upsert( job );
 			}
 			return job;
 		} catch ( err ) {
+			if ( superseded() ) {
+				return null;
+			}
 			if ( 'opex_missing' === err.code ) {
 				forget( id );
 			} else if ( ! err.session ) {
@@ -134,8 +161,15 @@
 			}
 			throw err;
 		} finally {
-			driving.delete( id );
-			store.set( 'driving', Array.from( driving ) );
+			// Pause, forget and remove drop the id without telling the store,
+			// so a call that ends with no owner left still tells it. A newer
+			// call's place is left alone.
+			if ( mine() ) {
+				driving.delete( id );
+			}
+			if ( ! driving.has( id ) ) {
+				announce();
+			}
 		}
 	}
 
@@ -184,15 +218,30 @@
 	}
 
 	/**
+	 * Tells whether a finished job still has a delivery the server will try:
+	 * waiting, or failed with tries left. This matches the server's own test
+	 * (OPEX_Runner::has_pending), so polling ends when every delivery is sent
+	 * or out of tries.
+	 *
+	 * @param {Object} job Exposed job.
+	 * @return {boolean} True while a delivery result can still change.
+	 */
+	function deliveryOpen( job ) {
+		const most = store.limit( 'delivery_attempts', 3 );
+		return !! job && 'done' === job.status && ( job.deliveries || [] ).some( ( item ) => ( 'pending' === item.status || 'failed' === item.status ) && ( Number( item.attempts ) || 0 ) < most );
+	}
+
+	/**
 	 * Polls the list while anything is running or paused that this screen is
-	 * not already driving. Stops by itself when nothing is active.
+	 * not already driving, or while a finished job still has deliveries to
+	 * try. Stops by itself when none is left.
 	 *
 	 * @return {Function} stop().
 	 */
 	function startPolling() {
 		let timer = null;
 		let stopped = false;
-		const needed = () => list().some( ( job ) => isActive( job ) && ! driving.has( job.id ) );
+		const needed = () => list().some( ( job ) => ( isActive( job ) && ! driving.has( job.id ) ) || deliveryOpen( job ) );
 		const tick = () => {
 			timer = null;
 			if ( stopped || 'expired' === store.get( 'session' ) ) {

@@ -213,6 +213,7 @@
 			store.set( 'destinations', items );
 		}
 
+		// Asks first, deletes the destination, then drops it from the shared list.
 		async function remove( item ) {
 			const name = item.name || item.host;
 			const yes = await ui.confirm( {
@@ -235,7 +236,9 @@
 					editingId = null;
 					app.clear( formBox );
 				}
-				store.set( 'destinations', items.filter( ( d ) => d.id !== item.id ) );
+				// Filter the list as it is now, not the copy read before the
+				// request: another delete or save may have changed it meanwhile.
+				store.set( 'destinations', ( list() || [] ).filter( ( d ) => d.id !== item.id ) );
 				/* translators: %s: destination name. */
 				say( 'success', sprintf( __( '%s was deleted.', 'open-export' ), name ) );
 				focusAfter( null, neighbor ? neighbor.id : null );

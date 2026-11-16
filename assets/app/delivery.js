@@ -210,8 +210,33 @@
 			return out;
 		}
 
-		function isThisSite( parsed ) {
-			return parsed.host === window.location.host;
+		/**
+		 * Whether plain http is allowed for a webhook address. It mirrors the
+		 * server's rule (OPEX_Delivery_Webhook::transport_allowed): localhost,
+		 * ::1, an IPv4 address in 127.0.0.0/8, or the host of the site's home
+		 * URL, any port. The home host comes from the REST root, which WordPress
+		 * builds from the home URL. The host is read from the typed text, not
+		 * from URL(), because URL() rewrites forms such as 127.1 that the server
+		 * would refuse.
+		 *
+		 * @param {string} address The webhook address as typed.
+		 * @return {boolean} True when the server would accept it over http.
+		 */
+		function httpAllowed( address ) {
+			const hostOf = ( text ) => {
+				const match = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/?#]*@)?(\[[^\]/?#]*\]|[^:/?#]*)/i.exec( String( text || '' ).trim() );
+				return match ? match[ 1 ].replace( /^\[|\]$/g, '' ).toLowerCase() : '';
+			};
+			const host = hostOf( address );
+			if ( ! host ) {
+				return false;
+			}
+			const octets = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec( host );
+			const ipv4 = !! octets && octets.slice( 1 ).every( ( part ) => ( '0' === part || '0' !== part[ 0 ] ) && Number( part ) <= 255 );
+			if ( 'localhost' === host || '::1' === host || ( ipv4 && '127' === octets[ 1 ] ) ) {
+				return true;
+			}
+			return host === hostOf( app.boot.restRoot );
 		}
 
 		function validate() {
@@ -246,7 +271,7 @@
 				}
 				if ( ! parsed || ! /^https?:$/.test( parsed.protocol ) ) {
 					add( fields.url, url, __( 'Enter the full webhook address, starting with https://.', 'open-export' ) );
-				} else if ( 'https:' !== parsed.protocol && ! isThisSite( parsed ) ) {
+				} else if ( 'https:' !== parsed.protocol && ! httpAllowed( value.webhook.url ) ) {
 					add( fields.url, url, __( 'The webhook address must start with https.', 'open-export' ) );
 				}
 				if ( secret.value.length > maxSecret() ) {
