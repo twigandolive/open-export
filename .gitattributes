@@ -17,3 +17,15 @@
 /composer.lock        export-ignore
 /lib/composer.json    export-ignore
 /lib/composer.lock    export-ignore
+
+# Developer files inside the bundled SFTP library. The library runs without them.
+/lib/vendor/paragonie/random_compat/build-phar.sh         export-ignore
+/lib/vendor/paragonie/random_compat/other                 export-ignore
+/lib/vendor/paragonie/random_compat/dist                  export-ignore
+/lib/vendor/paragonie/random_compat/psalm.xml             export-ignore
+/lib/vendor/paragonie/random_compat/psalm-autoload.php    export-ignore
+/lib/vendor/paragonie/constant_time_encoding/README.md    export-ignore
+/lib/vendor/phpseclib/phpseclib/BACKERS.md                export-ignore
+/lib/vendor/phpseclib/phpseclib/README.md                 export-ignore
+/lib/vendor/phpseclib/phpseclib/SECURITY.md               export-ignore
+/lib/vendor/phpseclib/phpseclib/VERSIONING.md             export-ignore
