@@ -141,14 +141,13 @@ class OPEX_Query_Rows {
 
 		// A friendly id reads from the post column or meta key that actually
 		// holds it.
-		$value = self::resolved_value( $src, $row, OPEX_Query::resolve_field( $src, $field ), $id, $meta, $tax );
+		$value = self::resolved_value( $row, OPEX_Query::resolve_field( $src, $field ), $id, $meta, $tax );
 		return $provider ? $provider->derive_value( $field, $value ) : $value;
 	}
 
 	/**
 	 * One cell read by its storage id (core, col, meta, tax or computed).
 	 *
-	 * @param array  $src   Parsed source.
 	 * @param object $row   Database row.
 	 * @param string $field Field id.
 	 * @param int    $id    Row id.
@@ -156,7 +155,7 @@ class OPEX_Query_Rows {
 	 * @param array  $tax   Term names of the batch, by taxonomy and row id.
 	 * @return string The cell text.
 	 */
-	private static function resolved_value( array $src, object $row, string $field, int $id, array $meta, array $tax ): string {
+	private static function resolved_value( object $row, string $field, int $id, array $meta, array $tax ): string {
 		if ( 0 === strpos( $field, 'core:' ) ) {
 			$col = substr( $field, 5 );
 			return OPEX_Query::is_forbidden_column( $col ) ? '' : self::flatten( $row->{$col} ?? '' );
@@ -174,7 +173,7 @@ class OPEX_Query_Rows {
 			return isset( $tax[ $name ][ $id ] ) ? implode( ' | ', $tax[ $name ][ $id ] ) : '';
 		}
 		if ( 0 === strpos( $field, 'computed:' ) ) {
-			return self::computed_value( $src, $row, substr( $field, 9 ), $id );
+			return self::computed_value( $row, substr( $field, 9 ), $id );
 		}
 		return '';
 	}
@@ -182,13 +181,12 @@ class OPEX_Query_Rows {
 	/**
 	 * A computed field: a value the database does not hold as such, like a permalink or roles.
 	 *
-	 * @param array  $src  Parsed source.
 	 * @param object $row  Database row.
 	 * @param string $what Computed field name, without the prefix.
 	 * @param int    $id   Row id.
 	 * @return string The cell text.
 	 */
-	private static function computed_value( array $src, object $row, string $what, int $id ): string {
+	private static function computed_value( object $row, string $what, int $id ): string {
 		switch ( $what ) {
 			case 'permalink':
 				return (string) get_permalink( $id );

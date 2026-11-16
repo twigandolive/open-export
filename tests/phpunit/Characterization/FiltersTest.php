@@ -7,8 +7,6 @@
 
 require_once __DIR__ . '/CharacterizationCase.php';
 
-use PHPUnit\Framework\Attributes\DataProvider;
-
 /**
  * Every operator on core, meta and taxonomy fields.
  */

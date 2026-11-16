@@ -8,7 +8,6 @@
  *   opexApp.icon( name, opts )  An <svg>. opts.sm for 16px, opts.label for a
  *                               meaningful icon (role img), opts.cls for extra classes.
  *                               Without a label the icon is hidden from screen readers.
- *   opexApp.icons               The shape table, so a later stage can add icons.
  */
 ( function () {
 	'use strict';
@@ -44,7 +43,6 @@
 		grip: [ [ 7.5, 5 ], [ 12.5, 5 ], [ 7.5, 10 ], [ 12.5, 10 ], [ 7.5, 15 ], [ 12.5, 15 ] ].map( ( c ) => [ 'circle', { cx: c[ 0 ], cy: c[ 1 ], r: 1.2, fill: 'currentColor', stroke: 'none' } ] ),
 	};
 
-	app.icons = icons;
 
 	/**
 	 * Builds an inline SVG icon. Without a label it is hidden from screen readers.

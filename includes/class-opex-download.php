@@ -27,7 +27,7 @@ class OPEX_Download {
 	public static function stream( array $job, string $download_name ): void {
 		$path   = OPEX_Jobs::file_path( $job );
 		$size   = is_file( $path ) ? filesize( $path ) : false;
-		$out    = false === $size ? false : fopen( 'php://output', 'wb' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		$out    = false === $size ? false : fopen( 'php://output', 'wb' );
 		$source = false === $out ? false : fopen( $path, 'rb' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 		if ( false === $source || false === $out ) {
 			status_header( 404 );

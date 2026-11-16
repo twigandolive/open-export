@@ -132,13 +132,13 @@
 	/**
 	 * Builds a card with an optional heading.
 	 *
-	 * @return {Object} { root, body, head }.
+	 * @return {Object} { root, body }.
 	 */
 	ui.card = function ( o ) {
 		const body = el( 'div', { class: 'opex-pad' } );
 		const head = o.title ? el( o.level || 'h2', { class: 'opex-statichead' }, o.title ) : null;
 		const root = el( 'section', { class: 'opex-card' + ( o.cls ? ' ' + o.cls : '' ) }, [ head, body ] );
-		return { root, body, head };
+		return { root, body };
 	};
 
 	/**

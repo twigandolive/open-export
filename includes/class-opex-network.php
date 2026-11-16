@@ -290,18 +290,6 @@ class OPEX_Network {
 	}
 
 	/**
-	 * Whether a source exists on the current site. WooCommerce code is loaded
-	 * for the whole request once any site runs it, so a WooCommerce source
-	 * also needs the plugin active on this site.
-	 *
-	 * @param string $source_id Source id.
-	 * @return bool True when this site has the source.
-	 */
-	public static function source_here( string $source_id ): bool {
-		return 'missing' !== self::source_state( $source_id );
-	}
-
-	/**
 	 * What the current site has of a source: 'ok', 'missing' (the source is
 	 * not there) or 'empty' (a post type or taxonomy with no content here).
 	 *

@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output across many requests.
-
 /**
  * Replaces {field id} in the row template with the escaped value, and
  * {field id|cdata} with a CDATA section.
@@ -275,5 +273,3 @@ class OPEX_Writer_XML_Template extends OPEX_Writer {
 		$this->append_text( $text );
 	}
 }
-
-// phpcs:enable

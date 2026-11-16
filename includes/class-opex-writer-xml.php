@@ -9,8 +9,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output; WP_Filesystem cannot append to multi-gigabyte files across hundreds of requests.
-
 /**
  * Plain XML with one element per row.
  */
@@ -66,5 +64,3 @@ class OPEX_Writer_XML extends OPEX_Writer {
 		return $name;
 	}
 }
-
-// phpcs:enable

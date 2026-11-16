@@ -13,7 +13,6 @@
  *
  * Exposes opexApp.builder.transforms:
  *   panel( ctx, fieldId, onChange )  Returns { root, focusError( index, arg ) }.
- *   check( step, ctx )   { argName: message } for one step ({ type: msg } for an unknown type).
  *   errors( ctx )        [ { fieldId, index, arg, message } ] for the whole config.
  */
 ( function () {
@@ -321,5 +320,5 @@
 		};
 	}
 
-	B.transforms = { panel, check, errors };
+	B.transforms = { panel, errors };
 }() );

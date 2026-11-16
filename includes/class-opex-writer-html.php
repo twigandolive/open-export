@@ -15,8 +15,6 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output across many requests.
-
 /**
  * Writes the export as an HTML table.
  */
@@ -134,5 +132,3 @@ class OPEX_Writer_HTML extends OPEX_Writer {
 		$this->append_text( $text );
 	}
 }
-
-// phpcs:enable

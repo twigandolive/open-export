@@ -166,6 +166,6 @@
 			el( 'thead', {}, head ),
 			tbody,
 		] );
-		return { root: el( 'div', { class: 'opex-tablewrap' }, table ), table, tbody, headRow: head };
+		return { root: el( 'div', { class: 'opex-tablewrap' }, table ), tbody };
 	};
 }() );

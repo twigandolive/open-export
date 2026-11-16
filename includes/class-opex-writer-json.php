@@ -9,8 +9,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- streamed export output; WP_Filesystem cannot append to multi-gigabyte files across hundreds of requests.
-
 /**
  * A JSON array with one object per row, written a batch at a time.
  */
@@ -52,5 +50,3 @@ class OPEX_Writer_JSON extends OPEX_Writer {
 		$this->append_text( "\n]\n" );
 	}
 }
-
-// phpcs:enable

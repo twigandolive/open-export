@@ -12,7 +12,6 @@
  *   del( path )                 DELETE.
  *   request( options )          Any apiFetch options, path relative to the namespace.
  *   downloadUrl( jobId )        A plain link that streams a finished file.
- *   normalize( error )          { code, message, status } from anything apiFetch throws.
  *   hasRoute( fragment )        Resolves true when the server registers a matching route.
  *
  * When the server answers 401 or 403, the store key "session" is set to
@@ -153,5 +152,5 @@
 		return routes.then( ( list ) => list.some( ( route ) => route.indexOf( fragment ) > -1 ) );
 	}
 
-	app.api = { request, get, post, del, downloadUrl, normalize, hasRoute };
+	app.api = { request, get, post, del, downloadUrl, hasRoute };
 }() );

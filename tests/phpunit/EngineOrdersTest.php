@@ -6,7 +6,6 @@
  * @package Open_Export
  */
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class EngineOrdersTest extends TestCase {

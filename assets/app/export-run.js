@@ -11,7 +11,7 @@
  * so typing anywhere on the page keeps focus while a job runs.
  *
  * Exposes opexApp.exportRun( { builder, say } ):
- *   Returns { root, start(), setName( name ), syncName(), show(), hide(), isRunning() }.
+ *   Returns { root, start(), setName( name ), syncName(), show(), hide() }.
  */
 ( function () {
 	'use strict';
@@ -252,7 +252,6 @@
 			start,
 			setName,
 			syncName,
-			isRunning,
 			show() {
 				visible = true;
 				watch();

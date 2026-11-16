@@ -124,7 +124,7 @@
 	 * card. Collapsed cards show a one-line summary. Locked cards cannot open.
 	 *
 	 * @param {Object} o number, title, locked (text shown while locked), level (heading tag, default h2).
-	 * @return {Object} { root, head, body, setOpen, isOpen, setLocked, setDone, setSummary }.
+	 * @return {Object} { root, body, setOpen, setLocked, setDone, setSummary }.
 	 */
 	B.card = function ( o ) {
 		const bodyId = app.uid( 'opex-card' );
@@ -155,13 +155,11 @@
 		} );
 		return {
 			root,
-			head,
 			body,
 			setOpen( value ) {
 				open = !! value;
 				sync();
 			},
-			isOpen: () => open && ! isLocked,
 			setLocked( value ) {
 				isLocked = !! value;
 				root.classList.toggle( 'is-locked', isLocked );

@@ -98,7 +98,6 @@
 				}
 				return ctx.fieldIndex[ id ] ? ctx.fieldIndex[ id ].label : id;
 			},
-			isCustom: ( id ) => ctx.config.custom_columns.some( ( col ) => col.id === id ),
 			setSource,
 			changed,
 			retryFields: () => fetchFields( false ),

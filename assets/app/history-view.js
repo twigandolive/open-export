@@ -6,7 +6,6 @@
  * them, so a running job only touches the parts that changed.
  *
  * Exposes opexApp.historyView:
- *   statusKind( job )       running, paused, done or failed.
  *   statusBadge( job )      Icon plus label.
  *   progress( job )         Returns { root, update( job ) } for the progress cell.
  *   sizeText( job )         File size, or why there is none yet.
@@ -295,5 +294,5 @@
 		return JSON.stringify( [ job.status, job.error, job.deliveries, job.notes, job.finished || 0, isStalled( job ), extra || '' ] );
 	}
 
-	app.historyView = { statusKind, statusBadge, statusLabel, progress, sizeText, startedBy, formatLabel, detail, detailKey };
+	app.historyView = { statusBadge, progress, sizeText, startedBy, formatLabel, detail, detailKey };
 }() );
