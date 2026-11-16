@@ -16,7 +16,7 @@ Index of Open Export 2.0.0. Detail: the code and [README.md](README.md).
 
 - Setup: `composer install` (PHP 8.2+), and again with `--working-dir=tests/php74` and `tests/lint`.
 - Test site: `tests/bin/setup-site.sh [--mariadb | --multisite] <dir>`. Throwaway, never live.
-- Four lanes, all required before a commit. `test.sh` fails when zero tests run.
+- Four test runs, all required before a commit. `test.sh` fails when zero tests run.
   1. SQLite: `OPEX_TEST_SITE=<dir> tests/bin/test.sh`
   2. MariaDB: `tests/bin/test.sh --site <mariadb dir>` (own server)
   3. Classic orders: `tests/bin/test.sh --site <dir> --legacy-orders`
@@ -24,7 +24,7 @@ Index of Open Export 2.0.0. Detail: the code and [README.md](README.md).
 - Multisite: `--filter 'NetworkExportTest|NetworkAccessTest|SmokeTest|UninstallTest'` on a `--multisite` site.
   ACF: `--filter AcfFieldsTest` with Secure Custom Fields (by hand). Both skip on a single site.
 - Lint: `tests/bin/lint.sh` (`phpcs.xml.dist`).
-- `OPEX_TEST_TOOLS`: a folder whose `venv/` has `pyftpdlib`, `asyncssh`, `pyopenssl`, or FTP tests skip.
+- `OPEX_TEST_TOOLS`: a folder whose `venv/` has `pyftpdlib`, `asyncssh`, `pyopenssl`. Without it, FTP tests skip.
 - Release zip: `git archive` of a commit. `.gitattributes` keeps dev files and `.wordpress-org/` out.
 
 ## Compartments
@@ -125,7 +125,7 @@ A site with `keep_data_on_uninstall` keeps its options and files and loses only 
 
 - `declare(strict_types=1)` only in new files. 1.3.1 files and their splits keep loose coercion.
 - XLSX: in-house `writer-xlsx`, no library.
-- phpseclib (3.2 MB, for SFTP) puts the zip far over the 200 KB target. Bundled unprefixed: a phpseclib 3
+- phpseclib (3.2 MB, for SFTP) puts the zip far over the 200 KB target. Bundled unprefixed, so a phpseclib 3
   that another plugin loaded first wins.
 - WP-Cron only, no Action Scheduler (no plugin dependency).
 - No build step: reviewers read the shipped code.
