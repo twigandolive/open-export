@@ -133,4 +133,17 @@ class DeliveryWebhookTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $res );
 		$this->assertFileDoesNotExist( self::$server->dir . '/request.json' );
 	}
+
+	public function test_redirect_is_a_failure_and_is_not_followed() {
+		if ( ! self::$server ) {
+			$this->markTestSkipped( 'Could not start the local php -S receiver.' );
+		}
+		$this->allow_loopback();
+		$job = $this->make_job();
+		$res = OPEX_Delivery_Webhook::send( $job, array( 'url' => $this->url( '/redirect' ) ), OPEX_Jobs::file_path( $job ) );
+		$this->assertInstanceOf( WP_Error::class, $res );
+		$this->assertStringContainsString( '302', $res->get_error_message() );
+		// The receiver overwrites its record on every request, so a followed redirect would show /hook.
+		$this->assertSame( '/redirect', $this->recorded()['path'] );
+	}
 }

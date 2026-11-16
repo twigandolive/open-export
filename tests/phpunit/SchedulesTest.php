@@ -172,4 +172,42 @@ class SchedulesTest extends TestCase {
 		$this->assertSame( 3, $s['last_run']['rows'] );
 		OPEX_Schedules::on_job_done( array( 'id' => 'jy', 'status' => 'done' ) ); // No schedule: ignored.
 	}
+
+	private function hook( array $over = array() ): array {
+		return array( 'delivery' => array( 'webhook' => array_merge( array( 'enabled' => true, 'url' => 'https://example.com/hook', 'secret' => 'plain-secret' ), $over ) ) );
+	}
+
+	public function test_webhook_secret_is_stored_encrypted_and_never_exposed() {
+		$rec = OPEX_Schedules::save( $this->raw( $this->hook() ) );
+		$this->assertIsArray( $rec );
+		$stored = $rec['delivery']['webhook']['secret'];
+		$this->assertNotSame( 'plain-secret', $stored );
+		$this->assertSame( 'plain-secret', OPEX_Secrets::decrypt( $stored ) );
+		$this->assertStringNotContainsString( 'plain-secret', wp_json_encode( get_option( 'opex_schedules' ) ) );
+
+		$out = OPEX_Schedules::expose( $rec );
+		$this->assertTrue( $out['delivery']['webhook']['has_secret'] );
+		$this->assertArrayNotHasKey( 'secret', $out['delivery']['webhook'] );
+		$this->assertStringNotContainsString( 'plain-secret', wp_json_encode( $out ) );
+		$this->assertStringNotContainsString( $stored, wp_json_encode( $out ) );
+	}
+
+	public function test_blank_secret_keeps_the_stored_one_and_clear_secret_removes_it() {
+		$rec  = OPEX_Schedules::save( $this->raw( $this->hook() ) );
+		$kept = OPEX_Schedules::save( $this->raw( $this->hook( array( 'secret' => '' ) ) ), $rec['id'] );
+		$this->assertSame( $rec['delivery']['webhook']['secret'], $kept['delivery']['webhook']['secret'] );
+
+		// Saving without a delivery block keeps it too.
+		$again = OPEX_Schedules::save( $this->raw(), $rec['id'] );
+		$this->assertSame( $rec['delivery']['webhook']['secret'], $again['delivery']['webhook']['secret'] );
+
+		$cleared = OPEX_Schedules::save( $this->raw( $this->hook( array( 'secret' => '' ) ) + array( 'clear_secret' => true ) ), $rec['id'] );
+		$this->assertSame( '', $cleared['delivery']['webhook']['secret'] );
+		$this->assertFalse( OPEX_Schedules::expose( $cleared )['delivery']['webhook']['has_secret'] );
+	}
+
+	public function test_plain_http_webhook_to_another_host_is_stored_disabled() {
+		$rec = OPEX_Schedules::save( $this->raw( $this->hook( array( 'url' => 'http://example.com/hook' ) ) ) );
+		$this->assertFalse( $rec['delivery']['webhook']['enabled'] );
+	}
 }

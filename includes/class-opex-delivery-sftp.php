@@ -12,8 +12,11 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Uploads with phpseclib 3, loaded only when a send or test runs. If another
  * plugin already loaded phpseclib 3, that copy is used. The upload goes to a
- * temporary name and is renamed at the end. The server host key is not pinned
- * (the destination record has no field for it).
+ * temporary name and is renamed at the end.
+ *
+ * The server's host key is pinned on first use. The fingerprint is checked
+ * before any credential is sent. A destination with no stored fingerprint
+ * accepts the server once and stores the fingerprint after a good transfer.
  */
 class OPEX_Delivery_Sftp {
 
@@ -30,12 +33,15 @@ class OPEX_Delivery_Sftp {
 	 * @return true|WP_Error
 	 */
 	public static function send( array $job, array $destination, string $file_path ) {
-		$sftp = self::open( $destination );
+		$fingerprint = '';
+		$sftp        = self::open( $destination, $fingerprint );
 		if ( is_wp_error( $sftp ) ) {
 			return $sftp;
 		}
 		try {
-			return self::upload( $sftp, $file_path, OPEX_Delivery::remote_name( $job ) );
+			$result = self::upload( $sftp, $file_path, OPEX_Delivery::remote_name( $job ) );
+			self::remember( $destination, $fingerprint, $result );
+			return $result;
 		} finally {
 			$sftp->disconnect();
 		}
@@ -48,7 +54,8 @@ class OPEX_Delivery_Sftp {
 	 * @return true|WP_Error
 	 */
 	public static function test( array $destination ) {
-		$sftp = self::open( $destination );
+		$fingerprint = '';
+		$sftp        = self::open( $destination, $fingerprint );
 		if ( is_wp_error( $sftp ) ) {
 			return $sftp;
 		}
@@ -66,10 +73,48 @@ class OPEX_Delivery_Sftp {
 			if ( true === $result ) {
 				$sftp->delete( $name );
 			}
+			self::remember( $destination, $fingerprint, $result );
 			return $result;
 		} finally {
 			$sftp->disconnect();
 		}
+	}
+
+	/**
+	 * Pins the fingerprint after a good transfer when none is stored yet.
+	 *
+	 * @param array         $d           Destination record.
+	 * @param string        $fingerprint Fingerprint seen on this connection.
+	 * @param true|WP_Error $result      Outcome of the transfer.
+	 * @return void
+	 */
+	private static function remember( array $d, string $fingerprint, $result ): void {
+		if ( true === $result && '' === (string) ( $d['host_key'] ?? '' ) && '' !== (string) ( $d['id'] ?? '' ) && '' !== $fingerprint ) {
+			OPEX_Destinations::pin_host_key( (string) $d['id'], $fingerprint );
+		}
+	}
+
+	/**
+	 * SHA-256 fingerprint of the server's host key, OpenSSH style: the
+	 * base64 of the hash of the key blob, without padding. The key comes
+	 * from SSH2::getServerPublicHostKey(), which connects, finishes the key
+	 * exchange and checks the server's signature, but sends no credential.
+	 *
+	 * @param object $sftp SFTP object, not yet logged in.
+	 * @return string Empty when the key could not be read.
+	 */
+	private static function fingerprint( $sftp ): string {
+		try {
+			$line = $sftp->getServerPublicHostKey();
+		} catch ( Throwable $e ) {
+			return '';
+		}
+		$parts = is_string( $line ) ? explode( ' ', $line ) : array();
+		$blob  = isset( $parts[1] ) ? base64_decode( $parts[1], true ) : false;
+		if ( false === $blob || '' === $blob ) {
+			return '';
+		}
+		return 'SHA256:' . rtrim( base64_encode( hash( 'sha256', $blob, true ) ), '=' );
 	}
 
 	/**
@@ -92,10 +137,11 @@ class OPEX_Delivery_Sftp {
 	/**
 	 * Opens, logs in and changes to the remote folder.
 	 *
-	 * @param array $d Destination record.
+	 * @param array  $d           Destination record.
+	 * @param string $fingerprint Set to the server's fingerprint.
 	 * @return object|WP_Error An SFTP object.
 	 */
-	private static function open( array $d ) {
+	private static function open( array $d, string &$fingerprint ) {
 		if ( ! self::load_library() ) {
 			return new WP_Error( 'opex_sftp_lib', __( 'The SFTP library is missing from the plugin.', 'open-export' ) );
 		}
@@ -115,6 +161,21 @@ class OPEX_Delivery_Sftp {
 		$class = self::SFTP_CLASS;
 		$sftp  = new $class( (string) ( $d['host'] ?? '' ), (int) ( $d['port'] ?? 22 ), self::CONNECT_TIMEOUT );
 		$sftp->setTimeout( self::IO_TIMEOUT );
+
+		// Check who the server is before any credential leaves this machine.
+		$fingerprint = self::fingerprint( $sftp );
+		if ( '' === $fingerprint ) {
+			$sftp->disconnect();
+			return new WP_Error( 'opex_sftp_connect', __( 'Could not connect to the server.', 'open-export' ) );
+		}
+		$pinned = trim( (string) ( $d['host_key'] ?? '' ) );
+		if ( '' !== $pinned && ! hash_equals( $pinned, $fingerprint ) ) {
+			$sftp->disconnect();
+			return new WP_Error(
+				'opex_sftp_hostkey',
+				__( 'The server\'s identity has changed since this destination was set up. Nothing was sent, not even your password. If the server was rebuilt on purpose, reset the saved host key on the destination and test it again.', 'open-export' )
+			);
+		}
 
 		try {
 			$ok = $sftp->login( (string) ( $d['username'] ?? '' ), $credential );

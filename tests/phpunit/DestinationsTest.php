@@ -109,6 +109,37 @@ class DestinationsTest extends TestCase {
 		$this->assertStringNotContainsString( 'pw', $res->get_error_message() );
 	}
 
+	public function test_security_notes_and_host_key_are_exposed() {
+		$ftp  = OPEX_Destinations::expose( OPEX_Destinations::save( $this->raw() ) );
+		$ftps = OPEX_Destinations::expose( OPEX_Destinations::save( $this->raw( array( 'type' => 'ftps' ) ) ) );
+		$sftp = OPEX_Destinations::expose( OPEX_Destinations::save( $this->raw( array( 'type' => 'sftp' ) ) ) );
+		$this->assertSame( 'FTP sends your password and file without encryption. Use SFTP if the server offers it.', $ftp['security_note'] );
+		$this->assertSame( 'FTPS encrypts the connection, but PHP cannot verify the server\'s certificate. Use SFTP if the server offers it.', $ftps['security_note'] );
+		$this->assertSame( '', $sftp['security_note'] );
+		$this->assertSame( '', $sftp['host_key'] );
+	}
+
+	public function test_old_record_without_host_key_loads_and_pin_is_first_wins() {
+		$rec = OPEX_Destinations::save( $this->raw( array( 'type' => 'sftp' ) ) );
+		$all = OPEX_Destinations::all();
+		unset( $all[ $rec['id'] ]['host_key'] );
+		update_option( 'opex_destinations', $all, false );
+		$this->assertSame( '', OPEX_Destinations::expose( OPEX_Destinations::get( $rec['id'] ) )['host_key'] );
+
+		$one = 'SHA256:' . str_repeat( 'A', 43 );
+		$two = 'SHA256:' . str_repeat( 'B', 43 );
+		OPEX_Destinations::pin_host_key( $rec['id'], 'not a fingerprint' );
+		$this->assertSame( '', OPEX_Destinations::get( $rec['id'] )['host_key'] ?? '' );
+		OPEX_Destinations::pin_host_key( $rec['id'], $one );
+		OPEX_Destinations::pin_host_key( $rec['id'], $two );
+		$this->assertSame( $one, OPEX_Destinations::get( $rec['id'] )['host_key'] );
+	}
+
+	public function test_host_key_cannot_be_set_through_save() {
+		$rec = OPEX_Destinations::save( $this->raw( array( 'type' => 'sftp', 'host_key' => 'SHA256:' . str_repeat( 'A', 43 ) ) ) );
+		$this->assertSame( '', $rec['host_key'] );
+	}
+
 	private function assertWPError( $value, string $msg = '' ): void {
 		$this->assertInstanceOf( WP_Error::class, $value, $msg );
 	}

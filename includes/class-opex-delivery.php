@@ -16,16 +16,21 @@ defined( 'ABSPATH' ) || exit;
 class OPEX_Delivery {
 
 	public const MAX_ATTEMPTS = 3;
+	private const RETRY_WAITS = array( 1 => 300, 2 => 1800 );
 	private const CHANNELS    = array( 'email', 'webhook', 'destination' );
 
 	/**
 	 * Cleans delivery settings from the browser or a schedule.
 	 *
-	 * @param mixed $raw   Raw input.
-	 * @param array $notes Plain-language notes, added to.
+	 * A blank webhook secret keeps the one in $previous. The webhook input
+	 * may set clear_secret to true to remove it on purpose.
+	 *
+	 * @param mixed $raw      Raw input.
+	 * @param array $notes    Plain-language notes, added to.
+	 * @param array $previous Delivery settings stored before, optional.
 	 * @return array Keys email, webhook and destination.
 	 */
-	public static function sanitize( $raw, array &$notes ): array {
+	public static function sanitize( $raw, array &$notes, array $previous = array() ): array {
 		$raw = is_array( $raw ) ? $raw : array();
 
 		$email   = is_array( $raw['email'] ?? null ) ? $raw['email'] : array();
@@ -60,9 +65,21 @@ class OPEX_Delivery {
 			$hon     = false;
 			$notes[] = __( 'Webhook delivery was turned off because it has no URL.', 'open-export' );
 		}
+		if ( $hon && '' !== $url && 'https' !== strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) && strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) ) !== strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ) {
+			// Plain http to another machine would send the signed payload in the clear.
+			$hon     = false;
+			$notes[] = __( 'Webhook delivery was turned off because its URL must use https unless it points at this site.', 'open-export' );
+		}
 		$secret = (string) ( $hook['secret'] ?? '' );
 		if ( '' !== $secret && ! OPEX_Secrets::is_encrypted( $secret ) ) {
 			$secret = OPEX_Secrets::encrypt( mb_substr( $secret, 0, 256 ) );
+		}
+		if ( '' === $secret ) {
+			$kept   = (string) ( $previous['webhook']['secret'] ?? '' );
+			if ( '' !== $kept && ! OPEX_Secrets::is_encrypted( $kept ) ) {
+				$kept = OPEX_Secrets::encrypt( mb_substr( $kept, 0, 256 ) ); // A plain value saved by an older build.
+			}
+			$secret = empty( $hook['clear_secret'] ) ? $kept : '';
 		}
 
 		$dest = is_array( $raw['destination'] ?? null ) ? $raw['destination'] : array();
@@ -134,6 +151,9 @@ class OPEX_Delivery {
 			if ( 'sent' === $status || $attempts >= self::MAX_ATTEMPTS || ! in_array( $status, array( 'pending', 'failed' ), true ) ) {
 				continue;
 			}
+			if ( $attempts > 0 && self::due_at( $item ) > time() ) {
+				continue;
+			}
 
 			$result = self::run_channel( (string) $item['channel'], $job, $delivery, $path );
 
@@ -149,6 +169,40 @@ class OPEX_Delivery {
 			$items[ $i ] = $item;
 		}
 		return $items;
+	}
+
+	/**
+	 * When the next attempt may run, or 0 when nothing is left to try.
+	 * The runner uses this to schedule the next opex_deliver event.
+	 *
+	 * @param array $deliveries The job's deliveries list.
+	 * @return int Unix time, or 0.
+	 */
+	public static function next_attempt_at( array $deliveries ): int {
+		$next = 0;
+		foreach ( $deliveries as $item ) {
+			if ( ! is_array( $item ) || ! in_array( (string) ( $item['status'] ?? '' ), array( 'pending', 'failed' ), true ) || (int) ( $item['attempts'] ?? 0 ) >= self::MAX_ATTEMPTS ) {
+				continue;
+			}
+			$due  = (int) ( $item['attempts'] ?? 0 ) > 0 ? self::due_at( $item ) : time();
+			$next = ( 0 === $next || $due < $next ) ? $due : $next;
+		}
+		return $next;
+	}
+
+	/**
+	 * Earliest time a failed item may be tried again: 5 minutes after the
+	 * first attempt, 30 minutes after the second. Filter opex_delivery_retry_wait
+	 * changes the wait (seconds), given the attempts made so far.
+	 *
+	 * @param array $item Delivery item.
+	 * @return int Unix time.
+	 */
+	private static function due_at( array $item ): int {
+		$attempts = (int) ( $item['attempts'] ?? 0 );
+		$default  = self::RETRY_WAITS[ min( $attempts, 2 ) ] ?? 1800;
+		$wait     = (int) apply_filters( 'opex_delivery_retry_wait', $default, $attempts );
+		return (int) ( $item['time'] ?? 0 ) + max( 0, $wait );
 	}
 
 	/**

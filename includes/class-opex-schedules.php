@@ -169,7 +169,7 @@ class OPEX_Schedules {
 		$rec['filename'] = '' === $pattern ? '{label}-{date}' : mb_substr( $pattern, 0, 200 );
 
 		$delivery        = is_array( $raw['delivery'] ?? null ) ? $raw['delivery'] : $base['delivery'];
-		$rec['delivery'] = self::sanitize_delivery( $delivery, $base['delivery'] );
+		$rec['delivery'] = self::sanitize_delivery( $delivery, $base['delivery'], ! empty( $raw['clear_secret'] ) );
 
 		$now = time();
 		if ( '' === $id ) {
@@ -195,44 +195,21 @@ class OPEX_Schedules {
 	}
 
 	/**
-	 * Clean the delivery block. Uses OPEX_Delivery when it exists.
+	 * Clean the delivery block. The webhook secret is always stored encrypted,
+	 * a blank one keeps the stored secret, and $clear_secret removes it.
 	 *
-	 * @param array $raw  Untrusted delivery settings.
-	 * @param array $base Stored settings, used to keep a webhook secret left blank.
+	 * @param array $raw          Untrusted delivery settings.
+	 * @param array $base         Stored settings, used to keep a webhook secret left blank.
+	 * @param bool  $clear_secret True to remove the stored webhook secret.
 	 */
-	private static function sanitize_delivery( array $raw, array $base ): array {
-		if ( class_exists( 'OPEX_Delivery' ) ) {
-			$notes = array();
-			return (array) OPEX_Delivery::sanitize( $raw, $notes );
+	private static function sanitize_delivery( array $raw, array $base, bool $clear_secret ): array {
+		if ( $clear_secret ) {
+			$raw['webhook']                 = is_array( $raw['webhook'] ?? null ) ? $raw['webhook'] : array();
+			$raw['webhook']['clear_secret'] = true;
+			$raw['webhook']['secret']       = '';
 		}
-		$out = self::default_delivery();
-		$e   = is_array( $raw['email'] ?? null ) ? $raw['email'] : array();
-		$to  = array();
-		foreach ( array_slice( (array) ( $e['to'] ?? array() ), 0, 10 ) as $addr ) {
-			$addr = sanitize_email( (string) $addr );
-			if ( '' !== $addr ) {
-				$to[] = $addr;
-			}
-		}
-		$out['email'] = array(
-			'enabled' => (bool) rest_sanitize_boolean( $e['enabled'] ?? false ),
-			'to'      => $to,
-			'mode'    => 'attach' === ( $e['mode'] ?? '' ) ? 'attach' : 'link',
-			'subject' => sanitize_text_field( (string) ( $e['subject'] ?? '' ) ),
-		);
-		$w = is_array( $raw['webhook'] ?? null ) ? $raw['webhook'] : array();
-		$secret = sanitize_text_field( (string) ( $w['secret'] ?? '' ) );
-		$out['webhook'] = array(
-			'enabled' => (bool) rest_sanitize_boolean( $w['enabled'] ?? false ),
-			'url'     => esc_url_raw( (string) ( $w['url'] ?? '' ), array( 'http', 'https' ) ),
-			'secret'  => '' !== $secret ? $secret : (string) ( $base['webhook']['secret'] ?? '' ),
-		);
-		$d = is_array( $raw['destination'] ?? null ) ? $raw['destination'] : array();
-		$out['destination'] = array(
-			'enabled' => (bool) rest_sanitize_boolean( $d['enabled'] ?? false ),
-			'id'      => preg_match( '/^d[0-9a-f]{12}$/', (string) ( $d['id'] ?? '' ) ) ? (string) $d['id'] : '',
-		);
-		return $out;
+		$notes = array();
+		return OPEX_Delivery::sanitize( $raw, $notes, $base );
 	}
 
 	/** Delete a schedule and its cron event. */

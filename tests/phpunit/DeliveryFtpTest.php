@@ -115,4 +115,48 @@ class DeliveryFtpTest extends TestCase {
 		$res           = OPEX_Delivery_Ftp::test( $rec );
 		$this->assertInstanceOf( WP_Error::class, $res );
 	}
+
+	public function test_expose_warns_about_plain_ftp_and_ftps() {
+		$ftp  = OPEX_Destinations::expose( $this->dest() );
+		$ftps = OPEX_Destinations::expose( $this->dest( array( 'type' => 'ftps' ) ) );
+		$sftp = OPEX_Destinations::expose( $this->dest( array( 'type' => 'sftp' ) ) );
+		$this->assertStringContainsString( 'without encryption', $ftp['security_note'] );
+		$this->assertStringContainsString( 'cannot verify the server', $ftps['security_note'] );
+		$this->assertSame( '', $sftp['security_note'] );
+	}
+
+	public function test_ftps_upload_against_a_self_signed_server() {
+		if ( ! function_exists( 'ftp_ssl_connect' ) ) {
+			$this->markTestSkipped( 'PHP has no FTPS support here.' );
+		}
+		$py    = OpexTestServer::python();
+		$tools = (string) getenv( 'OPEX_TEST_TOOLS' );
+		exec( $py . ' -c ' . escapeshellarg( 'import OpenSSL' ) . ' 2>&1', $o, $rc );
+		if ( 0 !== $rc || '' === (string) shell_exec( 'command -v openssl' ) ) {
+			$this->markTestSkipped( 'pyOpenSSL or the openssl tool is missing, so no FTPS server can start.' );
+		}
+		$certdir = $tools . '/certs-' . bin2hex( random_bytes( 4 ) );
+		mkdir( $certdir, 0700, true );
+		$pem = $certdir . '/server.pem';
+		exec( 'openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=127.0.0.1 -keyout ' . escapeshellarg( $certdir . '/k.pem' ) . ' -out ' . escapeshellarg( $certdir . '/c.pem' ) . ' 2>&1', $o2, $rc2 );
+		file_put_contents( $pem, (string) file_get_contents( $certdir . '/k.pem' ) . (string) file_get_contents( $certdir . '/c.pem' ) );
+
+		$s       = new OpexTestServer();
+		$s->dir  = OpexTestServer::temp_dir();
+		mkdir( $s->dir . '/in' );
+		$s->port = OpexTestServer::free_port();
+		try {
+			if ( 0 !== $rc2 || ! $s->start( array( $py, dirname( __DIR__ ) . '/servers/ftp_server.py', $s->dir, (string) $s->port, 'tester', 'pw-good', $pem ) ) ) {
+				$this->markTestSkipped( 'The throwaway FTPS server did not start.' );
+			}
+			$rec = $this->dest( array( 'type' => 'ftps', 'port' => $s->port ) );
+			$job = $this->make_job();
+			$res = OPEX_Delivery_Ftp::send( $job, $rec, OPEX_Jobs::file_path( $job ) );
+			$this->assertTrue( $res, is_wp_error( $res ) ? $res->get_error_message() : '' );
+			$this->assertSame( "id,name\n1,Ann\n2,Bob\n", file_get_contents( $s->dir . '/in/Orders-May.csv' ) );
+		} finally {
+			$s->stop();
+			OpexTestServer::rrmdir( $certdir );
+		}
+	}
 }

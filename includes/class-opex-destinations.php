@@ -12,6 +12,12 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Stores destination records. The password or private key is kept encrypted
  * and never leaves this class in clear text except to the delivery channels.
+ *
+ * Private and loopback addresses are allowed for FTP and SFTP hosts on
+ * purpose: a server on the local network is a normal place to deliver files.
+ * The webhook is different. It posts to a URL a person typed and can be
+ * pointed at internal services, so it goes through wp_safe_remote_post and
+ * refuses private addresses.
  */
 class OPEX_Destinations {
 
@@ -44,6 +50,8 @@ class OPEX_Destinations {
 
 	/**
 	 * Validates and saves a destination. A blank secret keeps the stored one.
+	 * The saved SFTP host key is cleared when the host, port or type changes,
+	 * or when the input has reset_host_key set to true.
 	 *
 	 * @param array  $raw Raw input.
 	 * @param string $id  Existing id to update, or blank to create.
@@ -93,6 +101,12 @@ class OPEX_Destinations {
 		$name = sanitize_text_field( (string) ( $raw['name'] ?? '' ) );
 		$id   = null === $existing ? 'd' . bin2hex( random_bytes( 6 ) ) : $id;
 
+		$keep_key = null !== $existing
+			&& empty( $raw['reset_host_key'] )
+			&& ( $existing['host'] ?? '' ) === $host
+			&& (int) ( $existing['port'] ?? 0 ) === $port
+			&& ( $existing['type'] ?? '' ) === $type;
+
 		$record = array(
 			'id'       => $id,
 			'name'     => '' !== $name ? mb_substr( $name, 0, 100 ) : $host,
@@ -103,6 +117,7 @@ class OPEX_Destinations {
 			'auth'     => $auth,
 			'secret'   => $secret,
 			'path'     => $path,
+			'host_key' => ( $keep_key && 'sftp' === $type ) ? (string) ( $existing['host_key'] ?? '' ) : '',
 			'passive'  => ! isset( $raw['passive'] ) || (bool) filter_var( $raw['passive'], FILTER_VALIDATE_BOOLEAN ),
 			'created'  => null === $existing ? $now : (int) ( $existing['created'] ?? $now ),
 			'updated'  => $now,
@@ -136,8 +151,37 @@ class OPEX_Destinations {
 	public static function expose( array $record ): array {
 		$out               = $record;
 		$out['has_secret'] = ! empty( $record['secret'] );
+		$out['host_key']   = (string) ( $record['host_key'] ?? '' );
 		unset( $out['secret'] );
+		$type = (string) ( $record['type'] ?? '' );
+		if ( 'ftp' === $type ) {
+			$out['security_note'] = __( 'FTP sends your password and file without encryption. Use SFTP if the server offers it.', 'open-export' );
+		} elseif ( 'ftps' === $type ) {
+			$out['security_note'] = __( 'FTPS encrypts the connection, but PHP cannot verify the server\'s certificate. Use SFTP if the server offers it.', 'open-export' );
+		} else {
+			$out['security_note'] = '';
+		}
 		return $out;
+	}
+
+	/**
+	 * Stores a host key fingerprint, only when none is stored yet. The first
+	 * successful connection wins, so a later change can never overwrite a pin.
+	 *
+	 * @param string $id          Destination id.
+	 * @param string $fingerprint Fingerprint such as SHA256:<base64>.
+	 * @return void
+	 */
+	public static function pin_host_key( string $id, string $fingerprint ): void {
+		$list = self::all();
+		if ( ! isset( $list[ $id ] ) || ! is_array( $list[ $id ] ) || '' !== (string) ( $list[ $id ]['host_key'] ?? '' ) ) {
+			return;
+		}
+		if ( 1 !== preg_match( '/^SHA256:[A-Za-z0-9+\/]{43}$/', $fingerprint ) ) {
+			return;
+		}
+		$list[ $id ]['host_key'] = $fingerprint;
+		update_option( self::OPTION, $list, false );
 	}
 
 	/**

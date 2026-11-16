@@ -1,6 +1,8 @@
 """Throwaway SFTP server for Open Export tests. Binds to 127.0.0.1 only.
 
-Usage: sftp_server.py <root> <port> <user> <password> <authorized_keys_file>
+Usage: sftp_server.py <root> <port> <user> <password> <authorized_keys_file> [<auth_log_file>]
+With a log file, every authentication step the client starts is appended to it
+(begin, password), so a test can prove no credential arrived.
 Prints READY on stdout when it accepts connections.
 """
 import asyncio
@@ -9,16 +11,25 @@ import sys
 import asyncssh
 
 root, port, user, password, authkeys = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5]
+authlog = sys.argv[6] if len(sys.argv) > 6 else ""
+
+
+def note(line):
+    if authlog:
+        with open(authlog, "a") as fh:
+            fh.write(line + "\n")
 
 
 class Server(asyncssh.SSHServer):
     def begin_auth(self, username):
+        note("begin " + username)
         return True
 
     def password_auth_supported(self):
         return True
 
     def validate_password(self, username, pw):
+        note("password " + username)
         return username == user and pw == password
 
     def public_key_auth_supported(self):

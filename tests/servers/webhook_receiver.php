@@ -1,6 +1,6 @@
 <?php
 /**
- * Router for `php -S`: records each request and answers 200, or 500 on /fail.
+ * Router for `php -S`: records each request and answers 200, 500 on /fail, and a 302 to /hook on /redirect.
  * Env OPEX_RECV_DIR is the folder for request.json.
  */
 $dir  = getenv( 'OPEX_RECV_DIR' );
@@ -20,6 +20,11 @@ file_put_contents(
 if ( '/fail' === $path ) {
 	http_response_code( 500 );
 	echo 'secret-looking body that must never be echoed';
+	return;
+}
+if ( '/redirect' === $path ) {
+	http_response_code( 302 );
+	header( 'Location: /hook' );
 	return;
 }
 http_response_code( 200 );

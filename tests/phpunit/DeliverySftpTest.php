@@ -134,4 +134,113 @@ class DeliverySftpTest extends TestCase {
 		$dead = $this->dest( array( 'port' => OpexTestServer::free_port() ) );
 		$this->assertInstanceOf( WP_Error::class, OPEX_Destinations::test( $dead['id'] ) );
 	}
+
+	/**
+	 * Starts a second throwaway server (new random host key) that logs auth steps.
+	 *
+	 * @param int $port Port to listen on.
+	 * @return OpexTestServer
+	 */
+	private function second_server( int $port ): OpexTestServer {
+		$s       = new OpexTestServer();
+		$s->dir  = OpexTestServer::temp_dir();
+		$s->port = $port;
+		mkdir( $s->dir . '/root/in', 0700, true );
+		copy( self::$server->dir . '/authorized_keys', $s->dir . '/authorized_keys' ); // The server refuses an empty file.
+		$ok = $s->start( array( OpexTestServer::python(), dirname( __DIR__ ) . '/servers/sftp_server.py', $s->dir . '/root', (string) $port, 'tester', 'pw-good', $s->dir . '/authorized_keys', $s->dir . '/auth.log' ) );
+		if ( ! $ok ) {
+			$s->stop();
+			$this->fail( 'The second SFTP server did not start.' );
+		}
+		return $s;
+	}
+
+	public function test_first_test_pins_and_later_connections_pass() {
+		$rec = $this->dest();
+		$this->assertSame( '', $rec['host_key'] );
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$pinned = OPEX_Destinations::get( $rec['id'] )['host_key'];
+		$this->assertMatchesRegularExpression( '/^SHA256:[A-Za-z0-9+\/]{43}$/', $pinned );
+		$this->assertSame( $pinned, OPEX_Destinations::expose( OPEX_Destinations::get( $rec['id'] ) )['host_key'] );
+
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$job = $this->make_job();
+		$this->assertTrue( OPEX_Delivery_Sftp::send( $job, OPEX_Destinations::get( $rec['id'] ), OPEX_Jobs::file_path( $job ) ) );
+		$this->assertSame( $pinned, OPEX_Destinations::get( $rec['id'] )['host_key'] );
+	}
+
+	public function test_fingerprint_matches_the_ssh_keyscan_value() {
+		$rec = $this->dest();
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$scan = (string) shell_exec( 'ssh-keyscan -t ed25519 -p ' . (int) self::$server->port . ' 127.0.0.1 2>/dev/null | ssh-keygen -lf - 2>/dev/null' );
+		if ( 1 !== preg_match( '/(SHA256:\S+)/', $scan, $m ) ) {
+			$this->markTestSkipped( 'ssh-keyscan did not answer.' );
+		}
+		$this->assertSame( $m[1], OPEX_Destinations::get( $rec['id'] )['host_key'] );
+	}
+
+	public function test_first_send_pins_when_nothing_is_stored() {
+		$rec = $this->dest();
+		$job = $this->make_job();
+		$this->assertTrue( OPEX_Delivery_Sftp::send( $job, $rec, OPEX_Jobs::file_path( $job ) ) );
+		$this->assertStringStartsWith( 'SHA256:', OPEX_Destinations::get( $rec['id'] )['host_key'] );
+	}
+
+	public function test_failed_first_connection_does_not_pin() {
+		$rec = $this->dest( array( 'secret' => 'wrong-pass' ) );
+		$this->assertWPError( OPEX_Destinations::test( $rec['id'] ) );
+		$this->assertSame( '', OPEX_Destinations::get( $rec['id'] )['host_key'] );
+	}
+
+	public function test_a_different_server_on_the_same_port_is_refused_before_login() {
+		$port  = OpexTestServer::free_port();
+		$first = $this->second_server( $port );
+		$rec   = $this->dest( array( 'port' => $port ) );
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$pinned = OPEX_Destinations::get( $rec['id'] )['host_key'];
+		$this->assertNotSame( '', $pinned );
+		$this->assertStringContainsString( 'password tester', (string) file_get_contents( $first->dir . '/auth.log' ), 'The real server saw the login.' );
+		$first->stop();
+
+		$impostor = $this->second_server( $port );
+		try {
+			$res = OPEX_Destinations::test( $rec['id'] );
+			$this->assertWPError( $res );
+			$this->assertSame( 'opex_sftp_hostkey', $res->get_error_code() );
+			$this->assertStringContainsString( 'identity has changed', $res->get_error_message() );
+			$job = $this->make_job();
+			$sent = OPEX_Delivery_Sftp::send( $job, OPEX_Destinations::get( $rec['id'] ), OPEX_Jobs::file_path( $job ) );
+			$this->assertWPError( $sent );
+			$this->assertSame( 'opex_sftp_hostkey', $sent->get_error_code() );
+			$this->assertFileDoesNotExist( $impostor->dir . '/auth.log', 'The impostor saw an authentication step.' );
+			$this->assertSame( array(), array_values( array_diff( scandir( $impostor->dir . '/root/in' ), array( '.', '..' ) ) ) );
+			$this->assertSame( $pinned, OPEX_Destinations::get( $rec['id'] )['host_key'], 'The pin is not overwritten.' );
+		} finally {
+			$impostor->stop();
+		}
+	}
+
+	public function test_changing_host_port_or_type_clears_the_pin_and_reset_does_too() {
+		$rec = $this->dest();
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$raw = array( 'name' => 't', 'type' => 'sftp', 'host' => '127.0.0.1', 'port' => self::$server->port, 'username' => 'tester', 'secret' => '', 'path' => '/in' );
+
+		$same = OPEX_Destinations::save( $raw, $rec['id'] );
+		$this->assertStringStartsWith( 'SHA256:', $same['host_key'], 'A rename keeps the pin.' );
+
+		$moved = OPEX_Destinations::save( array_merge( $raw, array( 'host' => 'localhost' ) ), $rec['id'] );
+		$this->assertSame( '', $moved['host_key'] );
+
+		OPEX_Destinations::save( $raw, $rec['id'] );
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$this->assertSame( '', OPEX_Destinations::save( array_merge( $raw, array( 'port' => 2222 ) ), $rec['id'] )['host_key'] );
+
+		OPEX_Destinations::save( $raw, $rec['id'] );
+		$this->assertTrue( OPEX_Destinations::test( $rec['id'] ) );
+		$this->assertSame( '', OPEX_Destinations::save( array_merge( $raw, array( 'reset_host_key' => true ) ), $rec['id'] )['host_key'] );
+	}
+
+	private function assertWPError( $value ): void {
+		$this->assertInstanceOf( WP_Error::class, $value );
+	}
 }
