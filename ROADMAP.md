@@ -1,6 +1,14 @@
 # Roadmap
 
-These are ideas for after Open Export 2.0.0. None of them has a date, and plans may change as feedback comes in. Everything the old roadmap listed for 1.5 and 2.0 ships in 2.0.0, as the [changelog](CHANGELOG.md) shows.
+These are ideas for after Open Export 2.0.1, the current release. None of them has a date, and plans may change as feedback comes in. Everything the old roadmap listed for 1.5 and 2.0 shipped in 2.0.0, as the [changelog](CHANGELOG.md) shows.
+
+## Release and distribution
+
+These steps are still open. None of them has a date.
+
+- A git tag and a GitHub Release for 2.0.1.
+- A WordPress.org submission, after confirming the `Contributors` username in `readme.txt`.
+- Testing in Safari, in Firefox, and with a screen reader.
 
 ## Ideas
 
